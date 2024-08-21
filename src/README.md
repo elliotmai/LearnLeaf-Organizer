@@ -1,11 +1,4 @@
 # Team6_3311
-How to run localhost page:
-
-npm start to run localhost
-If npm start fails to work, do npm run dev then npm start
-
-more functionality will be added pending further development
-
 
 Use Cases
 ----------

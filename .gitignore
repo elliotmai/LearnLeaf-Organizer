@@ -1,0 +1,5 @@
+clear
+.vs
+lib
+node_modules
+.firebase
