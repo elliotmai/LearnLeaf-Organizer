@@ -54,7 +54,6 @@ The application's color palette includes:
 ## Known Issues & Future Enhancements
 
 ### Current Fixes:
-- Archive page not rendering properly.
 - Change all instances of “Task” to “Assignment”.
 - Implement email notifications.
 - Add search and filter options to subject and project views.
