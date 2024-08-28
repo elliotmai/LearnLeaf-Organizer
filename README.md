@@ -54,6 +54,7 @@ The application's color palette includes:
 ## Known Issues & Future Enhancements
 
 ### Current Fixes:
+- Deploy web version (Preferably from GitHub Pages)
 - Change all instances of “Task” to “Assignment”.
 - Implement email notifications.
 - Add search and filter options to subject and project views.
