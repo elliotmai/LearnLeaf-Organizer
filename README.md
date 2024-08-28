@@ -1,126 +1,92 @@
-# Team6_3311
-How to run localhost page:
+# LearnLeaf Organizer
 
-npm start to run localhost
-If npm start fails to work, do npm run dev then npm start
+LearnLeaf Organizer is a single-user task and project management tool designed specifically for students. The application helps students manage their assignments, subjects, and projects efficiently, with features like calendar integration, notifications, and more.
 
-more functionality will be added pending further development
+## Features
 
+### Assignment Management
+- **Create, Edit, Delete Assignments**: Easily manage assignments with details like subject, name, priority, status, start date, due date, and project association.
+- **View Assignments**: See all assignments in a dedicated view or within the context of their associated subject or project.
+- **Assignment Notifications**: Receive reminders and notifications about upcoming deadlines.
 
-Use Cases
-----------
-1. User Account Management: Registering an account, logging in, and managing personal settings.
+### Calendar Integration
+- **Calendar View**: View assignments and deadlines in a calendar format.
+- **Modify Assignments from Calendar**: Edit or delete assignments directly from the calendar view.
 
-2. Task Creation and Management: Adding new tasks, editing task details, and deleting tasks.
+### Subject Management
+- **Create, Edit, Delete Subjects**: Manage subjects with details like name, semester, and color coding.
+- **Archive Subjects**: Archive subjects to declutter your workspace and unarchive them if needed.
 
-3. Project Creation and Organization: Creating projects and assigning tasks to them for better organization.
+### Project Management
+- **Create, Edit, Delete Projects**: Organize your assignments under projects with features to monitor progress via a doughnut chart.
+- **View Project Progress**: Track the status of associated assignments and view the next assignment due date.
 
-4. Setting Task Priorities and Deadlines: Assigning priorities to tasks and setting deadlines.
+### User Account Management
+- **User Registration & Login**: Create an account and manage your personal information.
+- **Manage Preferences**: Customize settings like time format, date format, and notification preferences.
 
-5. Task Tracking: Marking tasks as in progress, completed, or not started.
+### Additional Features
+- **Search and Filter**: Easily search for specific assignments and filter them by various criteria such as due date or priority.
+- **Archives**: Access completed assignments, archived subjects, and projects.
 
-6. Calendar Integration: Viewing tasks and deadlines in a calendar format.
+## Pages
 
-7. Task Notifications and Reminders: Receiving notifications and reminders about upcoming deadlines or pending tasks.
+- **Login Page**: Entry point to the application.
+- **Assignments View**: Main page displaying all assignments after login.
+- **Calendar View**: Visualize your assignments in a calendar format.
+- **Subjects View**: Manage and view all assignments related to specific subjects.
+- **Project Dashboard**: View projects and their associated assignments with a progress chart.
+- **Archive Page**: Access archived subjects, projects, and completed assignments.
+- **User Profile**: Manage user information and settings.
 
-8. Searching and Filtering: Searching for specific tasks or projects, and filtering them by various criteria like due date or priority.
+## Design
 
-Pages
-----------
-Login Page
+The application's color palette includes:
 
-List View
+- **Opal**: #B6CDC8
+- **Mineral Green**: #355147
+- **Leather**: #9F6C5B
+- **Hemp**: #907474
+- **Misty Blue**: #5B8E9F
+- **Orchid**: #8E5B9F
+- **Scarlet**: #F3161E
 
-    - Main page, opens directly from login
+## Known Issues & Future Enhancements
 
-Project View
+### Current Fixes:
+- Archive page not rendering properly.
+- Change all instances of “Task” to “Assignment”.
+- Implement email notifications.
+- Add search and filter options to subject and project views.
+- Fix month overflow issues (e.g., 01-Oct showing as 31-Sep).
+- UI improvements.
 
-    - Groups tasks by project
+### Expansion Scope:
+- Add assignment creation directly from the calendar.
+- Introduce assignment descriptions and subtasks.
+- Mass import assignments from Excel/CSV.
+- Create recurring assignments.
+- Implement Canvas REST API for subject, assignment, and quiz management.
+- Possible future features:
+  - Multi-user support.
+  - Mobile application version.
+  - Statistics page (e.g., number of classes taken, projects done, assignments completed, etc.).
 
-    - Looks like Canvas Dashboard (block for each project, click to open)
+## Installation
 
-    - Has list and calendar view
-
-    - Shows percentages of not started, in progress, and completed in pie chart
-
-Calander View
-
-Subjects
-
-    - Add
-    
-    - Delete
-    
-    - Edit
-    
-    - Customize colors (default gray)
-
-Archive Page?
-
-    - View completed/archived tasks and projects
-
-User Profile
-
-    - Settings
-    
-    - Notification preferences
-    
-        - Yes or No
-        
-        - Time
-
-Primary Functions
-(Included in List, Calendar, and Project Views)
-----------
-Search
-
-Filter
-
-    - Topic
-    
-    - Deadline
-    
-    - Priority
-    
-    - Status
-
-Add Task
-
-    - Subject (Required)
-    
-    - Name (Required)
-    
-    - Description
-    
-    - Status 
-    
-        - Not Started, In Progress, Completed
-        
-    - Start Date
-    
-    - Due Date
-    
-    - Time Due
-    
-    - Priority
-
-Delete Task
-
-Edit Task
-
-
-Design Colors
-----------
-Opal #B6CDC8
-
-Mineral Green #355147
-
-Leather #9F6C5B
-
-Hemp #907474
-
-Misty Blue #5B8E9F
-
-Orchid #8E5B9F
-
-Scarlet #F3161E
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/elliotmai/LearnLeaf-Organizer.git
+    ```
+2. Navigate to the project directory:
+    ```bash
+    cd LearnLeaf-Organizer
+    ```
+3. Install dependencies:
+    ```bash
+    npm install
+    ```
+4. Start the application:
+    ```bash
+    npm start
+    ```
