@@ -2,120 +2,162 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const sgMail = require('@sendgrid/mail');
 
+// Initialize Firebase Admin
 admin.initializeApp();
 
-const db = admin.firestore(); // Initialize Firestore outside the function scope to use in sendEmail
+// Set SendGrid API key from environment variable
+sgMail.setApiKey(functions.config().sendgrid.key);  // Make sure the API key is stored as an environment variable in Firebase
 
-sgMail.setApiKey(functions.config().sendgrid.key);
-
-function formatDate(input) {
-    if (!input) {
-        return ''; // Return empty string if input is undefined, null, etc.
-    }
-
-    let date;
-    if (input instanceof Date) {
-        // Input is already a JavaScript Date object
-        date = input;
-    } else if (input.toDate && typeof input.toDate === 'function') {
-        // Input is a Firestore Timestamp object
-        date = input.toDate();
-    } else if (typeof input === 'string' || typeof input === 'number') {
-        // Input is a string or a number (timestamp), attempt to parse it
-        date = new Date(input);
-    } else {
-        // Unsupported type, return empty string
-        console.error('Unsupported date type:', input);
-        return '';
-    }
-
-    return date;
-}
-
-const handleEmails = async (type) => {
-    // Get today's date at midnight in the Central Time Zone
-    const today = new Date();
-
-    const oneDayMS = 24 * 60 * 60 * 1000; // milliseconds in one day
-
-    functions.logger.info("Starting handleEmails function", { type, today: today.toString() });
-
-    const usersSnapshot = await db.collection('users').where('notifications', '==', true).get();
-    functions.logger.info("Users fetched for notifications", { numberOfUsers: usersSnapshot.size });
-
-    usersSnapshot.forEach(async userDoc => {
-        const user = userDoc.data();
-        functions.logger.info("Processing user", { userId: userDoc.id, notifications: user.notifications, email: user.email });
-
-        if (!user.email || !user.notificationsFrequency) {
-            functions.logger.info("Skipping user due to missing email or notification preferences", { userId: userDoc.id });
-            return;
-        }
-
-        const tasksSnapshot = await db.collection('tasks')
-            .where('userId', '==', userDoc.id)
-            .where('status', '!=', 'Completed')
-            .get();
-
-        let emailTasks = [];
-
-        tasksSnapshot.forEach(taskDoc => {
-            const task = taskDoc.data();
-            const dueDate = formatDate(task.dueDate);
-            const diffDays = (dueDate - today) / oneDayMS;
-
-            functions.logger.debug("Evaluating task for notification type", { type, task: task.assignment, dueDate, diffDays });
-
-            if ((type === 'daily' && user.notificationsFrequency[2] && Math.abs(diffDays) <= 1) ||
-                (type === 'weekly' && user.notificationsFrequency[1] && diffDays <= 7 && diffDays >= -1) ||
-                (type === 'urgent' && user.notificationsFrequency[3] && diffDays <= 0)) {
-                emailTasks.push(task);
-                functions.logger.debug("Task added to email batch", { type, task: task.assignment });
-            }
+// Query tasks due before or on the end date and where status != 'Completed'
+async function queryTasks(userId, endDate) {
+    const tasksRef = admin.firestore().collection('tasks');
+    
+    let tasks = [];
+    await tasksRef
+        .where('userId', '==', userId)
+        .where('dueDate', '<=', endDate)
+        .where('status', '!=', 'Completed')  // Filter out completed tasks
+        .get()
+        .then(querySnapshot => {
+            querySnapshot.forEach(doc => {
+                const task = doc.data();
+                if (task.dueDate) {
+                    tasks.push(task);
+                }
+            });
+        }).catch(error => {
+            console.error('Error querying tasks:', error);
         });
 
-        if (emailTasks.length > 0) {
-            await sendEmail(user.email, emailTasks, type);
-            functions.logger.info("Emails sent for type", { type, numberOfEmailsSent: emailTasks.length });
-        } else {
-            functions.logger.info("No tasks matched the criteria for sending emails", { type, userId: userDoc.id });
-        }
-    });
-};
+    return tasks;
+}
 
-const sendEmail = async (email, tasks, type) => {
-    const messageBody = tasks.map(task => `Task: ${task.assignment}\n\tDue: ${formatDate(task.dueDate).toLocaleDateString()}\n\n`).join('\n');
+// Helper function to create a notification document in the 'notifications' collection and return its ID
+async function createNotificationDocument(userId, userEmail, tasks, notificationType) {
+    const notificationsRef = admin.firestore().collection('notifications');
+    
+    // Prepare tasks map for the document
+    const tasksMap = tasks.reduce((acc, task, index) => {
+        const taskArray = [
+            task.subject,
+            task.assignment,
+            task.dueDate.toDate().toLocaleDateString('en-US', {
+                timeZone: 'America/Chicago',
+            }),
+        ];
+        acc[index + 1] = taskArray;  // Store each task as an array in the map
+        return acc;
+    }, {});
+
+    // Create the notification document
+    const notificationData = {
+        userId: userId,
+        userEmail: userEmail,
+        tasks: tasksMap,  // Store the tasks map
+        notificationTime: admin.firestore.Timestamp.now(),
+        notificationType: notificationType  // Include the notificationType field
+    };
+
+    // Add the document to the 'notifications' collection and return the document ID
+    const notificationDoc = await notificationsRef.add(notificationData);
+    console.log(`Notification document created for user: ${userEmail}`);
+    return notificationDoc.id;  // Return the document ID
+}
+
+// Function to send notification emails by pulling data from the 'notifications' collection
+async function sendNotificationEmailFromNotificationDoc(notificationDocId) {
+    const notificationsRef = admin.firestore().collection('notifications');
+    const notificationDoc = await notificationsRef.doc(notificationDocId).get();
+    
+    if (!notificationDoc.exists) {
+        console.error(`Notification document with ID ${notificationDocId} does not exist.`);
+        return;
+    }
+
+    const notificationData = notificationDoc.data();
+    const { userEmail, tasks, notificationType } = notificationData;
+
+    // Prepare tasks in HTML format
+    const formattedTasks = Object.keys(tasks).map(taskIndex => {
+        const task = tasks[taskIndex];  // Retrieve the task array [subject, assignment, dueDate]
+        return `Subject: ${task[0]}<br>Assignment: ${task[1]}<br>Due Date: ${task[2]}`;
+    }).join('<br><br>');  // Double <br> between tasks
+
+    // Create the SendGrid email payload
     const msg = {
-        subject: `Your ${type} Tasks Reminder`,
-        to: email,
-        from: 'learnleaforganizer@gmail.com', // Verified SendGrid sender
-        templateId: 'd-09f88e35060d476ba8ea14133c788db7', // SendGrid template ID
+        to: userEmail,
+        from: 'learnleaforganizer@gmail.com',  // Ensure this email is verified in your SendGrid account
+        templateId: 'd-09f88e35060d476ba8ea14133c788db7',  // Your SendGrid dynamic template ID
         dynamic_template_data: {
-            subject: `Your ${type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()} Tasks Reminder`,
-            text: messageBody
+            tasks: formattedTasks,  // Pass dynamic task data with <br> tags
+            subject: `${notificationType} Reminder of Upcoming Tasks`
         }
     };
 
-    try {
-        await sgMail.send(msg);
-        functions.logger.info("Email sent", { email, type });
-    } catch (error) {
-        functions.logger.error("Error sending email", { error: error.toString() });
-    }
-};
+    // Send the email using SendGrid API
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log(`Email successfully sent to ${userEmail}`);
+        })
+        .catch((error) => {
+            console.error(`Error sending email to ${userEmail}:`, error);
+        });
+}
 
+// Function to handle notifications based on priority (Weekly > Daily > Urgent)
+exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('America/Chicago').onRun(async (context) => {
+    console.log('sendNotifications function triggered');
+    const usersRef = admin.firestore().collection('users');
+    const now = admin.firestore.Timestamp.now();
+    const tomorrow = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 1)));
+    const nextWeek = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 7)));
+    
+    console.log('Querying users with notifications enabled...');
+    const usersSnapshot = await usersRef.where('notifications', '==', true).get();
 
-exports.sendDailyAndUrgentEmails = functions.pubsub.schedule('0 8 * * *') // Everyday at 8 AM
-    .timeZone('America/Chicago')
-    .onRun(async (context) => {
-        functions.logger.info("Triggered sendDailyAndUrgentEmails function");
-        await handleEmails('daily');
-        await handleEmails('urgent');
+    console.log(`Found ${usersSnapshot.size} users with notifications enabled.`);
+    
+    usersSnapshot.forEach(async userDoc => {
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+        const userEmail = userData.email;
+        const notificationsFrequency = userData.notificationsFrequency;
+        const timeFormat = userData.timeFormat || '12h'; // Default to 12-hour if not provided
+
+        // Check notification preferences
+        let tasks = [];
+        let notificationType = '';
+
+        if (notificationsFrequency[1] && new Date().getDay() === 1) {
+            // Weekly notification (every Monday)
+            tasks = await queryTasks(userId, nextWeek);
+            notificationType = 'Weekly';
+        } else if (notificationsFrequency[2]) {
+            // Daily notification
+            tasks = await queryTasks(userId, tomorrow);
+            notificationType = 'Daily';
+        } else if (notificationsFrequency[3]) {
+            // Urgent notification
+            tasks = await queryTasks(userId, now);
+            notificationType = 'Urgent';
+        }
+
+        // If tasks are found for the current user, create a notification document and send the email
+        if (tasks.length > 0) {
+            // Create a notification document and get its ID
+            const notificationDocId = await createNotificationDocument(userId, userEmail, tasks, notificationType);
+
+            // Send the email using the notification document
+            await sendNotificationEmailFromNotificationDoc(notificationDocId);
+        } else {
+            console.log(`No tasks found for ${userEmail}, skipping email.`);
+        }
     });
+});
 
-exports.sendWeeklyEmails = functions.pubsub.schedule('0 8 * * 1') // Every Monday at 8 AM
-    .timeZone('America/Chicago')
-    .onRun(async (context) => {
-        functions.logger.info("Triggered sendWeeklyEmails function");
-        await handleEmails('weekly');
-    });
+// Keep-alive function to reduce cold starts
+exports.keepWarm = functions.pubsub.schedule('every 5 minutes').timeZone('America/Chicago').onRun(async (context) => {
+    console.log('KeepWarm function triggered to keep the function instance warm.');
+    return null;
+});
