@@ -1,4 +1,7 @@
-[redirects]
-    from = "/*"
-    to = "/index.html"
-    status = 200
+[build]
+  publish = "public"  # The directory where your app is built
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
