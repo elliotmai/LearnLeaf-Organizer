@@ -1,5 +1,9 @@
 [build]
-  publish = "public"  # The directory where your app is built
+  command = "npm install && npm run build"  # This ensures npm install is run before building
+  publish = "dist"  # Adjust this if your built files are in a different directory, e.g., dist for some frameworks
+
+[build.environment]
+  NODE_ENV = "production"  # Set the correct Node environment
 
 [[redirects]]
   from = "/*"
