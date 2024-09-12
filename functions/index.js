@@ -44,6 +44,7 @@ async function createNotificationDocument(userId, userEmail, tasks, notification
             task.dueDate.toDate().toLocaleDateString('en-US', {
                 timeZone: 'America/Chicago',
             }),
+            task.project,
         ];
         acc[index + 1] = taskArray;  // Store each task as an array in the map
         return acc;
@@ -60,12 +61,12 @@ async function createNotificationDocument(userId, userEmail, tasks, notification
 
     // Add the document to the 'notifications' collection and return the document ID
     const notificationDoc = await notificationsRef.add(notificationData);
-    console.log(`Notification document created for user: ${userEmail}`);
+    console.log(`Notification document ${notificationDoc.id} created for ${userEmail}`);
     return notificationDoc.id;  // Return the document ID
 }
 
 // Function to send notification emails by pulling data from the 'notifications' collection
-async function sendNotificationEmailFromNotificationDoc(notificationDocId, tasks, notificationType) {
+async function sendNotificationEmailFromNotificationDoc(notificationDocId, notificationType) {
     const notificationsRef = admin.firestore().collection('notifications');
     const notificationDoc = await notificationsRef.doc(notificationDocId).get();
     
@@ -75,17 +76,35 @@ async function sendNotificationEmailFromNotificationDoc(notificationDocId, tasks
     }
 
     const notificationData = notificationDoc.data();
-    const { userEmail } = notificationData;
+    const { userEmail, tasks } = notificationData;
 
     let formattedTasks;
     // Check if there are tasks; if not, show "Nothing due, great job!"
-    if (tasks.length === 0 && (notificationType === 'Weekly' || notificationType === 'Daily')) {
+    if (Object.keys(tasks).length === 0 && (notificationType === 'Weekly' || notificationType === 'Daily')) {
         formattedTasks = "Nothing due, great job!";
     } else {
-        // Prepare tasks in HTML format
+        // Prepare tasks in HTML format by reading from the document
         formattedTasks = Object.keys(tasks).map(taskIndex => {
-            const task = tasks[taskIndex];  // Retrieve the task array [subject, assignment, dueDate]
-            return `Subject: ${task[0]}<br>Assignment: ${task[1]}<br>Due Date: ${task[2]}`;
+            const task = tasks[taskIndex];  // Retrieve the task array [subject, assignment, dueDate, project]
+
+            // Initialize an array to store the formatted task lines
+            let taskLines = [];
+
+            // Check if the task has 4 elements (subject, assignment, dueDate, project)
+            // Include subject and project only if they are present and not empty
+            if (task[0] && task[0] !== "") {
+                taskLines.push(`Subject: ${task[0]}`);
+            }
+
+            taskLines.push(`Assignment: ${task[1]}`);
+            taskLines.push(`Due Date: ${task[2]}`);
+
+            if (task[3] && task[3] !== "") {
+                taskLines.push(`Project: ${task[3]}`);
+            }
+
+            // Join the taskLines with <br> for HTML formatting
+            return taskLines.join('<br>');
         }).join('<br><br>');  // Double <br> between tasks
     }
 
@@ -164,7 +183,7 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
         const notificationDocId = await createNotificationDocument(userId, userEmail, tasks, notificationType);
 
         // Send the email using the notification document
-        await sendNotificationEmailFromNotificationDoc(notificationDocId, tasks, notificationType);
+        await sendNotificationEmailFromNotificationDoc(notificationDocId, notificationType);
     });
 });
 
