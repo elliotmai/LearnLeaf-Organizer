@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { RouterProvider, createBrowserRouter, Outlet, Navigate } from 'react-router-dom';
+import { useUser } from '/src/UserState.jsx';
 import App from './App.jsx';
 import LoginForm from './pages/LoginForm.jsx';
 import RegistrationForm from './pages/RegisterForm.jsx';
@@ -14,28 +15,91 @@ import UserProfile from './pages/UserProfile.jsx';
 import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
 
-const router = createBrowserRouter(
-  [
-    {
-      path: "/",
-      element: <App />,
-      children: [
-        { path: "", element: <LoginForm /> },
-        { path: "register", element: <RegistrationForm /> },
-        { path: "resetPassword", element: <ResetPassword /> },
-        { path: "tasks", element: <TaskList /> },
-        { path: "subjects", element: <SubjectDashboard /> },
-        { path: "subjects/:subjectName", element: <SubjectTasks /> },
-        { path: "projects", element: <ProjectDashboard /> },
-        { path: "projects/:projectId", element: <ProjectTasks /> },
-        { path: "profile", element: <UserProfile /> },
-        { path: "archives", element: <ArchiveDashboard /> },
-        { path: "calendar", element: <CalendarView /> },
-      ],
-    },
-  ],
-  // { basename: "/LearnLeaf-Organizer" }
-);
+// Use the custom hook to check authentication
+const ProtectedRoute = ({ children }) => {
+  const { user } = useUser(); // Check if user is authenticated
+  return user ? children : <Navigate to="/" />; // If no user, redirect to login
+};
+
+// Create your router
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,  // Common parent component, could be a layout component
+    children: [
+      // Public routes
+      { path: "", element: <LoginForm /> },
+      { path: "register", element: <RegistrationForm /> },
+      { path: "resetPassword", element: <ResetPassword /> },
+
+      // Protected routes, wrapped in <ProtectedRoute>
+      {
+        path: "tasks",
+        element: (
+          <ProtectedRoute>
+            <TaskList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "subjects",
+        element: (
+          <ProtectedRoute>
+            <SubjectDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "subjects/:subjectName",
+        element: (
+          <ProtectedRoute>
+            <SubjectTasks />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "projects",
+        element: (
+          <ProtectedRoute>
+            <ProjectDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "projects/:projectId",
+        element: (
+          <ProtectedRoute>
+            <ProjectTasks />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute>
+            <UserProfile />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "archives",
+        element: (
+          <ProtectedRoute>
+            <ArchiveDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "calendar",
+        element: (
+          <ProtectedRoute>
+            <CalendarView />
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
+]);
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
