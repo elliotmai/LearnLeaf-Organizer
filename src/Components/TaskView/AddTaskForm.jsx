@@ -16,14 +16,14 @@ const boxStyle = {
     left: '50%',
     transform: 'translate(-50%, -50%)',
     width: 400,
-    height: '90vh', // Sets the height of the box to 90% of the viewport height
-    maxHeight: '90vh', // Ensures the content doesn't exceed this height
-    overflowY: 'auto', // Allows scrolling within the Box if content exceeds its height
+    height: '90vh',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2, // Padding top
-    pb: 3, // Padding bottom
-    px: 4, // Padding left and right
+    pt: 2,
+    pb: 3,
+    px: 4,
 };
 
 const submitButtonStyle = {
@@ -43,7 +43,7 @@ const cancelButtonStyle = {
     },
 };
 
-export function AddTaskForm({ isOpen, onClose, initialSubject, initialProject, initialDueDate, refreshTasks }) {
+export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initialProject, initialDueDate, refreshTasks }) {
     const { user } = useUser();
     const [subjects, setSubjects] = useState([]);
     const [isNewSubject, setIsNewSubject] = useState(false);
@@ -69,7 +69,7 @@ export function AddTaskForm({ isOpen, onClose, initialSubject, initialProject, i
             setSubjects(fetchedSubjects);
         }
         loadSubjects();
-    }, []);
+    }, [user.id]);
 
     useEffect(() => {
         async function loadProjects() {
@@ -77,7 +77,7 @@ export function AddTaskForm({ isOpen, onClose, initialSubject, initialProject, i
             setProjects(fetchedProjects);
         }
         loadProjects();
-    }, []);
+    }, [user.id]);
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -148,12 +148,11 @@ export function AddTaskForm({ isOpen, onClose, initialSubject, initialProject, i
             updatedTaskDetails.project = newProjectName;
         }
 
-        await addTask(updatedTaskDetails);
-        setTaskDetails(updatedTaskDetails);  // Now update the state after all operations are done
+        const newTask = await addTask({ ...taskDetails, userId: user.id });  // Add the new task
+        onAddTask(newTask);  // Immediately update the parent component with the new task
         onClose();
-        refreshTasks();
+        refreshTasks();  // Optional: refresh tasks to ensure data consistency
     };
-
 
     return (
         <Modal open={isOpen} onClose={onClose}>

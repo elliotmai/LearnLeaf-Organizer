@@ -306,11 +306,17 @@ export async function fetchTasks(userId, subject = null, project = null) {
         return {
             ...data,
             taskId: doc.id,
+            name: data.assignment,
+            subject: data.subject,
+            project: data.project,
+            priority: data.priority,
+            status: data.status,
+            // Convert Firestore Timestamps to JavaScript Date objects for display
             startDate: formatDate(data.startDate),
             dueDate: formatDate(data.dueDate),
             dueTime: formatTime(data.dueTime),
             subjectColor: color,
-        };
+        }
     });
 
     // Sort tasks, placing those without a due date at the end

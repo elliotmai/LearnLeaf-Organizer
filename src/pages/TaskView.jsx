@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
-import { fetchTasks, logoutUser } from '/src/LearnLeaf_Functions.jsx'
+import { fetchTasks, logoutUser, deleteTask } from '/src/LearnLeaf_Functions.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import '/src/Components/FormUI.css';
 import '/src/Components/TaskView/TaskView.css';
-
 
 const TaskList = () => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
@@ -15,11 +14,9 @@ const TaskList = () => {
     const { user, updateUser } = useUser();
     const navigate = useNavigate();
 
-
     useEffect(() => {
-        // Fetch tasks when the component mounts or the user id changes
         if (user?.id) {
-            fetchTasks(user.id)
+            fetchTasks(user.id, null, null)
                 .then(fetchedTasks => setTasks(fetchedTasks))
                 .catch(error => console.error("Error fetching tasks:", error));
         }
@@ -30,15 +27,28 @@ const TaskList = () => {
     };
 
     const refreshTasks = async () => {
-        // Fetch tasks from the database and update state
-        const updatedTasks = await fetchTasks(user.id);
+        const updatedTasks = await fetchTasks(user.id, null, null);
         setTasks(updatedTasks);
     };
 
-    // Handler to close the AddTaskForm
+    const handleAddTask = (newTask) => {
+        setTasks(prevTasks => [...prevTasks, newTask]);
+        refreshTasks(); // Optionally refresh after adding the task to get the latest state
+    };
+
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
-        refreshTasks(); // Optionally refresh tasks upon closing the form to reflect any changes
+        refreshTasks(); // Optionally refresh tasks after closing the form
+    };
+
+    const handleDeleteTask = async (taskId) => {
+        try {
+            await deleteTask(taskId);
+            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+            refreshTasks(); // Refresh the task list after deletion
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
     };
 
     const handleLogout = async () => {
@@ -54,7 +64,7 @@ const TaskList = () => {
     return (
         <div className="view-container">
             <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo"/>
+                <img src={logo} alt="LearnLeaf_name_logo" />
                 <div className="top-navigation">
                     <nav className="nav-links">
                         <a href="/tasks">Tasks</a>
@@ -65,23 +75,32 @@ const TaskList = () => {
                         <a href="/profile">User Profile</a>
                     </nav>
                     <button className="logout-button" onClick={handleLogout}>Logout</button>
-                    </div>
+                </div>
             </div>
+
             <button className="fab" onClick={toggleFormVisibility}>
                 +
             </button>
+
             {isAddTaskFormOpen && (
                 <AddTaskForm
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
-                    refreshTasks={refreshTasks}
+                    onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
+                    refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
                 />
             )}
+
             <div className="task-list">
                 <h1 style={{ color: '#907474' }}>{user.name}'s Upcoming Tasks</h1>
-                <TasksTable tasks={tasks} refreshTasks={refreshTasks} />
+                <TasksTable
+                    tasks={tasks}
+                    refreshTasks={refreshTasks}
+                    onDelete={handleDeleteTask}  // Pass handleDeleteTask to TasksTable
+                />
             </div>
         </div>
     );
 };
+
 export default TaskList;

@@ -4,6 +4,16 @@
     align-content: center;
 }
 
+.task-widgets {
+    padding: 20px; /* Padding around the entire grid */
+}
+
+.task-widget {
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+}
+
 #tasksTable {
     border-collapse: collapse;
     width: 95%;
