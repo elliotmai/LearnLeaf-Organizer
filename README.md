@@ -88,5 +88,5 @@ The application's color palette includes:
     ```
 4. Start the application:
     ```bash
-    npm start
+    npm run dev
     ```
