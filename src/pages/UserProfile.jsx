@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser, updateUserDetails, deleteUser } from '/src/LearnLeaf_Functions.jsx';
+import TopBar from '/src/pages/TopBar.jsx';
 import '/src/Components/FormUI.css';
 import '/src/Components/UserProfile/UserProfile.css';
 
@@ -91,20 +92,7 @@ const UserProfile = () => {
     return (
         <div className="view-container">
             <div className="user-profile">
-                <div className="top-bar">
-                    <img src={logo} alt="LearnLeaf_name_logo"/>
-                    <div className="top-navigation">
-                        <nav className="nav-links">
-                            <a href="/tasks">Tasks</a>
-                            <a href="/calendar">Calendar</a>
-                            <a href="/subjects">Subjects</a>
-                            <a href="/projects">Projects</a>
-                            <a href="/archives">Archives</a>
-                            <a href="/profile">User Profile</a>
-                        </nav>
-                        <button className="logout-button" onClick={handleLogout}>Logout</button>
-                    </div>
-                </div>
+                <TopBar />
                 <div className="account-info">
                     <h3>Account Information</h3>
                     <div>

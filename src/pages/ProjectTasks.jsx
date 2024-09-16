@@ -5,6 +5,9 @@ import { useUser } from '/src/UserState.jsx';
 import { fetchProjects, fetchTasks, logoutUser } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
+import TopBar from '/src/pages/TopBar.jsx';
+import CircularProgress from '@mui/material/CircularProgress';
+import Grid from '@mui/material/Grid';
 
 const ProjectTasks = () => {
     const [project, setProject] = useState(null);
@@ -56,7 +59,6 @@ const ProjectTasks = () => {
         }
     }, [user?.id, project]); // This useEffect triggers when `project` is set.
 
-
     const refreshTasks = async () => {
         const updatedTasks = await fetchTasks(user.id, null, project.projectName);
         setTasks(updatedTasks);
@@ -85,7 +87,6 @@ const ProjectTasks = () => {
 
         let filterDate = new Date(filterDateStr);
         filterDate = new Date(filterDate.getTime() - filterDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
-
 
         switch (comparisonType) {
             case 'before':
@@ -149,36 +150,34 @@ const ProjectTasks = () => {
         });
     };
 
-
     return (
         <div className="view-container">
-            <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo"/>
-                <div className="top-navigation">
-                    <nav className="nav-links">
-                        <a href="/tasks">Tasks</a>
-                        <a href="/calendar">Calendar</a>
-                        <a href="/subjects">Subjects</a>
-                        <a href="/projects">Projects</a>
-                        <a href="/archives">Archives</a>
-                        <a href="/profile">User Profile</a>
-                    </nav>
-                    <button className="logout-button" onClick={handleLogout}>Logout</button>
-                </div>
-            </div>
+            <TopBar />
             <button className="fab" onClick={toggleFormVisibility}>+</button>
             {isAddTaskFormOpen && (
                 <AddTaskForm
-                    initialProject={project.projectName}
-                    initialSubject={project.subject}
+                    initialProject={project?.projectName || ''}
+                    initialSubject={project?.subject || ''}
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
                     refreshTasks={refreshTasks}
                 />
             )}
+
             <div>
-                <h1 style={{ color: '#907474' }}>{project ? `Upcoming Tasks for ${project.projectName}` : 'Loading project...'}</h1>
-                <TasksTable tasks={tasks} refreshTasks={refreshTasks} />
+                <h1 style={{ color: '#907474' }}>
+                    {project ? `Upcoming Tasks for ${project.projectName}` : 'Loading project...'}
+                </h1>
+
+                {/* Conditional Rendering for Tasks Table with Spinner */}
+                {project ? (
+                    <TasksTable tasks={tasks} refreshTasks={refreshTasks} />
+                ) : (
+                    <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
+                        <CircularProgress />
+                        <p>Loading tasks...</p>
+                    </Grid>
+                )}
             </div>
         </div>
     );

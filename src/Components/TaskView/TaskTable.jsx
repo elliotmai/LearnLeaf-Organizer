@@ -4,8 +4,11 @@ import debounce from 'lodash.debounce';  // Import debounce
 import { deleteTask, fetchProjects, fetchSubjects } from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
 import Grid from '@mui/material/Grid';
+import { useTheme, useMediaQuery } from '@mui/material';
 import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
+import TaskFilterBar from '../../pages/TaskFilterBar';
 import './TaskView.css';
+import '/src/Components/PageFormat.css';
 
 const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
     const [subjects, setSubjects] = useState([]);
@@ -21,6 +24,15 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
     });
 
     const { user } = useUser();
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
+    const getItemsPerRow = useCallback(() => {
+        if (isSmallScreen) return 1;
+        if (isMediumScreen) return 2;
+        return 3;
+    }, [isSmallScreen, isMediumScreen]);
 
     useEffect(() => {
         const loadSubjectsAndProjects = async () => {
@@ -109,26 +121,32 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
         setFilterCriteria(prev => ({ ...prev, [name]: value }));
     };
 
+    const itemsPerRow = getItemsPerRow();
+    const rowHeight = 550; // Adjust the item size based on the widget height
+    const filteredTasks = getFilteredTasks(initialTasks, filterCriteria);
+    const totalRows = Math.ceil(filteredTasks.length / itemsPerRow);
+
     const Row = React.memo(({ index, style }) => {
-        const startIndex = index * 3;
-        const filteredTasks = getFilteredTasks(initialTasks, filterCriteria);
+        const startIndex = index * itemsPerRow;
 
         return (
             <div style={style}>
                 <Grid container spacing={3} className="task-widgets">
-                    {Array(3).fill(null).map((_, i) => {
-                        const taskIndex = startIndex + i;
-                        return taskIndex < filteredTasks.length ? (
-                            <Grid item xs={12} sm={6} md={4} key={taskIndex}>
-                                <TaskWidget
-                                    task={filteredTasks[taskIndex]}
-                                    onDelete={onDelete}
-                                    subjects={subjects}
-                                    projects={projects}
-                                />
-                            </Grid>
-                        ) : null;
-                    })}
+                    {Array(itemsPerRow)
+                        .fill(null)
+                        .map((_, i) => {
+                            const taskIndex = startIndex + i;
+                            return taskIndex < filteredTasks.length ? (
+                                <Grid item xs={12} sm={6} md={4} key={taskIndex}>
+                                    <TaskWidget
+                                        task={filteredTasks[taskIndex]}
+                                        onDelete={onDelete}
+                                        subjects={subjects}
+                                        projects={projects}
+                                    />
+                                </Grid>
+                            ) : null;
+                        })}
                 </Grid>
             </div>
         );
@@ -136,98 +154,21 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
 
     return (
         <div className="task-table">
-            <div className="filter-bar">
-                <div className="filter-item">
-                    <label htmlFor="searchTask">Search:</label>
-                    <input
-                        id="searchTask"
-                        type="text"
-                        placeholder="Search tasks..."
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, searchQuery: e.target.value })}
-                    />
-                </div>
-                <div className="filter-item">
-                    <label htmlFor="priorityFilter">Priority:</label>
-                    <select
-                        id="priorityFilter"
-                        value={filterCriteria.priority}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, priority: e.target.value })}
-                    >
-                        <option value="">Show All</option>
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                    </select>
-                </div>
-
-                <div className="filter-item">
-                    <label htmlFor="statusFilter">Status:</label>
-                    <select
-                        id="statusFilter"
-                        value={filterCriteria.status}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, status: e.target.value })}
-                    >
-                        <option value="">Show All</option>
-                        <option value="Not Started">Not Started</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                    </select>
-                </div>
-
-                <div className="filter-item">
-                    <label htmlFor="startDateFilter">Start Date:</label>
-                    <select
-                        id="startDateFilter"
-                        value={filterCriteria.startDateComparison}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, startDateComparison: e.target.value })}
-                    >
-                        <option value="">Show All</option>
-                        <option value="before">Before</option>
-                        <option value="before-equal">Before or Equal to</option>
-                        <option value="equal">Equal to</option>
-                        <option value="after">After</option>
-                        <option value="after-equal">After or Equal to</option>
-                        <option value="none">None Set</option>
-                    </select>
-                    <input
-                        type="date"
-                        value={filterCriteria.startDate}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, startDate: e.target.value })}
-                    />
-                </div>
-
-                <div className="filter-item">
-                    <label htmlFor="dueDateFilter">Due Date:</label>
-                    <select
-                        id="dueDateFilter"
-                        value={filterCriteria.dueDateComparison}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, dueDateComparison: e.target.value })}
-                    >
-                        <option value="">Show All</option>
-                        <option value="before">Before</option>
-                        <option value="before-equal">Before or Equal to</option>
-                        <option value="equal">Equal to</option>
-                        <option value="after">After</option>
-                        <option value="after-equal">After or Equal to</option>
-                        <option value="none">None Set</option>
-                    </select>
-                    <input
-                        type="date"
-                        value={filterCriteria.dueDate}
-                        onChange={(e) => setFilterCriteria({ ...filterCriteria, dueDate: e.target.value })}
-                    />
-                </div>
-
-                <button onClick={clearFilters}>Clear Filters</button>
-            </div>
+            <TaskFilterBar
+                filterCriteria={filterCriteria}
+                setFilterCriteria={setFilterCriteria}
+                clearFilters={clearFilters}
+            />
 
             <List
                 height={600}
-                itemCount={Math.ceil(getFilteredTasks(initialTasks, filterCriteria).length / 3)}
-                itemSize={550}  // Adjust the item size based on the widget height
+                itemCount={totalRows}
+                itemSize={rowHeight} // Adjust the row height to fit the content
                 width="100%"
             >
-                {Row}
+                {({ index, style }) => (
+                    <Row index={index} style={style} />
+                )}
             </List>
         </div>
     );
