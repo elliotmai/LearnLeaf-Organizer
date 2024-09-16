@@ -90,7 +90,7 @@ The application's color palette includes:
     ```bash
     npm run build
     ```
-5. Open application on your device:
+5. Open the application on your device:
    ```bash
    npm run preview
    ```
