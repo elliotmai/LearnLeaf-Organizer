@@ -1,0 +1,8 @@
+[build]
+  command = "npm install && npm run build"  # This ensures npm install is run before building
+  publish = "dist"  # Adjust this if your built files are in a different directory, e.g., dist for some frameworks
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
