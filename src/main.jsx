@@ -50,7 +50,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "subjects/:subjectName",
+        path: "subjects/:subjectId",
         element: (
           <ProtectedRoute>
             <SubjectTasks />

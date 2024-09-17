@@ -294,7 +294,7 @@ export async function fetchTasks(userId, subject = null, project = null) {
     }
 
     const subjectColors = {};
-    const subjects = await fetchSubjects(userId);
+    const subjects = await fetchSubjects(userId, null);
     subjects.forEach(subj => {
         subjectColors[subj.subjectName] = subj.subjectColor;
     });
@@ -306,11 +306,17 @@ export async function fetchTasks(userId, subject = null, project = null) {
         return {
             ...data,
             taskId: doc.id,
+            name: data.assignment,
+            subject: data.subject,
+            project: data.project,
+            priority: data.priority,
+            status: data.status,
+            // Convert Firestore Timestamps to JavaScript Date objects for display
             startDate: formatDate(data.startDate),
             dueDate: formatDate(data.dueDate),
             dueTime: formatTime(data.dueTime),
             subjectColor: color,
-        };
+        }
     });
 
     // Sort tasks, placing those without a due date at the end
@@ -524,14 +530,21 @@ export async function deleteTask(taskId) {
     }
 }
 
-export async function fetchSubjects(userId) {
+export async function fetchSubjects(userId, subjectId = null) {
     const db = getFirestore();
     const subjectsRef = collection(db, "subjects");
-    const q = query(subjectsRef,
-        where("userId", "==", userId),
-        where("status", "==", "Active"),
-        orderBy("subjectName", "asc"));
+    let q;
 
+    if (subjectId) {
+        q = query(subjectsRef,
+            where("userId", "==", userId),
+            where("__name__", "==", subjectId));
+    }
+    else {
+        q = query(subjectsRef,
+            where("userId", "==", userId),
+            where("status", "==", "Active"));
+        }
     const querySnapshot = await getDocs(q);
     const subjects = [];
     querySnapshot.forEach((doc) => {

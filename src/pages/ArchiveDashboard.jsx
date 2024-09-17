@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import TasksTable from '/src/Components/ArchivePage/ArchivedTaskTable.jsx';
 import ArchivedSubjectWidget from '/src/Components/ArchivePage/ArchivedSubjectWidget.jsx';
 import ArchivedProjectWidget from '/src/Components/ArchivePage/ArchivedProjectWidget.jsx';
+import TopBar from '/src/pages/TopBar.jsx';
 import '/src/Components/ArchivePage/ArchiveDashboard.css';
 
 const ArchivedItemsPage = () => {
@@ -86,20 +87,7 @@ const ArchivedItemsPage = () => {
     return (
         <>
             <div className="content-container">
-                <div className="top-bar">
-                    <img src={logo} alt="LearnLeaf_name_logo"/>
-                    <div className="top-navigation">
-                        <nav className="nav-links">
-                            <a href="/tasks">Tasks</a>
-                            <a href="/calendar">Calendar</a>
-                            <a href="/subjects">Subjects</a>
-                            <a href="/projects">Projects</a>
-                            <a href="/archives">Archives</a>
-                            <a href="/profile">User Profile</a>
-                        </nav>
-                        <button className="logout-button" onClick={handleLogout}>Logout</button>
-                    </div>
-                </div>
+                <TopBar />
                 <h1 className="label">{user.name}'s Archives</h1>
                 <div className="section"> 
                     <div className="section-header" onClick={() => toggleSection('tasks-content')}>Tasks</div>

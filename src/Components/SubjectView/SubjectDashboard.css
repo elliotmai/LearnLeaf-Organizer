@@ -1,6 +1,6 @@
 .subjects-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* This creates 4 columns, each taking up an equal fraction of the available space */
+    /* display: grid;
+    grid-template-columns: repeat(3, 1fr); */
     gap: 20px; /* Space between widgets */
     padding: 20px; /* Padding around the entire grid */
 }

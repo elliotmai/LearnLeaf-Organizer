@@ -6,13 +6,19 @@
     align-items: center; /* Align items vertically in the center */
     justify-content: center;
     background-color: #B6CDC8;
-    padding: 0px 5px 10px 5px;
-    margin: 0px 0px 0px 0px;
+    /* padding: 0px 5px 10px 5px; */
+    margin: 0px 0px 20px 0px;
     border-radius: 8px;
 }
 
     .top-bar img {
-        width: 55%;
+        width: 75%;
+        will-change: filter, transform;
+        transition: filter 300ms, transform 300ms;
+    }
+
+    .top-bar img:hover {
+        transform: scale(1.01);
     }
 
 .top-navigation {
@@ -25,7 +31,7 @@
     color: #9F6C5B;
     text-decoration: none;
     font-style: italic;
-    font-size: 16px;
+    font-size: 1em;
     font-weight: 300;
 }
 .logout-button :hover {
@@ -69,7 +75,7 @@
         color: #9F6C5B;
         text-decoration: none;
         font-style: italic;
-        font-size: 16px;
+        font-size: 1em;
         font-weight: 300;
     }
 
@@ -79,6 +85,7 @@
 
 .fab {
     position: fixed;
+    z-index: 1;
     bottom: 20px;
     right: 20px;
     width: 56px;

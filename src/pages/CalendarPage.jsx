@@ -4,6 +4,7 @@ import CalendarUI from '/src/Components/CalendarPage/CalendarUI';
 import { fetchTasks, logoutUser } from '/src/LearnLeaf_Functions.jsx'
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
+import TopBar from '/src/pages/TopBar.jsx';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 
@@ -43,20 +44,7 @@ const CalendarView = () => {
 
     return (
         <div className="view-container">
-            <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo"/>
-                <div className="top-navigation">
-                    <nav className="nav-links">
-                        <a href="/tasks">Tasks</a>
-                        <a href="/calendar">Calendar</a>
-                        <a href="/subjects">Subjects</a>
-                        <a href="/projects">Projects</a>
-                        <a href="/archives">Archives</a>
-                        <a href="/profile">User Profile</a>
-                    </nav>
-                    <button className="logout-button" onClick={handleLogout}>Logout</button>
-                </div>
-            </div>
+            <TopBar />
             <CalendarUI events={events} refreshTasks={refreshTasks}/>
         </div>
     );
