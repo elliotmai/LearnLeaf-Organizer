@@ -88,5 +88,9 @@ The application's color palette includes:
     ```
 4. Start the application:
     ```bash
-    npm start
+    npm run build
     ```
+5. Open the application on your device:
+   ```bash
+   npm run preview
+   ```
