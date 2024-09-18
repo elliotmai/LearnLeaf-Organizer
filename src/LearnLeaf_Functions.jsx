@@ -1,7 +1,7 @@
 // @flow
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, deleteUser as deleteFirebaseUser } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, getDocs, collection, where, query, orderBy, Timestamp, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, where, query, orderBy, Timestamp, deleteDoc, deleteField, updateDoc, writeBatch } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 import { useUser } from '/src/UserState.jsx';
 
@@ -479,7 +479,9 @@ export async function addTask(taskDetails) {
 };
 
 export async function editTask(taskDetails) {
-    const { taskId, userId, subject, project, assignment, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    console.log('attempting to edit: ', taskDetails);
+    const { taskId, userId, subject, project, assignment, priority, status, startDate, dueDate, dueTime } = taskDetails;
+    // console.log(dueDateInput, dueTimeInput, startDateInput);
     const db = getFirestore(); // Initialize Firestore
 
     // Initialize taskData with fields that are always present
@@ -492,19 +494,29 @@ export async function editTask(taskDetails) {
         status,
     };
 
-    // Conditionally add dates and times if provided
-    if (startDateInput) {
-        taskData.startDate = Timestamp.fromDate(new Date(startDateInput + "T00:00:00"));
+    /// Handling startDate
+    if (startDate !== undefined && startDate !== '') {
+        taskData.startDate = Timestamp.fromDate(new Date(startDate + "T00:00:00"));
+    } else if (startDate === '') {
+        taskData.startDate = deleteField(); // Clear field if empty
     }
 
-    if (dueDateInput) {
-        taskData.dueDate = Timestamp.fromDate(new Date(dueDateInput + "T00:00:00"));
+    // Handling dueDate
+    if (dueDate !== undefined && dueDate !== '') {
+        taskData.dueDate = Timestamp.fromDate(new Date(dueDate + "T00:00:00"));
+    } else if (dueDate === '') {
+        taskData.dueDate = deleteField(); // Clear field if empty
     }
 
-    if (dueTimeInput) {
-        const dateTimeString = dueDateInput + "T" + dueTimeInput + ":00";
+    // Handling dueTime (only if dueDate exists)
+    if (dueTime !== undefined && dueTime !== '' && dueDate !== '') {
+        const dateTimeString = dueDate + "T" + dueTime + ":00";
         taskData.dueTime = Timestamp.fromDate(new Date(dateTimeString));
+    } else if (dueTime === '' || dueDate === '') {
+        taskData.dueTime = deleteField(); // Clear field if dueTime is empty or dueDate is missing
     }
+
+    console.log('passing to fb: ', taskData);
 
     // Create a reference to the task document
     const taskDocRef = doc(db, "tasks", taskId);
@@ -517,6 +529,7 @@ export async function editTask(taskDetails) {
         console.error("Error updating task:", error);
     }
 };
+
 
 export async function deleteTask(taskId) {
     const db = getFirestore(); // Initialize Firestore
