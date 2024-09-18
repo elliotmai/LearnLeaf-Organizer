@@ -143,6 +143,7 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
                                         onDelete={onDelete}
                                         subjects={subjects}
                                         projects={projects}
+                                        refreshTasks={refreshTasks}
                                     />
                                 </Grid>
                             ) : null;
