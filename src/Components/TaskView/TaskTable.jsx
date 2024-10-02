@@ -155,11 +155,13 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
 
     return (
         <div className="task-table">
-            <TaskFilterBar
-                filterCriteria={filterCriteria}
-                setFilterCriteria={setFilterCriteria}
-                clearFilters={clearFilters}
-            />
+            <div className="filter-bar">
+                <TaskFilterBar
+                    filterCriteria={filterCriteria}
+                    setFilterCriteria={setFilterCriteria}
+                    clearFilters={clearFilters}
+                />
+            </div>
 
             <List
                 height={600}
