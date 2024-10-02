@@ -9,22 +9,28 @@ import '/src/App.css';
 const TopBar = () => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Detect if screen size is small
+    const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); // Detect if screen size is medium
+    const isLargeScreen = useMediaQuery(theme.breakpoints.up('md')); // Detect if screen size is large
     const navigate = useNavigate();
 
     const handleLogout = async () => {
         try {
             await logoutUser();
-            // Assuming you have a method to update user context
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
         }
     };
 
+    // Define the logo style based on screen size
+    const logoStyle = {
+        width: isSmallScreen ? '95%' : isMediumScreen ? '70%' : '55%',
+    };
+
     return (
         <div className="top-bar">
             <a href="/tasks">
-                <img src={logo} alt="LearnLeaf_name_logo" />
+                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
             </a>
             <div className="top-navigation">
                 <nav className="nav-links">

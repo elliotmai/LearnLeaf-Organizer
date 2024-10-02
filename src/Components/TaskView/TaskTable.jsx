@@ -31,7 +31,7 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
     const getItemsPerRow = useCallback(() => {
         if (isSmallScreen) return 1;
         if (isMediumScreen) return 2;
-        return 3;
+        return 4;
     }, [isSmallScreen, isMediumScreen]);
 
     useEffect(() => {
@@ -131,13 +131,13 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
 
         return (
             <div style={style}>
-                <Grid container spacing={3} className="task-widgets">
+                <Grid container spacing={2} className="task-widgets">
                     {Array(itemsPerRow)
                         .fill(null)
                         .map((_, i) => {
                             const taskIndex = startIndex + i;
                             return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={6} md={4} key={taskIndex}>
+                                <Grid item xs={12} sm={6} md={3} key={taskIndex}>
                                     <TaskWidget
                                         task={filteredTasks[taskIndex]}
                                         onDelete={onDelete}

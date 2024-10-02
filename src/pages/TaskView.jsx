@@ -10,6 +10,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import '/src/Components/FormUI.css';
 import '/src/Components/TaskView/TaskView.css';
+import '/src/Components/PageFormat.css';
 
 const TaskList = () => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);

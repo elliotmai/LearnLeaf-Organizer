@@ -1,3 +1,7 @@
+/* .view-container {
+    width: 95%;
+} */
+
 .top-bar {
     display: flex;
     flex-direction: column;
@@ -10,12 +14,6 @@
     margin: 0px 0px 20px 0px;
     border-radius: 8px;
 }
-
-    .top-bar img {
-        width: 75%;
-        will-change: filter, transform;
-        transition: filter 300ms, transform 300ms;
-    }
 
     .top-bar img:hover {
         transform: scale(1.01);
@@ -39,7 +37,6 @@
 } 
 
 .logo {
-    width: 55%;
     will-change: filter;
     transition: filter 300ms;
 }

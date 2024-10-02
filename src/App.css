@@ -1,8 +1,8 @@
 #root {
   width: 100%;
-  height: auto;
+  height: 100%;
   margin-bottom: 10px;
-  padding: 0px 10px 10px 10px;
+  padding: 0px 0px 10px 0px;
   text-align: center;
   font-family: Arial, sans-serif;
   display: flex;
@@ -12,11 +12,16 @@
 }
 
 .view-container {
-    width: 100%;
+    /* padding: 0% 2% 0% 2%; */
     justify-content: center;
     align-content: center;
+    width: fill;
 }
 
+.app-container {
+  width: -webkit-fill-available;
+  padding: 0% 2%;
+}
 
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
