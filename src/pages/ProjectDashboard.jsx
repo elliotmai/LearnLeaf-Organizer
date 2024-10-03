@@ -9,6 +9,7 @@ import ProjectFilterBar from './ProjectFilterBar.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import { Grid, useTheme, useMediaQuery } from '@mui/material'; // Import Material-UI components for layout
 import '/src/Components/PageFormat.css';
+import '/src/Components/FilterBar.css';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -105,11 +106,12 @@ const ProjectsDashboard = () => {
     return (
         <div className="view-container">
             <TopBar />
+            <h1 style={{ color: '#907474' }}>{user?.name}'s Current Projects</h1>
             <ProjectFilterBar
-                    filterCriteria={filterCriteria}
-                    setFilterCriteria={setFilterCriteria}
-                    clearFilters={clearFilters}
-                />
+                filterCriteria={filterCriteria}
+                setFilterCriteria={setFilterCriteria}
+                clearFilters={clearFilters}
+            />
             <Grid container spacing={3} className="projects-grid">
 
                 {filteredProjects.map((project, index) => (

@@ -27,12 +27,17 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+    const isLargeScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+    const isXLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
+    // Adjust the number of items per row based on screen size
     const getItemsPerRow = useCallback(() => {
         if (isSmallScreen) return 1;
         if (isMediumScreen) return 2;
-        return 4;
-    }, [isSmallScreen, isMediumScreen]);
+        if (isLargeScreen) return 3;
+        if (isXLargeScreen) return 4;
+        return 3; // Default to 3 items per row
+    }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
 
     useEffect(() => {
         const loadSubjectsAndProjects = async () => {
@@ -137,7 +142,7 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
                         .map((_, i) => {
                             const taskIndex = startIndex + i;
                             return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={6} md={3} key={taskIndex}>
+                                <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={taskIndex}>
                                     <TaskWidget
                                         task={filteredTasks[taskIndex]}
                                         onDelete={onDelete}
@@ -155,13 +160,13 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
 
     return (
         <div className="task-table">
-            <div className="filter-bar">
+            {/* <div className="filter-bar"> */}
                 <TaskFilterBar
                     filterCriteria={filterCriteria}
                     setFilterCriteria={setFilterCriteria}
                     clearFilters={clearFilters}
                 />
-            </div>
+            {/* </div> */}
 
             <List
                 height={600}

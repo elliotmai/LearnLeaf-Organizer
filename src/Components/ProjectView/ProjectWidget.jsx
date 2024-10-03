@@ -38,7 +38,7 @@ const ProjectWidget = ({ project, refreshProjects }) => {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const navigate = useNavigate();
     const theme = useTheme();
-    const isLargeScreen = useMediaQuery(theme.breakpoints.up('md')); // Large screen detection
+    const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg')); // Large screen detection
 
     const colors = ['#355147', '#5B8E9F', '#F3161E'];
 
