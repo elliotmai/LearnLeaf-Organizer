@@ -3,7 +3,8 @@
     flex-direction: column;
     height: 5%;
     width: 100%;
-    align-items: center; /* Align items vertically in the center */
+    align-items: center;
+    /* Align items vertically in the center */
     justify-content: center;
     background-color: #B6CDC8;
     /* padding: 0px 5px 10px 5px; */
@@ -11,15 +12,9 @@
     border-radius: 8px;
 }
 
-    .top-bar img {
-        width: 75%;
-        will-change: filter, transform;
-        transition: filter 300ms, transform 300ms;
-    }
-
-    .top-bar img:hover {
-        transform: scale(1.01);
-    }
+.top-bar img:hover {
+    transform: scale(1.01);
+}
 
 .top-navigation {
     display: flex;
@@ -34,12 +29,12 @@
     font-size: 1em;
     font-weight: 300;
 }
+
 .logout-button :hover {
     text-decoration: underline;
-} 
+}
 
 .logo {
-    width: 55%;
     will-change: filter;
     transition: filter 300ms;
 }
@@ -48,14 +43,16 @@
     display: flex;
     position: center;
     flex-direction: column;
-    align-items: center; /* Center items vertically */
+    align-items: center;
+    /* Center items vertically */
     width: 65%;
     height: fit-content;
 
 }
 
 .app-name {
-    color: #355147; /* Adjust color as needed */
+    color: #355147;
+    /* Adjust color as needed */
     font-weight: bold;
     font-size: 24px;
 }
@@ -68,20 +65,21 @@
 
 .nav-links {
     display: flex;
-    gap: 20px; /* Space between links */
+    gap: 20px;
+    /* Space between links */
 }
 
-    .nav-links a {
-        color: #9F6C5B;
-        text-decoration: none;
-        font-style: italic;
-        font-size: 1em;
-        font-weight: 300;
-    }
+.nav-links a {
+    color: #9F6C5B;
+    text-decoration: none;
+    font-style: italic;
+    font-size: 1em;
+    font-weight: 300;
+}
 
-        .nav-links a:hover {
-            text-decoration: underline;
-        }
+.nav-links a:hover {
+    text-decoration: underline;
+}
 
 .fab {
     position: fixed;
@@ -94,11 +92,12 @@
     background-color: #5B8E9F;
     color: white;
     border: none;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.26);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
     cursor: pointer;
     font-size: 24px;
 }
 
-    .fab:hover {
-        background-color: #0056b3; /* Darker blue */
-    }
+.fab:hover {
+    background-color: #0056b3;
+    /* Darker blue */
+}

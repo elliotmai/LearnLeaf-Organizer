@@ -8,13 +8,19 @@ body {
 }
 
 .login-form-container {
-    width: 95%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     text-align: center;
     align-items: center;
     padding: 0px;
 
+}
+
+.top-bar img {
+    width: 50%;
+    will-change: filter, transform;
+    transition: filter 300ms, transform 300ms;
 }
 
 .form-group {
