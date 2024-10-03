@@ -5,6 +5,7 @@ import { fetchSubjects, logoutUser } from '/src/LearnLeaf_Functions.jsx';
 import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
+import SubjectFilterBar from './SubjectFilterBar';
 import { Grid, useMediaQuery, useTheme } from '@mui/material';
 import { FixedSizeList as List } from 'react-window'; // List component from react-window
 import '/src/Components/PageFormat.css';
@@ -37,6 +38,11 @@ const SubjectsDashboard = () => {
     const [subjects, setSubjects] = useState([]);
     const { user } = useUser();
     const navigate = useNavigate();
+    const [filterCriteria, setFilterCriteria] = useState({
+        searchSubject: '',
+        searchSemester: ''
+    });
+    
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -55,6 +61,8 @@ const SubjectsDashboard = () => {
             fetchSubjects(user.id)
                 .then(fetchedSubjects => setSubjects(fetchedSubjects))
                 .catch(error => console.error("Error fetching subjects:", error));
+
+            console.log(subjects);
         }
     }, [user?.id]);
 
@@ -68,9 +76,27 @@ const SubjectsDashboard = () => {
         setSubjects(updatedSubjects);
     };
 
+    const getFilteredSubjects = (subjects, filterCriteria) => {
+        return subjects.filter((subject) => {
+            const matchesSearchSubject = filterCriteria.searchSubject === '' || subject.subjectName.toLowerCase().includes(filterCriteria.searchSubject.toLowerCase());
+            const matchesSearchSemester = filterCriteria.searchSemester === '' || subject.semester.toLowerCase().includes(filterCriteria.searchSemester.toLowerCase())
+
+            return matchesSearchSubject && matchesSearchSemester;
+        });
+    };
+
+    const clearFilters = () => {
+        setFilterCriteria({
+            searchSubject: '',
+            searchSemester: ''
+        });
+    };
+
     const itemsPerRow = getItemsPerRow();
     const rowHeight = 200; // Approximate height of each widget
-    const totalRows = Math.ceil(subjects.length / itemsPerRow);
+    const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
+    console.log(filteredSubjects.length);
+    const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
     return (
         <div className="view-container">
@@ -80,6 +106,11 @@ const SubjectsDashboard = () => {
             </button>
             {isOpen && <AddSubjectForm isOpen={isOpen} onClose={onClose} refreshSubjects={refreshSubjects} />}
             <div className="subjects-grid">
+                <SubjectFilterBar
+                    filterCriteria={filterCriteria}
+                    setFilterCriteria={setFilterCriteria}
+                    clearFilters={clearFilters}
+                />
                 <List
                     height={600} // Adjust the height to the desired value
                     itemCount={totalRows} // Number of rows needed to display subjects
@@ -90,7 +121,7 @@ const SubjectsDashboard = () => {
                         <Row
                             index={index}
                             style={style}
-                            subjects={subjects}
+                            subjects={filteredSubjects}
                             refreshSubjects={refreshSubjects}
                             itemsPerRow={itemsPerRow}
                         />
