@@ -9,6 +9,8 @@ import SubjectFilterBar from './SubjectFilterBar';
 import { Grid, useMediaQuery, useTheme } from '@mui/material';
 import { FixedSizeList as List } from 'react-window'; // List component from react-window
 import '/src/Components/PageFormat.css';
+import '/src/Components/FilterBar.css';
+
 
 // Memoized Row component for rendering tasks
 const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow }) => {
@@ -20,7 +22,7 @@ const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow }
                 {Array(itemsPerRow).fill(null).map((_, i) => {
                     const subjectIndex = startIndex + i;
                     return subjectIndex < subjects.length ? (
-                        <Grid item xs={12} sm={6} md={4} lg={3} key={subjects[subjectIndex].id}>
+                        <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={subjects[subjectIndex].id}>
                             <SubjectWidget
                                 subject={subjects[subjectIndex]}
                                 refreshSubjects={refreshSubjects}
@@ -46,15 +48,17 @@ const SubjectsDashboard = () => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-    const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg')); // Large screen detection
+    const isLargeScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+    const isXLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
     // Adjust the number of items per row based on screen size
     const getItemsPerRow = useCallback(() => {
         if (isSmallScreen) return 1;
         if (isMediumScreen) return 2;
-        if (isLargeScreen) return 4; // 4 items per row for large screens
+        if (isLargeScreen) return 3;
+        if (isXLargeScreen) return 4;
         return 3; // Default to 3 items per row
-    }, [isSmallScreen, isMediumScreen, isLargeScreen]);
+    }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
 
     useEffect(() => {
         if (user?.id) {
@@ -105,6 +109,7 @@ const SubjectsDashboard = () => {
                 +
             </button>
             {isOpen && <AddSubjectForm isOpen={isOpen} onClose={onClose} refreshSubjects={refreshSubjects} />}
+            <h1 style={{ color: '#907474' }}>{user?.name}'s Current Subjects</h1>
             <div className="subjects-grid">
                 <SubjectFilterBar
                     filterCriteria={filterCriteria}
