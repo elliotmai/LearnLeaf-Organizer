@@ -1,16 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Snackbar } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import {TaskEditForm} from '/src/Components/TaskView/EditForm.jsx'
 import { debounce } from 'lodash';
 import './TaskView.css';
 
 const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
     const [formValues, setFormValues] = useState({ ...task });
+    const [editedTask, setEditedTask] = useState({});
+    const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [openSnackbar, setOpenSnackbar] = useState(false); // State to control the Snackbar visibility
+
+    const toggleFormVisibility = () => {
+        setIsEditTaskFormOpen(!isEditTaskFormOpen);
+    };
 
     const handleTextFieldChange = useCallback(
         debounce((event) => {
@@ -27,7 +35,7 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
 
     const handleSelectChange = (event) => {
         const { name, value } = event.target;
-        
+
         if (name === 'subject') {
             if (value === 'newSubject') {
                 setIsNewSubject(true); // Show text field for new subject
@@ -61,8 +69,6 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
         setNewSubjectName('');
         setIsNewProject(false);
         setNewProjectName('');
-
-        console.log('incoming task:', task);
     }, [task]);
 
     const getValidSubject = () => subjects.some(subj => subj.subjectName === formValues.subject) ? formValues.subject : '';
@@ -73,11 +79,9 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
         return selectedSubject ? selectedSubject.subjectColor : 'black';
     };
 
-    const handleSave = async () => {
+    const handleSave = async (editedTask) => {
         try {
-            let updatedTask = { ...formValues };
-
-            console.log('updatedTask:', updatedTask);
+            let updatedTask = { ...editedTask };
 
             let subjectAdded = false;
             let projectAdded = false;
@@ -101,15 +105,25 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
             // Save the task with the new subject or project
             await editTask(updatedTask);
 
-            setOpenSnackbar(true); // Show Snackbar on successful save
+            // setOpenSnackbar(true); // Show Snackbar on successful save
 
-            // Refresh tasks if a new subject or project has been added
-            if (subjectAdded || projectAdded) {
+            if (isEditModalOpen) {
+                setEditModalOpen(false); // Close the edit modal
+            }
+
+            if (updatedTask)
+            {
                 refreshTasks(); // Force refresh if subject or project was added
             }
+            
         } catch (error) {
             console.error('Error updating task:', error);
         }
+    };
+
+    const handleEditClick = (task) => {
+        setEditedTask({ ...task });
+        setEditModalOpen(true); // Open the edit modal
     };
 
     const handleCloseSnackbar = () => {
@@ -118,6 +132,18 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
 
     return (
         <div style={{ position: 'relative' }}>
+            <TaskEditForm
+                key={editedTask.taskId}
+                task={editedTask}
+                isOpen={isEditModalOpen}
+                onClose={() => setEditModalOpen(false)}
+                onSave={(updatedTask) => {
+                    // setTask(updatedTask);
+                    setEditModalOpen(false);
+                    refreshTasks();
+                }}
+            />
+
             <Card sx={{ minWidth: 275 }}>
                 <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ color: getSubjectColor(), fontWeight: 'bold' }}>
@@ -255,25 +281,54 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
                     </Grid>
                 </CardContent>
 
-                <CardActions>
-                    <Button
-                        size="small"
-                        onClick={handleSave}
-                        variant="contained"
-                        sx={{ backgroundColor: '#B6CDC8', color: '#355147', '&:hover': { backgroundColor: '#a8bdb8' }, mr: 2, ml: 1 }}
-                    >
-                        Save
-                    </Button>
+                <CardActions
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingRight: 2
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Button
+                            size="small"
+                            onClick={() => handleSave(formValues)}
+                            variant="contained"
+                            sx={{
+                                backgroundColor: '#B6CDC8',
+                                color: '#355147',
+                                '&:hover': { backgroundColor: '#a8bdb8' },
+                                mr: 3,
+                                ml: 1
+                            }}
+                        >
+                            Save
+                        </Button>
+
+                        <EditIcon
+                            onClick={() => handleEditClick(task)}
+                            sx={{
+                                color: '#9F6C5B',
+                                fontSize: 'xl',
+                                cursor: 'pointer'
+                            }}
+                        />
+                    </div>
 
                     <Button
                         size="small"
                         onClick={() => onDelete(task.taskId)}
                         variant="contained"
-                        sx={{ backgroundColor: '#ff5252', color: '#fff', '&:hover': { backgroundColor: '#ff1744' } }}
+                        sx={{
+                            backgroundColor: '#ff5252',
+                            color: '#fff',
+                            '&:hover': { backgroundColor: '#ff1744' },
+                        }}
                     >
                         Delete
                     </Button>
                 </CardActions>
+
 
                 {/* Snackbar Notification positioned at the top of the widget */}
                 <Snackbar

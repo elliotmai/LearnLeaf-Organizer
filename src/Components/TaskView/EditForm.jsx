@@ -59,13 +59,13 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
     useEffect(() => {
         setFormValues({ ...task });
         async function loadSelections() {
-            const fetchedSubjects = await fetchSubjects(user.id);
+            const fetchedSubjects = await fetchSubjects(user.id, null);
             setSubjects(fetchedSubjects);
-            const fetchedProjects = await fetchProjects(user.id);
+            const fetchedProjects = await fetchProjects(user.id, null);
             setProjects(fetchedProjects);
         }
         loadSelections();
-    }, [task, user.id]);
+    }, [task, user.id, isOpen]);
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -159,7 +159,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
         <Modal open={isOpen} onClose={onClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
             <Box sx={boxStyle}>
                 <h2 id="modal-modal-title" style={{ color: "#8E5B9F" }}>Edit Task</h2>
-                <form noValidate autoComplete="off">
+                <form noValidate autoComplete="on">
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="subject-label">Subject</InputLabel>
                         <Select
