@@ -218,7 +218,7 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
                                 <InputLabel>Priority</InputLabel>
                                 <Select
                                     name="priority"
-                                    value={formValues.priority}
+                                    value={formValues.priority || 'Medium'}
                                     onChange={handleSelectChange}
                                 >
                                     <MenuItem value="High">High</MenuItem>
@@ -233,7 +233,7 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
                                 <InputLabel>Status</InputLabel>
                                 <Select
                                     name="status"
-                                    value={formValues.status}
+                                    value={formValues.status || 'Not Started'}
                                     onChange={handleSelectChange}
                                 >
                                     <MenuItem value="Not Started">Not Started</MenuItem>

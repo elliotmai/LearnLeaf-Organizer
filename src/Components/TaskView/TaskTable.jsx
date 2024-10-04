@@ -42,8 +42,8 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
     useEffect(() => {
         const loadSubjectsAndProjects = async () => {
             try {
-                const fetchedSubjects = await fetchSubjects(user.id);
-                const fetchedProjects = await fetchProjects(user.id);
+                const fetchedSubjects = await fetchSubjects(user.id, null);
+                const fetchedProjects = await fetchProjects(user.id, null);
                 setSubjects(fetchedSubjects);
                 setProjects(fetchedProjects);
             } catch (error) {

@@ -48,7 +48,18 @@ const cancelButtonStyle = {
 
 export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
     const { user } = useUser();
-    const [formValues, setFormValues] = useState(task);
+    const [formValues, setFormValues]  = useState({
+        taskId: task.taskId,
+        subject: '',  // Start with an empty string, meaning "None" by default.
+        assignment: task.assignment || '',
+        priority: task.priority || 'Medium',
+        status: task.status || 'Not Started',
+        startDate: task.startDate || '',
+        dueDate: task.dueDate || '',
+        dueTime: task.dueTime || '',
+        project: '',  // Start with an empty string.
+        userId: task.userId
+    });
     const [subjects, setSubjects] = useState([]);
     const [projects, setProjects] = useState([]);
     const [isNewSubject, setIsNewSubject] = useState(false);
@@ -57,15 +68,28 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
     const [newProjectName, setNewProjectName] = useState('');
 
     useEffect(() => {
-        setFormValues({ ...task });
-        async function loadSelections() {
-            const fetchedSubjects = await fetchSubjects(user.id, null);
-            setSubjects(fetchedSubjects);
-            const fetchedProjects = await fetchProjects(user.id, null);
-            setProjects(fetchedProjects);
-        }
-        loadSelections();
-    }, [task, user.id, isOpen]);
+        const loadSubjectsAndProjects = async () => {
+            try {
+                const fetchedSubjects = await fetchSubjects(user.id, null);
+                const fetchedProjects = await fetchProjects(user.id, null);
+    
+                setSubjects(fetchedSubjects);
+                setProjects(fetchedProjects);
+    
+                // Only update setFormValues if initial values are found in fetched data
+                setFormValues(prevDetails => ({
+                    ...prevDetails,
+                    subject: fetchedSubjects.some(subj => subj.subjectName === task.subject) ? task.subject : '',
+                    project: fetchedProjects.some(proj => proj.projectName === task.project) ? task.project : ''
+                }));
+    
+            } catch (error) {
+                console.error('Error fetching subjects or projects:', error);
+            }
+        };
+    
+        loadSubjectsAndProjects();
+    }, [user?.id, task]); 
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -112,9 +136,9 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                 assignment: formValues.assignment,
                 priority: formValues.priority,
                 status: formValues.status,
-                startDateInput: formValues.startDate, // Align this with editTask expectations
-                dueDateInput: formValues.dueDate,     // Align this with editTask expectations
-                dueTimeInput: formValues.dueTime,     // Align this with editTask expectations
+                startDateInput: formValues.startDate, 
+                dueDateInput: formValues.dueDate,     
+                dueTimeInput: formValues.dueTime,     
             };
 
             // Check if "None" was selected for subject or project and replace with an empty string
@@ -166,7 +190,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                             labelId="subject-label"
                             id="subject"
                             name="subject"
-                            value={isNewSubject ? 'newSubject' : formValues.subject}
+                            value={isNewSubject ? 'newSubject' : formValues.subject || 'None'}
                             onChange={handleInputChange}
                             required
                         >
@@ -201,7 +225,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                         <Select
                             labelId="priority-label"
                             id="priority"
-                            value={formValues.priority? formValues.priority : ''}
+                            value={formValues.priority? formValues.priority : 'Medium'}
                             label="Priority"
                             name="priority"
                             onChange={handleInputChange}
@@ -216,7 +240,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                         <Select
                             labelId="status-label"
                             id="status"
-                            value={formValues.status? formValues.status : ''}
+                            value={formValues.status? formValues.status : 'Not Started'}
                             label="Status"
                             name="status"
                             onChange={handleInputChange}
@@ -262,7 +286,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                             labelId="project-label"
                             id="project"
                             name="project"
-                            value={isNewProject ? 'newProject' : formValues.project}
+                            value={isNewProject ? 'newProject' : formValues.project || 'None'}
                             onChange={handleInputChange}
                             required
                         >

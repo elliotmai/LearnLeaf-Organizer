@@ -69,6 +69,11 @@ const SubjectTasks = () => {
         }
     };
 
+    const handleAddTask = (newTask) => {
+        setTasks(prevTasks => [...prevTasks, newTask]);
+        refreshTasks(); // Optionally refresh after adding the task to get the latest state
+    };
+
     // Handler to close the AddTaskForm
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
@@ -84,10 +89,13 @@ const SubjectTasks = () => {
 
             {isAddTaskFormOpen && (
                 <AddTaskForm
-                    initialSubject={subject?.subjectName || ''}
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
-                    refreshTasks={refreshTasks}
+                    onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
+                    refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
+                    initialSubject = {subject?.subjectName}
+                    initialProject = {null}
+                    initialDueDate = {null}
                 />
             )}
 
@@ -96,10 +104,13 @@ const SubjectTasks = () => {
                     {/* Conditional Rendering for Subject Name */}
                     Upcoming Tasks for {subject?.subjectName ? subject.subjectName : "Loading..."}
                 </h1>
-                
+
                 {/* Conditional Rendering for Tasks Table */}
                 {subject?.subjectName ? (
-                    <TasksTable tasks={tasks} refreshTasks={refreshTasks} />
+                    <TasksTable
+                        tasks={tasks}
+                        refreshTasks={refreshTasks}
+                    />
                 ) : (
                     // Display spinner with loading message
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
