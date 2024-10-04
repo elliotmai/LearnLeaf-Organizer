@@ -56,12 +56,15 @@ const TaskList = () => {
     };
 
     const handleDeleteTask = async (taskId) => {
-        try {
-            await deleteTask(taskId);
-            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
-            refreshTasks(); // Refresh the task list after deletion
-        } catch (error) {
-            console.error('Error deleting task:', error);
+        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        if (confirmation) {
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+                refreshTasks(); // Refresh the task list after deletion
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
         }
     };
 
@@ -91,9 +94,10 @@ const TaskList = () => {
                 />
             )}
 
+            <h1 style={{ color: '#907474' }}>{user?.name}'s Upcoming Tasks</h1>
+
             <div className="task-list">
-                <h1 style={{ color: '#907474' }}>{user?.name}'s Upcoming Tasks</h1>
-                
+
                 {/* Conditional Rendering for Spinner and TasksTable */}
                 {isLoading ? (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>

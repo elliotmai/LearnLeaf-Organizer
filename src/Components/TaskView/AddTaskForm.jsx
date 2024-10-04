@@ -53,31 +53,39 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
     const [newProjectName, setNewProjectName] = useState('');
     const [taskDetails, setTaskDetails] = useState({
         userId: user.id,
-        subject: initialSubject || '',
+        subject: '',  // Start with an empty string, meaning "None" by default.
         assignment: '',
         priority: 'Medium',
         status: 'Not Started',
         startDateInput: '',
         dueDateInput: initialDueDate || '',
         dueTimeInput: '',
-        project: initialProject || '',
+        project: '',  // Start with an empty string.
     });
-
+    
     useEffect(() => {
-        async function loadSubjects() {
-            const fetchedSubjects = await fetchSubjects(user.id);
-            setSubjects(fetchedSubjects);
-        }
-        loadSubjects();
-    }, [user.id]);
-
-    useEffect(() => {
-        async function loadProjects() {
-            const fetchedProjects = await fetchProjects(user.id);
-            setProjects(fetchedProjects);
-        }
-        loadProjects();
-    }, [user.id]);
+        const loadSubjectsAndProjects = async () => {
+            try {
+                const fetchedSubjects = await fetchSubjects(user.id, null);
+                const fetchedProjects = await fetchProjects(user.id, null);
+    
+                setSubjects(fetchedSubjects);
+                setProjects(fetchedProjects);
+    
+                // Only update taskDetails if initial values are found in fetched data
+                setTaskDetails(prevDetails => ({
+                    ...prevDetails,
+                    subject: fetchedSubjects.some(subj => subj.subjectName === initialSubject) ? initialSubject : '',
+                    project: fetchedProjects.some(proj => proj.projectName === initialProject) ? initialProject : ''
+                }));
+    
+            } catch (error) {
+                console.error('Error fetching subjects or projects:', error);
+            }
+        };
+    
+        loadSubjectsAndProjects();
+    }, [user?.id]);    
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -158,14 +166,14 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
         <Modal open={isOpen} onClose={onClose}>
             <Box sx={boxStyle}>
                 <h2 style={{ color: "#8E5B9F" }}>Add a New Task</h2>
-                <form noValidate autoComplete="off" onSubmit={handleSubmit}>
+                <form noValidate autoComplete="on" onSubmit={handleSubmit}>
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="subject-label">Subject</InputLabel>
                         <Select
                             labelId="subject-label"
                             id="subject"
                             name="subject"
-                            value={isNewSubject ? 'newSubject' : taskDetails.subject}
+                            value={isNewSubject ? 'newSubject' : taskDetails.subject || ''}
                             onChange={handleInputChange}
                             required
                         >
@@ -191,7 +199,12 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
 
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="priority-label">Priority</InputLabel>
-                        <Select labelId="priority-label" id="priority" value={taskDetails.priority} name="priority" onChange={handleInputChange}>
+                        <Select 
+                        labelId="priority-label" 
+                        id="priority" 
+                        value={'Medium'}
+                        name="priority" 
+                        onChange={handleInputChange}>
                             <MenuItem value="High">High</MenuItem>
                             <MenuItem value="Medium">Medium</MenuItem>
                             <MenuItem value="Low">Low</MenuItem>
@@ -200,7 +213,12 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
 
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="status-label">Status</InputLabel>
-                        <Select labelId="status-label" id="status" value={taskDetails.status} name="status" onChange={handleInputChange}>
+                        <Select 
+                        labelId="status-label" 
+                        id="status" 
+                        value={'Not Started'}
+                        name="status" 
+                        onChange={handleInputChange}>
                             <MenuItem value="Not Started">Not Started</MenuItem>
                             <MenuItem value="In Progress">In Progress</MenuItem>
                             <MenuItem value="Completed">Completed</MenuItem>
@@ -216,7 +234,7 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                             labelId="project-label"
                             id="project"
                             name="project"
-                            value={isNewProject ? "newProject" : taskDetails.project}
+                            value={isNewProject ? "newProject" : taskDetails.project || ''}
                             onChange={handleInputChange}
                             required
                         >

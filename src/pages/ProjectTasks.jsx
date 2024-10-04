@@ -138,6 +138,11 @@ const ProjectTasks = () => {
         return filteredTasks;
     };
 
+    const handleAddTask = (newTask) => {
+        setTasks(prevTasks => [...prevTasks, newTask]);
+        refreshTasks(); // Optionally refresh after adding the task to get the latest state
+    };
+
     const clearFilters = () => {
         setFilterCriteria({
             searchQuery: '',
@@ -156,11 +161,13 @@ const ProjectTasks = () => {
             <button className="fab" onClick={toggleFormVisibility}>+</button>
             {isAddTaskFormOpen && (
                 <AddTaskForm
-                    initialProject={project?.projectName || ''}
-                    initialSubject={project?.subject || ''}
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
-                    refreshTasks={refreshTasks}
+                    onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
+                    refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
+                    initialSubject = {project.subject}
+                    initialProject = {project.projectName}
+                    initialDueDate = {null}
                 />
             )}
 
