@@ -72,7 +72,7 @@ button {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: fit-content;
     background-color: rgb(178 178 178 / 51%);
     z-index: 1000;
 }

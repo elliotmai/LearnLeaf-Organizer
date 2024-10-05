@@ -52,6 +52,7 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
         taskId: task.taskId,
         subject: '',  // Start with an empty string, meaning "None" by default.
         assignment: task.assignment || '',
+        description: task.description || '',
         priority: task.priority || 'Medium',
         status: task.status || 'Not Started',
         startDate: task.startDate || '',
@@ -134,11 +135,12 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                 subject: formValues.subject,
                 project: formValues.project,
                 assignment: formValues.assignment,
+                description: formValues.description,
                 priority: formValues.priority,
                 status: formValues.status,
-                startDateInput: formValues.startDate, 
-                dueDateInput: formValues.dueDate,     
-                dueTimeInput: formValues.dueTime,     
+                startDate: formValues.startDate, 
+                dueDate: formValues.dueDate,     
+                dueTime: formValues.dueTime,     
             };
 
             // Check if "None" was selected for subject or project and replace with an empty string
@@ -219,6 +221,16 @@ export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
                         name="assignment"
                         value={formValues.assignment ? formValues.assignment : ''}
                         onChange={handleInputChange}
+                    />
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Description"
+                        name="description"
+                        value={formValues.description ? formValues.description : ''}
+                        onChange={handleInputChange}
+                        multiline
+                        maxRows={4}
                     />
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="priority-label">Priority</InputLabel>
