@@ -491,10 +491,16 @@ export async function editTask(taskDetails) {
         subject,
         project,
         assignment,
-        description,
         priority,
         status,
     };
+
+    if (description != undefined){
+        taskData.description = description;
+    }
+    else {
+        taskData.description = '';
+    }
 
     /// Handling startDate
     if (startDate !== undefined && startDate !== '') {
