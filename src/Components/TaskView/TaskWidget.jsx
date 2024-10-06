@@ -6,7 +6,7 @@ import {TaskEditForm} from '/src/Components/TaskView/EditForm.jsx'
 import { debounce } from 'lodash';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
+const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -81,46 +81,61 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
 
     const handleSave = async (editedTask) => {
         try {
-            console.log('edited task: ', editTask);
+            console.log('edited task: ', editedTask);  // (corrected log statement)
             let updatedTask = { ...editedTask };
-
+    
             let subjectAdded = false;
             let projectAdded = false;
-
+    
             // If a new subject is being added
             if (isNewSubject && newSubjectName) {
-                const newSubjectDetails = { userId: updatedTask.userId, subjectName: newSubjectName, semester: '', subjectColor: 'black' };
+                const newSubjectDetails = {
+                    userId: updatedTask.userId,
+                    subjectName: newSubjectName,
+                    semester: '',
+                    subjectColor: 'black'
+                };
                 await addSubject(newSubjectDetails);
                 updatedTask.subject = newSubjectName;
                 subjectAdded = true;  // Mark subject as added
             }
-
+    
             // If a new project is being added
             if (isNewProject && newProjectName) {
-                const newProjectDetails = { userId: updatedTask.userId, projectName: newProjectName, subject: '' };
+                const newProjectDetails = {
+                    userId: updatedTask.userId,
+                    projectName: newProjectName,
+                    subject: ''
+                };
                 await addProject(newProjectDetails);
                 updatedTask.project = newProjectName;
                 projectAdded = true;  // Mark project as added
             }
-
+    
             // Save the task with the new subject or project
             await editTask(updatedTask);
-
-            // setOpenSnackbar(true); // Show Snackbar on successful save
-
+    
+            // Only after a successful save, update the local state
+            onUpdateTask(updatedTask);
+    
+            // Show the Snackbar indicating success
+            setOpenSnackbar(true);
+    
+            // Close the edit modal if it was open
             if (isEditModalOpen) {
-                setEditModalOpen(false); // Close the edit modal
+                setEditModalOpen(false);
             }
-
-            if (updatedTask)
-            {
-                refreshTasks(); // Force refresh if subject or project was added
-            }
-            
+    
+            // Optionally, refresh tasks if a new subject or project was added
+            // if (subjectAdded || projectAdded) {
+            //     refreshTasks();
+            // }
+    
         } catch (error) {
             console.error('Error updating task:', error);
+            // Optionally, show an error Snackbar or handle the error case
         }
-    };
+    };    
 
     const handleEditClick = (task) => {
         setEditedTask({ ...task });
@@ -138,11 +153,7 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
                 task={editedTask}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
-                onSave={(updatedTask) => {
-                    // setTask(updatedTask);
-                    setEditModalOpen(false);
-                    refreshTasks();
-                }}
+                onSave={handleSave}               
             />
 
             <Card sx={{ minWidth: 275 }}>

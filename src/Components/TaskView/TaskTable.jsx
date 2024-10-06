@@ -11,6 +11,8 @@ import './TaskView.css';
 import '/src/Components/PageFormat.css';
 
 const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
+    // Set stateTasks to the value of initialTasks
+    const [stateTasks, setTasks] = useState(initialTasks);
     const [subjects, setSubjects] = useState([]);
     const [projects, setProjects] = useState([]);
     const [filterCriteria, setFilterCriteria] = useState({
@@ -54,6 +56,15 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
         loadSubjectsAndProjects();
     }, [user?.id]);
 
+    // Update the state when a task is updated
+    const updateTaskInState = (updatedTask) => {
+        setTasks((prevTasks) =>
+            prevTasks.map((task) =>
+                task.taskId === updatedTask.taskId ? updatedTask : task
+            )
+        );
+    };    
+
     // Debounce search query handling
     const handleSearchChange = useCallback(
         debounce((value) => {
@@ -85,6 +96,7 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
         }
     };
 
+    // Use stateTasks instead of initialTasks for filtering
     const getFilteredTasks = (tasks, filterCriteria) => {
         return tasks.filter((task) => {
             const matchesSearchQuery = filterCriteria.searchQuery === '' || task.assignment.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
@@ -128,7 +140,8 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
 
     const itemsPerRow = getItemsPerRow();
     const rowHeight = 550; // Adjust the item size based on the widget height
-    const filteredTasks = getFilteredTasks(initialTasks, filterCriteria);
+    // Use stateTasks for filtering
+    const filteredTasks = getFilteredTasks(stateTasks, filterCriteria);
     const totalRows = Math.ceil(filteredTasks.length / itemsPerRow);
 
     const Row = React.memo(({ index, style }) => {
@@ -149,6 +162,7 @@ const TasksTable = ({ tasks: initialTasks, refreshTasks, onDelete }) => {
                                         subjects={subjects}
                                         projects={projects}
                                         refreshTasks={refreshTasks}
+                                        onUpdateTask={updateTaskInState}
                                     />
                                 </Grid>
                             ) : null;
