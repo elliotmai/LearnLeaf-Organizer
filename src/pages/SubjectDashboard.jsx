@@ -66,7 +66,7 @@ const SubjectsDashboard = () => {
                 .then(fetchedSubjects => setSubjects(fetchedSubjects))
                 .catch(error => console.error("Error fetching subjects:", error));
 
-            console.log(subjects);
+            // console.log(subjects);
         }
     }, [user?.id]);
 
@@ -74,9 +74,9 @@ const SubjectsDashboard = () => {
     const onOpen = () => setIsOpen(true); // Function to open the modal
 
     const refreshSubjects = async () => {
-        console.log("Refreshing subjects...");
+        // console.log("Refreshing subjects...");
         const updatedSubjects = await fetchSubjects(user.id);
-        console.log("Successfully refreshed subjects");
+        // console.log("Successfully refreshed subjects");
         setSubjects(updatedSubjects);
     };
 
@@ -99,7 +99,7 @@ const SubjectsDashboard = () => {
     const itemsPerRow = getItemsPerRow();
     const rowHeight = 200; // Approximate height of each widget
     const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
-    console.log(filteredSubjects.length);
+    // console.log(filteredSubjects.length);
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
     return (

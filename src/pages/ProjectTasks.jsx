@@ -33,7 +33,7 @@ const ProjectTasks = () => {
                 .then(fetchedProjects => {
                     if (fetchedProjects.length > 0) {
                         setProject(fetchedProjects[0]);
-                        console.log("Project fetched: ", fetchedProjects[0]);
+                        // console.log("Project fetched: ", fetchedProjects[0]);
                     } else {
                         setProject(null);
                     }
@@ -53,7 +53,7 @@ const ProjectTasks = () => {
             fetchTasks(user.id, null, project.projectName)
                 .then(fetchedTasks => {
                     setTasks(fetchedTasks);
-                    console.log("Tasks fetched for project: ", project.projectName);
+                    // console.log("Tasks fetched for project: ", project.projectName);
                 })
                 .catch(error => console.error("Error fetching tasks for project:", error));
         }

@@ -20,14 +20,14 @@ const SubjectTasks = () => {
     // First useEffect to fetch the subject data
     useEffect(() => {
         if (user?.id && subjectId) {
-            console.log("Fetching subject...");
+            // console.log("Fetching subject...");
             setTasks([]); // Clear tasks while loading new subject
             fetchSubjects(user.id, subjectId)
                 .then(fetchedSubjects => {
-                    console.log("Fetched Subjects:", fetchedSubjects);
+                    // console.log("Fetched Subjects:", fetchedSubjects);
                     if (fetchedSubjects.length > 0) {
                         setSubject(fetchedSubjects[0]); // Set the first fetched subject
-                        console.log("Subject set: ", fetchedSubjects[0]);
+                        // console.log("Subject set: ", fetchedSubjects[0]);
                     } else {
                         setSubject(null);
                         console.log("No subjects found");
@@ -47,11 +47,11 @@ const SubjectTasks = () => {
     useEffect(() => {
         // Fetch tasks only if the subject has been set
         if (user?.id && subject?.subjectName) {
-            console.log("Fetching tasks for subject:", subject.subjectName); // Debugging output for subject name
+            // console.log("Fetching tasks for subject:", subject.subjectName); // Debugging output for subject name
             fetchTasks(user.id, subject.subjectName, null)
                 .then(fetchedTasks => {
                     setTasks(fetchedTasks);
-                    console.log("Fetched tasks:", fetchedTasks);
+                    // console.log("Fetched tasks:", fetchedTasks);
                 })
                 .catch(error => console.error("Error fetching tasks:", error));
         }
