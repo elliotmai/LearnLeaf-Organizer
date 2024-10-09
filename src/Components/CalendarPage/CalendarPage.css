@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 .rbc-time-header-gutter,
 .rbc-time-content > .rbc-time-gutter,
 .rbc-agenda-time-cell {
@@ -12,3 +13,15 @@
 .Calendar {
     width: 90%;
 }
+=======
+.rbc-time-header-gutter,
+.rbc-time-content > .rbc-time-gutter,
+.rbc-agenda-time-cell {
+    display: none !important;
+}
+
+.dialog-title {
+    color: #8E5B9F;
+    font-size: 24px;
+}
+>>>>>>> Stashed changes

@@ -24,6 +24,7 @@
     "date-fns": "^3.6.0",
     "firebase": "^10.6.0",
     "lodash.debounce": "^4.0.8",
+    "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-big-calendar": "^1.11.6",
     "react-color": "^2.19.3",

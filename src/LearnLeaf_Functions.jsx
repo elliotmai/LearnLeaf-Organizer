@@ -239,7 +239,7 @@ export function formatTimeDisplay(input) {
 }
 
 // Helper function to format Firestore Timestamp to "HH:MM AM/PM"
-function formatTime(input) {
+export function formatTime(input) {
     if (!input) {
         return ''; // Return empty string if input is undefined, null, etc.
     }
@@ -302,6 +302,7 @@ export async function fetchTasks(userId, subject = null, project = null) {
     const querySnapshot = await getDocs(q);
     const tasks = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        console.log({data});
         const color = subjectColors[data.subject] || 'defaultColor';
         return {
             ...data,
@@ -443,6 +444,8 @@ export async function fetchArchivedTasks(userId) {
 
 // Function to create a new task
 export async function addTask(taskDetails) {
+
+    console.log({taskDetails});
     const { userId, subject, project, assignment, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
 
     // Initialize taskData with fields that are always present
@@ -457,7 +460,7 @@ export async function addTask(taskDetails) {
 
     // Conditionally add dates and times if provided
     if (startDateInput) {
-        taskData.startDate = Timestamp.fromDate(new Date(startDateInput + "T00:00:00"));
+        taskData.startDate = Timestamp.fromDate(new Date(startDateInput + "T00:00:00"));    
     }
 
     if (dueDateInput) {

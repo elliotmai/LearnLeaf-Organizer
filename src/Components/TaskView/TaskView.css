@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 .task-list,
 .task-table {
     width: 100%;
@@ -28,3 +29,130 @@
     z-index: 1000; /* Ensure it appears above other content */
     transition: opacity 0.3s ease;
 }
+=======
+/* .task-list {
+    width: 100%;
+    justify-content: center;
+    align-content: center;
+} */
+
+.task-widgets {
+    padding: 20px; /* Padding around the entire grid */
+}
+
+.task-widget {
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* #tasksTable {
+    border-collapse: collapse;
+    width: 95%;
+    padding-top: 20px;
+    margin: 10px 3% 0px 3%;
+  }
+  
+  #tasksTable thead {
+    background-color: #5B8E9F;
+    color: white;
+  }
+  
+  #tasksTable th, #tasksTable td {
+    padding: 15px;
+    border: 1px solid #545454;
+    text-align: left;
+  }
+  
+  #tasksTable tbody tr:nth-child(even) {
+    background-color: #f3f2f2;
+  }
+
+  #tasksTable td {
+    word-wrap: break-word; /* Enable text wrapping inside cells */
+*/
+
+.filter-bar {
+    display: flex;
+    flex-direction: row;
+    width: 80%;
+    gap: 2%;
+    justify-content: center;
+    align-content: center;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 1%;
+}
+
+    .filter-bar select {
+        /* width: fit-content; */
+        padding: 8px;
+        margin-top: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    .filter-bar input[type="text"] {
+        /* width: fit-content; */
+        padding: 8px;
+        margin-top: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    
+    .filter-bar input[type="date"] {
+        /* padding: 8px; */
+        margin-top: 10px;
+        height: 60%;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    .filter-bar button {
+        background-color: #B6CDC8;
+        color: #355147;
+        font-size: 15px;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 25px 0px 30px 0px;
+    }
+
+    .clear-filters:hover {
+        background-color: #ff5252;
+    }
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+}
+
+    .filter-item label {
+        font-size: 14px;
+        font-weight: bold;
+        color: #355147;
+    }
+
+.filter-summary {
+    padding: 10px 10px;
+    background-color: #e8e8e8;
+    text-align: center;
+}
+
+.popup-notification {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4caf50; /* Green background */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Ensure it appears above other content */
+    transition: opacity 0.3s ease;
+}
+
+
+
+  
+>>>>>>> Stashed changes
