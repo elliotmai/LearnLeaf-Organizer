@@ -2,7 +2,7 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { fetchSubjects, fetchTasks } from '/src/LearnLeaf_Functions.jsx';
+import { fetchSubjects, fetchTasks, deleteTask } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -74,6 +74,19 @@ const SubjectTasks = () => {
         refreshTasks(); // Optionally refresh after adding the task to get the latest state
     };
 
+    const handleDeleteTask = async (taskId) => {
+        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        if (confirmation) {
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+                refreshTasks(); // Refresh the task list after deletion
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+    };
+
     // Handler to close the AddTaskForm
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
@@ -110,6 +123,7 @@ const SubjectTasks = () => {
                     <TasksTable
                         tasks={tasks}
                         refreshTasks={refreshTasks}
+                        onDelete={handleDeleteTask}
                     />
                 ) : (
                     // Display spinner with loading message
