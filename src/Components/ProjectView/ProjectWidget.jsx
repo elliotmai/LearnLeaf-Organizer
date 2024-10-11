@@ -1,34 +1,19 @@
 import React, { useState } from 'react';
-import {useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { archiveProject, deleteProject, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
 import ProjectTasks from '/src/pages/ProjectTasks.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import IconButton from '@mui/material/IconButton';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
+import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Link } from '@mui/material';
 import { EditProjectForm } from './EditProjectForm.jsx';
 
 const CustomIconButton = styled(IconButton)({
-    '&:hover': {
-        backgroundColor: '#9F6C5B',
-    },
+    color: '#9F6C5B'
 });
-
-const ArchiveButton = styled(Button)(({ theme }) => ({
-    backgroundColor: theme.palette.warning.main,
-    color: '#fff',
-    '&:hover': {
-        backgroundColor: theme.palette.warning.dark,
-    },
-}));
 
 const ProjectWidget = ({ project, refreshProjects }) => {
     const [editedProject, setEditedProject] = useState({
@@ -93,28 +78,24 @@ const ProjectWidget = ({ project, refreshProjects }) => {
             />
             <Card
                 sx={{
-                    mb: 2,
-                    backgroundColor: '#f4f6f7', // Matching background color from SubjectWidget
-                    border: '2px solid black', // Black border as requested
-                    borderRadius: 2,
+                    border: '3px solid', // Add border style to make it visible
+                    borderRadius: '8px',
+                    borderColor: 'black', // Use dynamic color value
                 }}
             >
                 <CardContent>
                     <Link
                         href={`/projects/${project.projectId}`} // Correct internal link for projects
+                        underline="hover"
                         variant="h6"
-                        underline="none" // Ensures no underline by default
+                        color="inherit"
                         sx={{
                             color: '#355147',
-                            fontSize: '20px', // Apply font size
-                            display: 'block', // Ensure it's a block element
-                            fontWeight: 'bold', // Apply bold weight
-                            marginBottom: '8px', // Spacing below the text
-                            paddingBottom: '5px', // Extra padding if needed
-                            '&:hover': {
-                                textDecoration: 'underline' // Hover effect for underline
-                            }
+                            display: 'block',
+                            fontWeight: 'bold',
+                            fontSize: '22px',
                         }}
+
                     >
                         {project.projectName}
                     </Link>
@@ -124,7 +105,14 @@ const ProjectWidget = ({ project, refreshProjects }) => {
                     </Typography>
 
                     {project.nextTaskName ? (
-                        <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}> {/* Custom color for next task */}
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: '#9F6C5B',
+                                fontWeight: 'bold',
+                                paddingBottom: '1rem'
+                            }}
+                        > {/* Custom color for next task */}
                             Next Task: {project.nextTaskName} <br />
                             {project.nextTaskDueDate ? (
                                 <>
@@ -135,61 +123,121 @@ const ProjectWidget = ({ project, refreshProjects }) => {
                             )}
                         </Typography>
                     ) : (
-                        <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}> {/* Custom color for no tasks */}
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: '#9F6C5B',
+                                fontWeight: 'bold'
+                            }}
+                        > {/* Custom color for no tasks */}
                             No Upcoming Tasks
                         </Typography>
                     )}
 
-                    {/* PieChart with Conditional Legend */}
-                    {data.some(entry => entry.value > 0) && (
-                        <PieChart width={isLargeScreen ? 400 : 200} height={150}>
-                            <Pie
-                                data={data}
-                                cx="50%" // Center the chart on small screens
-                                cy="50%"
-                                outerRadius={70}
-                                innerRadius={40}
-                                fill="#8884d8"
-                                dataKey="value"
+                    {/* PieChart with Conditional Centering */}
+                    {data.some((entry) => entry.value > 0) && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: isLargeScreen ? 'flex-start' : 'center', // Center chart on small screens
+                                alignItems: 'center',
+                                mt: 2,
+                                mb: 2,
+                            }}
+                        >
+                            <PieChart
+                                width={isLargeScreen ? 400 : 300}
+                                height={isLargeScreen ? 150 : 200}
                             >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
+                                <Pie
+                                    data={data}
+                                    cx="50%" // Center the chart on small screens
+                                    cy="50%"
+                                    outerRadius={70}
+                                    innerRadius={40}
+                                    dataKey="value"
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
 
-                            {/* Conditionally Render Legend only for Large Screens */}
-                            {isLargeScreen && <Legend layout="vertical" verticalAlign="middle" align="right" />}
-                        </PieChart>
+                                {/* Conditionally Render Legend only for Large Screens */}
+                                {isLargeScreen ? (
+                                    <Legend
+                                        layout="vertical"
+                                        verticalAlign="middle"
+                                        align="right"
+                                    />
+                                ) : (
+                                    <Legend
+                                        layout="horizontal"
+                                        verticalAlign="bottom"
+                                        align="center"
+                                    />
+                                )}
+                            </PieChart>
+                        </Box>
                     )}
 
-                    <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }} gutterBottom> {/* Custom color for project due */}
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: '#9F6C5B',
+                            fontWeight: 'bold',
+                            paddingTop: '1rem'
+                        }}
+                    >
                         {project.projectDueDate
                             ? `Project Due: ${formatDateDisplay(project.projectDueDate)}${project.projectDueTime ? ` at ${formatTimeDisplay(project.projectDueTime)}` : ''}`
                             : 'No Due Date Set'}
                     </Typography>
-
-                    <Grid container spacing={1} justifyContent="space-between" alignItems="center">
-                        {project.status === "Active" && (
-                            <ArchiveButton
-                                variant="contained"
-                                onClick={handleArchiveProject}
-                                size="small"
-                                sx={{ backgroundColor: '#B6CDC8', color: '#355147', '&:hover': { backgroundColor: '#a8bdb8' }, mr: 2, ml: 1 }}
-                            >
-                                Archive
-                            </ArchiveButton>
-                        )}
-                        <Grid item>
-                            <CustomIconButton aria-label="edit" onClick={() => handleEditClick(project)}>
-                                <EditIcon />
-                            </CustomIconButton>
-                            <CustomIconButton aria-label="delete" onClick={() => handleDeleteClick(project.projectId)}>
-                                <DeleteIcon />
-                            </CustomIconButton>
-                        </Grid>
-                    </Grid>
                 </CardContent>
+                <CardActions
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                    }}
+                >
+                    {/* Edit Button on the far left */}
+                    <CustomIconButton
+                        aria-label="edit"
+
+                        onClick={() => handleEditClick(project)}
+                    >
+                        <EditIcon
+                            fontSize="medium"
+                        />
+                    </CustomIconButton>
+
+                    {/* Grouping Archive and Delete buttons on the right */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Button
+                            size="small"
+                            onClick={handleArchiveProject}
+                            variant="contained"
+                            sx={{
+                                backgroundColor: '#B6CDC8',
+                                color: '#355147',
+                                '&:hover': { backgroundColor: '#a8bdb8' },
+                                mr: 1 // Reduce the margin to make them closer
+                            }}
+                        >
+                            Archive
+                        </Button>
+
+                        <CustomIconButton
+                            aria-label="delete"
+                            onClick={() => handleDeleteClick(project.projectId)}
+                        >
+                            <DeleteIcon
+                                fontSize="medium"
+                            />
+                        </CustomIconButton>
+                    </div>
+                </CardActions>
             </Card>
         </>
     );

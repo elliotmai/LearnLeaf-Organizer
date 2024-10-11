@@ -45,6 +45,7 @@ export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
         userId: user.id,
         subjectName: '',
         semester: '',
+        description: '',
         subjectColor: 'black',
     });
 
@@ -87,6 +88,16 @@ export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
                         label="Semester"
                         value={subjectDetails.semester}
                         onChange={handleInputChange}
+                    />
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Description"
+                        name="description"
+                        value={subjectDetails.description}
+                        onChange={handleInputChange}
+                        multiline
+                        maxRows={4}
                     />
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
                         <ChromePicker

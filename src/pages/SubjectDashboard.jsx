@@ -97,7 +97,7 @@ const SubjectsDashboard = () => {
     };
 
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 200; // Approximate height of each widget
+    const rowHeight = 250; // Approximate height of each widget
     const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
     // console.log(filteredSubjects.length);
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);

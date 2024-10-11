@@ -66,6 +66,7 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                 userId: formValues.userId,
                 subjectName: formValues.subjectName,
                 semester: formValues.semester,
+                description: formValues.description,
                 subjectColor: formValues.subjectColor,
                 status: formValues.status,
             };
@@ -100,6 +101,16 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                         label="Semester"
                         value={formValues.semester}
                         onChange={handleChange}
+                    />
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Description"
+                        name="description"
+                        value={formValues.description}
+                        onChange={handleChange}
+                        multiline
+                        maxRows={4}
                     />
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
                         <ChromePicker
