@@ -154,9 +154,9 @@ export async function deleteUser(userId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    fetchTasks();
-});
+// document.addEventListener('DOMContentLoaded', function () {
+//     fetchTasks(user.id, null, null);
+// });
 
 // Helper function to format Firestore Timestamp to "day month, year"
 function formatDate(input) {
@@ -480,9 +480,9 @@ export async function addTask(taskDetails) {
 };
 
 export async function editTask(taskDetails) {
-    console.log('attempting to edit: ', taskDetails);
+    // console.log('attempting to edit: ', taskDetails);
     const { taskId, userId, subject, project, assignment, description, priority, status, startDate, dueDate, dueTime } = taskDetails;
-    console.log('dates/time: ', dueDate, dueTime, startDate);
+    // console.log('dates/time: ', dueDate, dueTime, startDate);
     const db = getFirestore(); // Initialize Firestore
 
     // Initialize taskData with fields that are always present
@@ -524,7 +524,7 @@ export async function editTask(taskDetails) {
         taskData.dueTime = deleteField(); // Clear field if dueTime is empty or dueDate is missing
     }
 
-    console.log('passing to fb: ', taskData);
+    // console.log('passing to fb: ', taskData);
 
     // Create a reference to the task document
     const taskDocRef = doc(db, "tasks", taskId);
@@ -585,7 +585,7 @@ export async function addSubject({ userId, subjectName, semester, subjectColor }
         subjectColor,
     };
 
-    console.log("Attmepting to add: ", subjectData);
+    // console.log("Attmepting to add: ", subjectData);
 
     try {
         // Assuming 'subjects' is the name of your collection

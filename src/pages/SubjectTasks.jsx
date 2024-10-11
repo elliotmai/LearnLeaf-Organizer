@@ -2,7 +2,7 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { fetchSubjects, fetchTasks } from '/src/LearnLeaf_Functions.jsx';
+import { fetchSubjects, fetchTasks, deleteTask } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -20,14 +20,14 @@ const SubjectTasks = () => {
     // First useEffect to fetch the subject data
     useEffect(() => {
         if (user?.id && subjectId) {
-            console.log("Fetching subject...");
+            // console.log("Fetching subject...");
             setTasks([]); // Clear tasks while loading new subject
             fetchSubjects(user.id, subjectId)
                 .then(fetchedSubjects => {
-                    console.log("Fetched Subjects:", fetchedSubjects);
+                    // console.log("Fetched Subjects:", fetchedSubjects);
                     if (fetchedSubjects.length > 0) {
                         setSubject(fetchedSubjects[0]); // Set the first fetched subject
-                        console.log("Subject set: ", fetchedSubjects[0]);
+                        // console.log("Subject set: ", fetchedSubjects[0]);
                     } else {
                         setSubject(null);
                         console.log("No subjects found");
@@ -47,11 +47,11 @@ const SubjectTasks = () => {
     useEffect(() => {
         // Fetch tasks only if the subject has been set
         if (user?.id && subject?.subjectName) {
-            console.log("Fetching tasks for subject:", subject.subjectName); // Debugging output for subject name
+            // console.log("Fetching tasks for subject:", subject.subjectName); // Debugging output for subject name
             fetchTasks(user.id, subject.subjectName, null)
                 .then(fetchedTasks => {
                     setTasks(fetchedTasks);
-                    console.log("Fetched tasks:", fetchedTasks);
+                    // console.log("Fetched tasks:", fetchedTasks);
                 })
                 .catch(error => console.error("Error fetching tasks:", error));
         }
@@ -72,6 +72,19 @@ const SubjectTasks = () => {
     const handleAddTask = (newTask) => {
         setTasks(prevTasks => [...prevTasks, newTask]);
         refreshTasks(); // Optionally refresh after adding the task to get the latest state
+    };
+
+    const handleDeleteTask = async (taskId) => {
+        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        if (confirmation) {
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+                refreshTasks(); // Refresh the task list after deletion
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
     };
 
     // Handler to close the AddTaskForm
@@ -110,6 +123,7 @@ const SubjectTasks = () => {
                     <TasksTable
                         tasks={tasks}
                         refreshTasks={refreshTasks}
+                        onDelete={handleDeleteTask}
                     />
                 ) : (
                     // Display spinner with loading message

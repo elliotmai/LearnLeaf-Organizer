@@ -53,7 +53,7 @@ export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
             setSubjects(fetchedSubjects || []);
         };
         loadSubjects();
-        console.log(subjects);
+        // console.log(subjects);
     }, [user.id]);
 
     const handleInputChange = (e) => {

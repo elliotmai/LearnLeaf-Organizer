@@ -2,7 +2,7 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { fetchProjects, fetchTasks, logoutUser } from '/src/LearnLeaf_Functions.jsx';
+import { fetchProjects, fetchTasks, logoutUser, deleteTask } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -33,7 +33,7 @@ const ProjectTasks = () => {
                 .then(fetchedProjects => {
                     if (fetchedProjects.length > 0) {
                         setProject(fetchedProjects[0]);
-                        console.log("Project fetched: ", fetchedProjects[0]);
+                        // console.log("Project fetched: ", fetchedProjects[0]);
                     } else {
                         setProject(null);
                     }
@@ -53,7 +53,7 @@ const ProjectTasks = () => {
             fetchTasks(user.id, null, project.projectName)
                 .then(fetchedTasks => {
                     setTasks(fetchedTasks);
-                    console.log("Tasks fetched for project: ", project.projectName);
+                    // console.log("Tasks fetched for project: ", project.projectName);
                 })
                 .catch(error => console.error("Error fetching tasks for project:", error));
         }
@@ -143,6 +143,19 @@ const ProjectTasks = () => {
         refreshTasks(); // Optionally refresh after adding the task to get the latest state
     };
 
+    const handleDeleteTask = async (taskId) => {
+        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        if (confirmation) {
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+                refreshTasks(); // Refresh the task list after deletion
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+    };
+
     const clearFilters = () => {
         setFilterCriteria({
             searchQuery: '',
@@ -165,9 +178,9 @@ const ProjectTasks = () => {
                     onClose={handleCloseAddTaskForm}
                     onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
                     refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
-                    initialSubject = {project.subject}
-                    initialProject = {project.projectName}
-                    initialDueDate = {null}
+                    initialSubject={project.subject}
+                    initialProject={project.projectName}
+                    initialDueDate={null}
                 />
             )}
 
@@ -178,7 +191,11 @@ const ProjectTasks = () => {
 
                 {/* Conditional Rendering for Tasks Table with Spinner */}
                 {project ? (
-                    <TasksTable tasks={tasks} refreshTasks={refreshTasks} />
+                    <TasksTable
+                        tasks={tasks}
+                        refreshTasks={refreshTasks}
+                        onDelete={handleDeleteTask}
+                    />
                 ) : (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                         <CircularProgress />
