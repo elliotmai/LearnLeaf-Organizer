@@ -575,15 +575,18 @@ export async function fetchSubjects(userId, subjectId = null) {
     return subjects;
 }
 
-export async function addSubject({ userId, subjectName, semester, subjectColor }) {
+export async function addSubject({ userId, subjectName, description, semester, subjectColor }) {
     const db = getFirestore(); // Initialize Firestore
     const subjectData = {
         userId,
         subjectName,
         semester,
+        description,
         status: 'Active', // Assuming new subjects are active by default
         subjectColor,
     };
+
+
 
     // console.log("Attmepting to add: ", subjectData);
 
@@ -597,7 +600,7 @@ export async function addSubject({ userId, subjectName, semester, subjectColor }
 }
 
 export async function editSubject(subjectDetails) {
-    const { subjectId, userId, subjectName, semester, subjectColor, status } = subjectDetails;
+    const { subjectId, userId, subjectName, semester, description, subjectColor, status } = subjectDetails;
 
     if (!subjectId) {
         throw new Error("subjectId is undefined, cannot update subject");
@@ -613,6 +616,15 @@ export async function editSubject(subjectDetails) {
         subjectColor,
         status,
     };
+
+    if (description != undefined){
+        subjectData.description = description;
+    }
+    else {
+        subjectData.description = '';
+    }
+
+
 
     // Create a reference to the task document
     const subjectDocRef = doc(db, "subjects", subjectId);
