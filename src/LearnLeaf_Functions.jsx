@@ -154,9 +154,9 @@ export async function deleteUser(userId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    fetchTasks();
-});
+// document.addEventListener('DOMContentLoaded', function () {
+//     fetchTasks(user.id, null, null);
+// });
 
 // Helper function to format Firestore Timestamp to "day month, year"
 function formatDate(input) {
@@ -443,7 +443,7 @@ export async function fetchArchivedTasks(userId) {
 
 // Function to create a new task
 export async function addTask(taskDetails) {
-    const { userId, subject, project, assignment, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    const { userId, subject, project, assignment, description, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
 
     // Initialize taskData with fields that are always present
     const taskData = {
@@ -451,6 +451,7 @@ export async function addTask(taskDetails) {
         subject,
         project,
         assignment,
+        description,
         priority,
         status,
     };
@@ -479,9 +480,9 @@ export async function addTask(taskDetails) {
 };
 
 export async function editTask(taskDetails) {
-    console.log('attempting to edit: ', taskDetails);
-    const { taskId, userId, subject, project, assignment, priority, status, startDate, dueDate, dueTime } = taskDetails;
-    // console.log(dueDateInput, dueTimeInput, startDateInput);
+    // console.log('attempting to edit: ', taskDetails);
+    const { taskId, userId, subject, project, assignment, description, priority, status, startDate, dueDate, dueTime } = taskDetails;
+    // console.log('dates/time: ', dueDate, dueTime, startDate);
     const db = getFirestore(); // Initialize Firestore
 
     // Initialize taskData with fields that are always present
@@ -494,17 +495,24 @@ export async function editTask(taskDetails) {
         status,
     };
 
+    if (description != undefined){
+        taskData.description = description;
+    }
+    else {
+        taskData.description = '';
+    }
+
     /// Handling startDate
     if (startDate !== undefined && startDate !== '') {
         taskData.startDate = Timestamp.fromDate(new Date(startDate + "T00:00:00"));
-    } else if (startDate === '') {
+    } else {
         taskData.startDate = deleteField(); // Clear field if empty
     }
 
     // Handling dueDate
     if (dueDate !== undefined && dueDate !== '') {
         taskData.dueDate = Timestamp.fromDate(new Date(dueDate + "T00:00:00"));
-    } else if (dueDate === '') {
+    } else {
         taskData.dueDate = deleteField(); // Clear field if empty
     }
 
@@ -512,11 +520,11 @@ export async function editTask(taskDetails) {
     if (dueTime !== undefined && dueTime !== '' && dueDate !== '') {
         const dateTimeString = dueDate + "T" + dueTime + ":00";
         taskData.dueTime = Timestamp.fromDate(new Date(dateTimeString));
-    } else if (dueTime === '' || dueDate === '') {
+    } else {
         taskData.dueTime = deleteField(); // Clear field if dueTime is empty or dueDate is missing
     }
 
-    console.log('passing to fb: ', taskData);
+    // console.log('passing to fb: ', taskData);
 
     // Create a reference to the task document
     const taskDocRef = doc(db, "tasks", taskId);
@@ -577,7 +585,7 @@ export async function addSubject({ userId, subjectName, semester, subjectColor }
         subjectColor,
     };
 
-    console.log("Attmepting to add: ", subjectData);
+    // console.log("Attmepting to add: ", subjectData);
 
     try {
         // Assuming 'subjects' is the name of your collection

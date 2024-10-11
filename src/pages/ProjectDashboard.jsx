@@ -74,7 +74,7 @@ const ProjectsDashboard = () => {
     };
 
     const getFilteredProjects = (projects, filterCriteria) => {
-        console.log(filterCriteria);
+        // console.log(filterCriteria);
         return projects.filter((project) => {
             const matchesSearchProject = filterCriteria.searchProject === '' || project.projectName.toLowerCase().includes(filterCriteria.searchProject.toLowerCase());
             const matchesSearchSubject = filterCriteria.searchSubject === '' || project.subject.toLowerCase().includes(filterCriteria.searchSubject.toLowerCase());
@@ -101,7 +101,7 @@ const ProjectsDashboard = () => {
 
     const itemsPerRow = getItemsPerRow();
     const filteredProjects = getFilteredProjects(projects, filterCriteria);
-    console.log(filteredProjects);
+    // console.log(filteredProjects);
 
     return (
         <div className="view-container">

@@ -55,6 +55,7 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
         userId: user.id,
         subject: '',  // Start with an empty string, meaning "None" by default.
         assignment: '',
+        description: '',
         priority: 'Medium',
         status: 'Not Started',
         startDateInput: '',
@@ -196,6 +197,7 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                         />
                     )}
                     <TextField fullWidth margin="normal" label="Assignment" name="assignment" value={taskDetails.assignment} onChange={handleInputChange} required />
+                    <TextField fullWidth margin="normal" label="Description" name="description" value={taskDetails.description} onChange={handleInputChange} multiline maxRows={4}/>
 
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="priority-label">Priority</InputLabel>

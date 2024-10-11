@@ -81,6 +81,7 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks }) => {
 
     const handleSave = async (editedTask) => {
         try {
+            // console.log('edited task: ', editTask);
             let updatedTask = { ...editedTask };
 
             let subjectAdded = false;
