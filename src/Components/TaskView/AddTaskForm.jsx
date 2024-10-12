@@ -158,7 +158,6 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
         }
 
         const newTask = { ...taskDetails, userId: user.id };
-        console.log("new task: ", newTask);
         const newTaskData = await addTask(newTask);
 
         if (newTaskData.dueDate != undefined) {

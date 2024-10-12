@@ -24,7 +24,6 @@ const TaskList = () => {
             fetchTasks(user.id, null, null)
                 .then(fetchedTasks => {
                     setTasks(fetchedTasks);
-                    console.log("fetched tasks: ", fetchedTasks);
                     setIsLoading(false);
                 })
                 .catch(error => {
