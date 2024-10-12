@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { addTask, fetchSubjects, addSubject, fetchProjects, addProject } from '/src/LearnLeaf_Functions.jsx';
+import { addTask, fetchSubjects, addSubject, fetchProjects, addProject, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -157,10 +157,24 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
             updatedTaskDetails.project = newProjectName;
         }
 
-        const newTask = await addTask({ ...taskDetails, userId: user.id });  // Add the new task
-        onAddTask(newTask);  // Immediately update the parent component with the new task
+        const newTask = { ...taskDetails, userId: user.id };
+        const newTaskData = await addTask(newTask);
+
+        if (newTaskData.dueDate != undefined) {
+            newTaskData.dueDate = formatDate(newTaskData.dueDate)
+        }
+
+        if (newTaskData.startDate != undefined) {
+            newTaskData.startDate = formatDate(newTaskData.startDate)
+        }
+
+        if (newTaskData.dueTime != undefined) {
+            newTaskData.dueTime = formatTime(newTaskData.dueTime)
+        }
+
+        onAddTask(newTaskData);  // Immediately update the parent component with the new task
         onClose();
-        refreshTasks();  // Optional: refresh tasks to ensure data consistency
+        // refreshTasks();  // Optional: refresh tasks to ensure data consistency
     };
 
     return (
