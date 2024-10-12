@@ -40,7 +40,7 @@ const SubjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                     </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                    <Grid container spacing={3} className="filter-bar">
+                    <Grid container spacing={1} className="filter-bar">
                         {/* Search Input: Full Width on Top */}
                         <Grid item xs={12} className="filter-item">
                             <TextField
@@ -53,7 +53,6 @@ const SubjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                                 placeholder="Search subjects..."
                             />
                         </Grid>
-
                         <Grid item xs={12} className="filter-item">
                             <TextField
                                 id="searchSemester"
@@ -63,6 +62,17 @@ const SubjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                                 value={filterCriteria.searchSemester}
                                 onChange={(e) => setFilterCriteria({ ...filterCriteria, searchSemester: e.target.value })}
                                 placeholder="Search semesters..."
+                            />
+                        </Grid>
+                        <Grid item xs={12} className="filter-item">
+                            <TextField
+                                id="searchDescription"
+                                label="Search Description"
+                                variant="outlined"
+                                fullWidth
+                                value={filterCriteria.searchDescription}
+                                onChange={(e) => setFilterCriteria({ ...filterCriteria, searchDescription: e.target.value })}
+                                placeholder="Search descriptions..."
                             />
                         </Grid>
 

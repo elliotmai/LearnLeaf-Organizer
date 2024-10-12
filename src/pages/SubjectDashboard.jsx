@@ -42,7 +42,8 @@ const SubjectsDashboard = () => {
     const navigate = useNavigate();
     const [filterCriteria, setFilterCriteria] = useState({
         searchSubject: '',
-        searchSemester: ''
+        searchSemester: '',
+        searchDescription: ''
     });
     
     const theme = useTheme();
@@ -84,20 +85,22 @@ const SubjectsDashboard = () => {
         return subjects.filter((subject) => {
             const matchesSearchSubject = filterCriteria.searchSubject === '' || subject.subjectName.toLowerCase().includes(filterCriteria.searchSubject.toLowerCase());
             const matchesSearchSemester = filterCriteria.searchSemester === '' || subject.semester.toLowerCase().includes(filterCriteria.searchSemester.toLowerCase())
+            const matchesSearchDescription = filterCriteria.searchDescription === '' || subject.description.toLowerCase().includes(filterCriteria.searchDescription.toLowerCase())
 
-            return matchesSearchSubject && matchesSearchSemester;
+            return matchesSearchSubject && matchesSearchSemester && matchesSearchDescription;
         });
     };
 
     const clearFilters = () => {
         setFilterCriteria({
             searchSubject: '',
-            searchSemester: ''
+            searchSemester: '',
+            searchDescription: ''
         });
     };
 
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 250; // Approximate height of each widget
+    const rowHeight = 280; // Approximate height of each widget
     const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
     // console.log(filteredSubjects.length);
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
