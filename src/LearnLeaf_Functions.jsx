@@ -159,7 +159,7 @@ export async function deleteUser(userId) {
 // });
 
 // Helper function to format Firestore Timestamp to "day month, year"
-function formatDate(input) {
+export function formatDate(input) {
     if (!input) {
         return ''; // Return empty string if input is undefined, null, etc.
     }
@@ -239,7 +239,7 @@ export function formatTimeDisplay(input) {
 }
 
 // Helper function to format Firestore Timestamp to "HH:MM AM/PM"
-function formatTime(input) {
+export function formatTime(input) {
     if (!input) {
         return ''; // Return empty string if input is undefined, null, etc.
     }
@@ -444,6 +444,7 @@ export async function fetchArchivedTasks(userId) {
 // Function to create a new task
 export async function addTask(taskDetails) {
     const { userId, subject, project, assignment, description, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    const taskId = `${userId}_${Date.now()}`;
 
     // Initialize taskData with fields that are always present
     const taskData = {
@@ -470,13 +471,17 @@ export async function addTask(taskDetails) {
         taskData.dueTime = Timestamp.fromDate(new Date(dateTimeString));
     }
 
+    const addedTask = {...taskData, taskId};
+
     // Assuming tasks are stored in a 'tasks' collection
     try {
-        await setDoc(doc(db, "tasks", `${userId}_${Date.now()}`), taskData);
+        await setDoc(doc(db, "tasks", taskId), taskData);
         console.log("Task added successfully");
     } catch (error) {
         console.error("Error adding task:", error);
     }
+
+    return addedTask;
 };
 
 export async function editTask(taskDetails) {

@@ -69,9 +69,39 @@ const SubjectTasks = () => {
         }
     };
 
+    const sortTasks = (tasks) => {
+        return tasks.sort((a, b) => {
+            // Convert date strings to Date objects for comparison
+            const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
+            const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+    
+            // Compare by dueDate first
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+    
+            // If due dates are the same, compare due times
+            // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
+            const timeA = a.dueTime ? a.dueTime : '23:59';
+            const timeB = b.dueTime ? b.dueTime : '23:59';
+    
+            if (timeA < timeB) return -1;
+            if (timeA > timeB) return 1;
+    
+            // Finally, compare assignments
+            return a.assignment.localeCompare(b.assignment);
+        });    
+    };    
+
     const handleAddTask = (newTask) => {
-        setTasks(prevTasks => [...prevTasks, newTask]);
-        refreshTasks(); // Optionally refresh after adding the task to get the latest state
+        if (!newTask) {
+            console.error("New task is undefined!");
+            return;
+        }
+    
+        setTasks((prevTasks) => {
+            const updatedTasks = [...prevTasks, newTask];
+            return sortTasks(updatedTasks);
+        });
     };
 
     const handleDeleteTask = async (taskId) => {
@@ -79,8 +109,10 @@ const SubjectTasks = () => {
         if (confirmation) {
             try {
                 await deleteTask(taskId);
-                setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
-                refreshTasks(); // Refresh the task list after deletion
+                setTasks((prevTasks) => {
+                    const updatedTasks = prevTasks.filter((task) => task.taskId !== taskId);
+                    return updatedTasks;
+                });
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -90,7 +122,20 @@ const SubjectTasks = () => {
     // Handler to close the AddTaskForm
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
-        refreshTasks(); // Optionally refresh tasks upon closing the form to reflect any changes
+    };
+
+    const updateTaskInState = (updatedTask) => {
+        setTasks((prevTasks) => {
+            let updatedTasks;
+            if (updatedTask.status !== 'Completed') {
+                updatedTasks = prevTasks.map((task) =>
+                    task.taskId === updatedTask.taskId ? updatedTask : task
+                );
+            } else {
+                updatedTasks = prevTasks.filter((task) => task.taskId !== updatedTask.taskId);
+            }
+            return sortTasks(updatedTasks);
+        });
     };
 
     return (
@@ -124,6 +169,7 @@ const SubjectTasks = () => {
                         tasks={tasks}
                         refreshTasks={refreshTasks}
                         onDelete={handleDeleteTask}
+                        onUpdateTask={updateTaskInState}
                     />
                 ) : (
                     // Display spinner with loading message
