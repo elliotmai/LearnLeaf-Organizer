@@ -3,3 +3,5 @@ clear
 lib
 node_modules
 .firebasesendgrid.env
+
+dist\assets
