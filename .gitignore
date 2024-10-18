@@ -3,4 +3,5 @@ clear
 lib
 node_modules
 .firebasesendgrid.env
+.DS_Store
 dist
