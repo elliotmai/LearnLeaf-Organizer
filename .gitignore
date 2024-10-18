@@ -4,5 +4,3 @@ lib
 node_modules
 .firebasesendgrid.env
 dist
-package-lock.json
-package.json
