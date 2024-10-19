@@ -584,48 +584,47 @@ export async function deleteTask(taskId) {
     }
 }
 
-export async function fetchSubjects(userId, subjectId = null) {
-    const db = getFirestore();
-    const subjectsRef = collection(db, "subjects");
+export async function fetchSubjects(subject = null) {
+    const subjectsRef = collection(db, "users/${userId}/subjects");
+
     let q;
 
-    if (subjectId) {
+    if (subject) {
         q = query(subjectsRef,
-            where("userId", "==", userId),
-            where("__name__", "==", subjectId));
+            where("__name__", "==", subject));
     }
     else {
         q = query(subjectsRef,
-            where("userId", "==", userId),
-            where("status", "==", "Active"));
+            where("subjectStatus", "==", "Active"));
     }
     const querySnapshot = await getDocs(q);
     const subjects = [];
     querySnapshot.forEach((doc) => {
-        subjects.push({ id: doc.id, ...doc.data() });
+        subjects.push({ subjectId: doc.id, ...doc.data() });
     });
 
     return subjects;
 }
 
-export async function addSubject({ userId, subjectName, description, semester, subjectColor }) {
-    const db = getFirestore(); // Initialize Firestore
+export async function addSubject({ userId, subjectName, subjectDescription, subjectSemester, subjectColor }) {
+    const subjectId = `${Date.now()}_${userId}`
+
     const subjectData = {
         userId,
         subjectName,
-        semester,
-        description,
-        status: 'Active', // Assuming new subjects are active by default
+        subjectSemester,
+        subjectDescription,
+        subjectStatus: 'Active', // Assuming new subjects are active by default
         subjectColor,
     };
 
-
-
     // console.log("Attmepting to add: ", subjectData);
 
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
+
     try {
-        // Assuming 'subjects' is the name of your collection
-        await setDoc(doc(db, "subjects", `${userId}_${Date.now()}`), subjectData);
+        await setDoc(subjectRef, subjectData);
+
         console.log("Subject added successfully");
     } catch (error) {
         console.error("Error adding subject:", error);
@@ -633,38 +632,28 @@ export async function addSubject({ userId, subjectName, description, semester, s
 }
 
 export async function editSubject(subjectDetails) {
-    const { subjectId, userId, subjectName, semester, description, subjectColor, status } = subjectDetails;
+    const { subjectId, userId, subjectName, subjectSemester, subjectDescription, subjectColor, subjectStatus } = subjectDetails;
 
     if (!subjectId) {
         throw new Error("subjectId is undefined, cannot update subject");
     }
 
-    const db = getFirestore(); // Initialize Firestore
-
     // Initialize subjectData with fields that are always present
     const subjectData = {
         userId,
         subjectName,
-        semester,
+        subjectDescription,
+        subjectSemester,
         subjectColor,
-        status,
+        subjectStatus,
     };
 
-    if (description != undefined) {
-        subjectData.description = description;
-    }
-    else {
-        subjectData.description = '';
-    }
-
-
-
-    // Create a reference to the task document
-    const subjectDocRef = doc(db, "subjects", subjectId);
+    // Create a reference to the subject document
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
 
     // Use updateDoc to update the task document
     try {
-        await updateDoc(subjectDocRef, subjectData);
+        await updateDoc(subjectRef, subjectData);
         console.log("Subject updated successfully");
     } catch (error) {
         console.error("Error updating subject:", error);
@@ -672,14 +661,14 @@ export async function editSubject(subjectDetails) {
 };
 
 export async function archiveSubject(subjectId) {
-    const db = getFirestore(); // Initialize Firestore
-    const subjectRef = doc(db, "subjects", subjectId);
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
 
     try {
         // Update the status field of the subject to 'Archived'
         await updateDoc(subjectRef, {
-            status: 'Archived'
+            subjectStatus: 'Archived'
         });
+
         console.log("Subject archived successfully");
     } catch (error) {
         console.error("Error archiving subject:", error);
@@ -687,27 +676,25 @@ export async function archiveSubject(subjectId) {
 }
 
 export async function fetchArchivedSubjects(userId) {
-    const db = getFirestore();
-    const subjectsRef = collection(db, "subjects");
-    const q = query(subjectsRef, where("userId", "==", userId), where("status", "==", "Archived"), orderBy("subjectName", "asc"));
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
+    const q = query(subjectRef, where("userId", "==", userId), where("subjectStatus", "==", "Archived"), orderBy("subjectName", "asc"));
 
     const querySnapshot = await getDocs(q);
     const archivedSubjects = [];
     querySnapshot.forEach((doc) => {
-        archivedSubjects.push({ id: doc.id, ...doc.data() });
+        archivedSubjects.push({ subjectId: doc.id, ...doc.data() });
     });
 
     return archivedSubjects;
 }
 
 export async function reactivateSubject(subjectId) {
-    const db = getFirestore(); // Initialize Firestore
-    const subjectRef = doc(db, "subjects", subjectId);
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
 
     try {
         // Update the status field of the subject to 'Active'
         await updateDoc(subjectRef, {
-            status: 'Active'
+            subjectStatus: 'Active'
         });
         console.log("Subject reactivated successfully");
     } catch (error) {
@@ -717,11 +704,10 @@ export async function reactivateSubject(subjectId) {
 
 // Function to delete a subject
 export async function deleteSubject(subjectId) {
-    const db = getFirestore(); // Initialize Firestore
-    const subjectDocRef = doc(db, "subjects", subjectId); // Create a reference to the task document
+    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
 
     try {
-        await deleteDoc(subjectDocRef); // Delete the document
+        await deleteDoc(subjectRef); // Delete the document
         console.log("Subject deleted successfully");
     } catch (error) {
         console.error("Error deleting subject:", error);
