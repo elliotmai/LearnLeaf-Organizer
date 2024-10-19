@@ -42,7 +42,7 @@ export function registerUser(email, password, name) {
                 timeFormat: '12h', // Initialize time format as 12 Hour
                 dateFormat: 'MM/DD/YYYY', // Initialize date format as MM/DD/YYYY
                 notifications: false, // Initialize notifications as Disabled
-                notificationsFrequency: [true,false,false,false], //Array to store frequency preferences - [None, Weekly, Daily, None], Initialized as None
+                notificationsFrequency: [true, false, false, false], //Array to store frequency preferences - [None, Weekly, Daily, None], Initialized as None
             });
         })
         .catch((error) => {
@@ -165,7 +165,7 @@ export function formatDate(input) {
         console.error('Unsupported date type:', input);
         return '';
     }
-  
+
     // Format the date to 'YYYY-MM-DD'
     let year = date.getFullYear();
     let month = (date.getMonth() + 1).toString().padStart(2, '0'); // JS months are 0-indexed
@@ -245,7 +245,7 @@ export function formatTime(input) {
         console.error('Unsupported time type:', input);
         return '';
     }
-  
+
     // Format the time to 'HH:MM'
     let hours = time.getHours().toString().padStart(2, '0');
     let minutes = time.getMinutes().toString().padStart(2, '0');
@@ -253,215 +253,266 @@ export function formatTime(input) {
 }
 
 export async function fetchTasks(userId, subject = null, project = null) {
-    const db = getFirestore();
-    let q;
+    try {
+        // Step 1: Start with the basic tasks query
+        let query = db.collection(`users/${userId}/tasks`).where('taskStatus', '!=', 'Completed');
 
-    // Construct the query based on the presence of subject or project
-    if (subject) {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-            where("subject", "==", subject),
-            where("status", "!=", "Completed")
-        );
-    } else if (project) {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-            where("project", "==", project),
-            where("status", "!=", "Completed")
-        );
-    } else {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-            where("status", "!=", "Completed")
-        );
-    }
-
-    const subjectColors = {};
-    const subjects = await fetchSubjects(userId, null);
-    subjects.forEach(subj => {
-        subjectColors[subj.subjectName] = subj.subjectColor;
-    });
-
-    const querySnapshot = await getDocs(q);
-    const tasks = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const color = subjectColors[data.subject] || 'defaultColor';
-        return {
-            ...data,
-            taskId: doc.id,
-            name: data.assignment,
-            subject: data.subject,
-            project: data.project,
-            priority: data.priority,
-            status: data.status,
-            // Convert Firestore Timestamps to JavaScript Date objects for display
-            startDate: formatDate(data.startDate),
-            dueDate: formatDate(data.dueDate),
-            dueTime: formatTime(data.dueTime),
-            subjectColor: color,
+        // Step 2: Conditionally filter by taskSubject if a subject is provided
+        if (subject) {
+            query = query.where('taskSubject', '==', db.doc(subject));
         }
-    });
 
-    // Sort tasks, placing those without a due date at the end
-    tasks.sort((a, b) => {
-        // Convert date strings to Date objects for comparison
-        const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-        const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+        // Step 3: Conditionally filter by taskProject if a project is provided
+        if (project) {
+            query = query.where('taskProject', '==', db.doc(project));
+        }
 
-        // Compare by dueDate first
-        if (dateA < dateB) return -1;
-        if (dateA > dateB) return 1;
+        // Step 4: Fetch the filtered tasks
+        const tasksSnapshot = await query.get();
 
-        // If due dates are the same, compare due times
-        // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-        const timeA = a.dueTime ? a.dueTime : '23:59';
-        const timeB = b.dueTime ? b.dueTime : '23:59';
+        const tasks = await Promise.all(tasksSnapshot.docs.map(async (taskDoc) => {
+            const taskData = taskDoc.data();
 
-        if (timeA < timeB) return -1;
-        if (timeA > timeB) return 1;
+            // Step 5: Get the project and subject information from references
+            const taskProjectRef = taskData.taskProject;
+            const taskSubjectRef = taskData.taskSubject;
 
-        // Finally, compare assignments
-        return a.assignment.localeCompare(b.assignment);
-    });
+            let projectData = {};
+            let subjectData = {};
 
-    return tasks;
+            // Step 6: Retrieve the project details if the taskProject reference exists
+            if (taskProjectRef) {
+                const projectDoc = await taskProjectRef.get();
+                if (projectDoc.exists) {
+                    const project = projectDoc.data();
+                    projectData = {
+                        projectName: project.projectName,
+                        projectId: projectDoc.id
+                    };
+                }
+            }
+
+            // Step 7: Retrieve the subject details if the taskSubject reference exists
+            if (taskSubjectRef) {
+                const subjectDoc = await taskSubjectRef.get();
+                if (subjectDoc.exists) {
+                    const subject = subjectDoc.data();
+                    subjectData = {
+                        subjectName: subject.subjectName,
+                        subjectColor: subject.subjectColor,
+                        subjectId: subjectDoc.id
+                    };
+                }
+            }
+
+            // Step 8: Combine task, project, and subject data
+            return {
+                taskDescription: taskData.taskDescription,
+                taskDueDate: formatDate(taskData.taskDueDate),
+                taskDueTime: formatTime(taskData.taskDueTime),
+                taskName: taskData.taskName,
+                taskPriority: taskData.taskPriority,
+                taskProject: projectData,
+                taskStartDate: formatDate(taskData.taskStartDate),
+                taskStatus: taskData.taskStatus,
+                taskSubject: subjectData,
+                taskId: taskDoc.id
+            };
+        }));
+
+        return tasks;
+
+    } catch (error) {
+        console.error("Error fetching tasks: ", error);
+    }
 }
 
 export async function fetchAllTasks(userId, subject = null, project = null) {
-    const db = getFirestore();
-    let q;
+    try {
+        // Step 1: Start with the basic tasks query
+        let query = db.collection(`users/${userId}/tasks`);
 
-    if (subject) {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-            where("subject", "==", subject),
-        );
-    } else if (project) {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-            where("project", "==", project),
-        );
-    } else {
-        q = query(
-            collection(db, "tasks"),
-            where("userId", "==", userId),
-        );
+        // Step 2: Conditionally filter by taskSubject if a subject is provided
+        if (subject) {
+            query = query.where('taskSubject', '==', db.doc(subject));
+        }
+
+        // Step 3: Conditionally filter by taskProject if a project is provided
+        if (project) {
+            query = query.where('taskProject', '==', db.doc(project));
+        }
+
+        // Step 4: Fetch the filtered tasks
+        const tasksSnapshot = await query.get();
+
+        const tasks = await Promise.all(tasksSnapshot.docs.map(async (taskDoc) => {
+            const taskData = taskDoc.data();
+
+            // Step 5: Get the project and subject information from references
+            const taskProjectRef = taskData.taskProject;
+            const taskSubjectRef = taskData.taskSubject;
+
+            let projectData = {};
+            let subjectData = {};
+
+            // Step 6: Retrieve the project details if the taskProject reference exists
+            if (taskProjectRef) {
+                const projectDoc = await taskProjectRef.get();
+                if (projectDoc.exists) {
+                    const project = projectDoc.data();
+                    projectData = {
+                        projectName: project.projectName,
+                        projectId: projectDoc.id
+                    };
+                }
+            }
+
+            // Step 7: Retrieve the subject details if the taskSubject reference exists
+            if (taskSubjectRef) {
+                const subjectDoc = await taskSubjectRef.get();
+                if (subjectDoc.exists) {
+                    const subject = subjectDoc.data();
+                    subjectData = {
+                        subjectName: subject.subjectName,
+                        subjectColor: subject.subjectColor,
+                        subjectId: subjectDoc.id
+                    };
+                }
+            }
+
+            // Step 8: Combine task, project, and subject data
+            return {
+                taskDescription: taskData.taskDescription,
+                taskDueDate: formatDate(taskData.taskDueDate),
+                taskDueTime: formatTime(taskData.taskDueTime),
+                taskName: taskData.taskName,
+                taskPriority: taskData.taskPriority,
+                taskProject: projectData,
+                taskStartDate: formatDate(taskData.taskStartDate),
+                taskStatus: taskData.taskStatus,
+                taskSubject: subjectData,
+                taskId: taskDoc.id
+            };
+        }));
+
+        return tasksAll;
+
+    } catch (error) {
+        console.error("Error fetching tasks: ", error);
     }
-
-    const querySnapshot = await getDocs(q);
-    const tasksAll = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            ...data,
-            taskId: doc.id,
-            startDate: formatDate(data.startDate),
-            dueDate: formatDate(data.dueDate),
-            dueTime: formatTime(data.dueTime),
-        };
-    });
-
-    tasksAll.sort((a, b) => {
-        // Convert date strings to Date objects for comparison
-        const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-        const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-
-        // Compare by dueDate first
-        if (dateA < dateB) return -1;
-        if (dateA > dateB) return 1;
-
-        // If due dates are the same, compare due times
-        // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-        const timeA = a.dueTime ? a.dueTime : '23:59';
-        const timeB = b.dueTime ? b.dueTime : '23:59';
-
-        if (timeA < timeB) return -1;
-        if (timeA > timeB) return 1;
-
-        // Finally, compare assignments
-        return a.assignment.localeCompare(b.assignment);
-    });
-
-    return tasksAll;
 }
 
 export async function fetchArchivedTasks(userId) {
-    const db = getFirestore();
-    const tasksRef = collection(db, "tasks");
-    const q = query(tasksRef,
-        where("userId", "==", userId),
-        where("status", "==", "Completed"));
+    try {
+        // Step 1: Start with the basic tasks query
+        let query = db.collection(`users/${userId}/tasks`).where('taskStatus', '==', 'Completed');
 
-    const querySnapshot = await getDocs(q);
-    const archivedTasks = [];
-    querySnapshot.forEach((doc) => {
-        archivedTasks.push({ id: doc.id, ...doc.data() });
-    });
+        // Step 2: Conditionally filter by taskSubject if a subject is provided
+        if (subject) {
+            query = query.where('taskSubject', '==', db.doc(subject));
+        }
 
-    // Sort tasks, placing those without a due date at the end
-    archivedTasks.sort((a, b) => {
-        // Convert date strings to Date objects for comparison
-        const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-        const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+        // Step 3: Conditionally filter by taskProject if a project is provided
+        if (project) {
+            query = query.where('taskProject', '==', db.doc(project));
+        }
 
-        // Compare by dueDate first
-        if (dateA < dateB) return -1;
-        if (dateA > dateB) return 1;
+        // Step 4: Fetch the filtered tasks
+        const tasksSnapshot = await query.get();
 
-        // If due dates are the same, compare due times
-        // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-        const timeA = a.dueTime ? a.dueTime : '23:59';
-        const timeB = b.dueTime ? b.dueTime : '23:59';
+        const tasks = await Promise.all(tasksSnapshot.docs.map(async (taskDoc) => {
+            const taskData = taskDoc.data();
 
-        if (timeA < timeB) return -1;
-        if (timeA > timeB) return 1;
+            // Step 5: Get the project and subject information from references
+            const taskProjectRef = taskData.taskProject;
+            const taskSubjectRef = taskData.taskSubject;
 
-        // Finally, compare assignments
-        return a.assignment.localeCompare(b.assignment);
-    });
+            let projectData = {};
+            let subjectData = {};
 
-    return archivedTasks;
+            // Step 6: Retrieve the project details if the taskProject reference exists
+            if (taskProjectRef) {
+                const projectDoc = await taskProjectRef.get();
+                if (projectDoc.exists) {
+                    const project = projectDoc.data();
+                    projectData = {
+                        projectName: project.projectName,
+                        projectId: projectDoc.id
+                    };
+                }
+            }
+
+            // Step 7: Retrieve the subject details if the taskSubject reference exists
+            if (taskSubjectRef) {
+                const subjectDoc = await taskSubjectRef.get();
+                if (subjectDoc.exists) {
+                    const subject = subjectDoc.data();
+                    subjectData = {
+                        subjectName: subject.subjectName,
+                        subjectColor: subject.subjectColor,
+                        subjectId: subjectDoc.id
+                    };
+                }
+            }
+
+            // Step 8: Combine task, project, and subject data
+            return {
+                taskDescription: taskData.taskDescription,
+                taskDueDate: formatDate(taskData.taskDueDate),
+                taskDueTime: formatTime(taskData.taskDueTime),
+                taskName: taskData.taskName,
+                taskPriority: taskData.taskPriority,
+                taskProject: projectData,
+                taskStartDate: formatDate(taskData.taskStartDate),
+                taskStatus: taskData.taskStatus,
+                taskSubject: subjectData,
+                taskId: taskDoc.id
+            };
+        }));
+
+        return archivedTasks;
+
+    } catch (error) {
+        console.error("Error fetching tasks: ", error);
+    }
 }
 
 // Function to create a new task
 export async function addTask(taskDetails) {
-    const { userId, subject, project, assignment, description, priority, status, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
-    const taskId = `${userId}_${Date.now()}`;
+    const { userId, taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    const taskId = `${Date.now()}_${userId}`;
 
     // Initialize taskData with fields that are always present
     const taskData = {
         userId,
-        subject,
-        project,
-        assignment,
-        description,
-        priority,
-        status,
+        taskSubject,
+        taskProject,
+        taskName,
+        taskDescription,
+        taskPriority,
+        taskStatus,
     };
 
     // Conditionally add dates and times if provided
     if (startDateInput) {
-        taskData.startDate = Timestamp.fromDate(new Date(startDateInput + "T00:00:00"));
+        taskData.taskStartDate = Timestamp.fromDate(new Date(startDateInput + "T00:00:00"));
     }
 
     if (dueDateInput) {
-        taskData.dueDate = Timestamp.fromDate(new Date(dueDateInput + "T00:00:00"));
+        taskData.taskDueDate = Timestamp.fromDate(new Date(dueDateInput + "T00:00:00"));
     }
 
     if (dueTimeInput) {
         const dateTimeString = dueDateInput + "T" + dueTimeInput + ":00";
-        taskData.dueTime = Timestamp.fromDate(new Date(dateTimeString));
+        taskData.taskDueTime = Timestamp.fromDate(new Date(dateTimeString));
     }
 
-    const addedTask = {...taskData, taskId};
+    const addedTask = { ...taskData, taskId };
+    const taskRef = doc(db, `users/${userId}/tasks`, taskId);
 
-    // Assuming tasks are stored in a 'tasks' collection
     try {
-        await setDoc(doc(db, "tasks", taskId), taskData);
+        await setDoc(taskRef, taskData);
+
         console.log("Task added successfully");
     } catch (error) {
         console.error("Error adding task:", error);
@@ -472,57 +523,49 @@ export async function addTask(taskDetails) {
 
 export async function editTask(taskDetails) {
     // console.log('attempting to edit: ', taskDetails);
-    const { taskId, userId, subject, project, assignment, description, priority, status, startDate, dueDate, dueTime } = taskDetails;
-    // console.log('dates/time: ', dueDate, dueTime, startDate);
-    const db = getFirestore(); // Initialize Firestore
+    const { taskId, userId, taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, taskStartDate, taskDueDate, taskDueTime } = taskDetails;
 
     // Initialize taskData with fields that are always present
     const taskData = {
         userId,
-        subject,
-        project,
-        assignment,
-        priority,
-        status,
+        taskSubject,
+        taskProject,
+        taskName,
+        taskDescription,
+        taskPriority,
+        taskStatus,
     };
 
-    if (description != undefined){
-        taskData.description = description;
-    }
-    else {
-        taskData.description = '';
-    }
-
     /// Handling startDate
-    if (startDate !== undefined && startDate !== '') {
-        taskData.startDate = Timestamp.fromDate(new Date(startDate + "T00:00:00"));
+    if (taskStartDate !== undefined && taskStartDate !== '') {
+        taskData.taskStartDate = Timestamp.fromDate(new Date(taskStartDate + "T00:00:00"));
     } else {
-        taskData.startDate = deleteField(); // Clear field if empty
+        taskData.taskStartDate = deleteField(); // Clear field if empty
     }
 
     // Handling dueDate
-    if (dueDate !== undefined && dueDate !== '') {
-        taskData.dueDate = Timestamp.fromDate(new Date(dueDate + "T00:00:00"));
+    if (taskDueDate !== undefined && taskDueDate !== '') {
+        taskData.taskDueDate = Timestamp.fromDate(new Date(taskDueDate + "T00:00:00"));
     } else {
-        taskData.dueDate = deleteField(); // Clear field if empty
+        taskData.taskDueDate = deleteField(); // Clear field if empty
     }
 
     // Handling dueTime (only if dueDate exists)
-    if (dueTime !== undefined && dueTime !== '' && dueDate !== '') {
-        const dateTimeString = dueDate + "T" + dueTime + ":00";
-        taskData.dueTime = Timestamp.fromDate(new Date(dateTimeString));
+    if (taskDueTime !== undefined && taskDueTime !== '' && taskDueDate !== '') {
+        const dateTimeString = taskDueDate + "T" + taskDueTime + ":00";
+        taskData.taskDueTime = Timestamp.fromDate(new Date(dateTimeString));
     } else {
-        taskData.dueTime = deleteField(); // Clear field if dueTime is empty or dueDate is missing
+        taskData.taskDueTime = deleteField(); // Clear field if dueTime is empty or dueDate is missing
     }
 
     // console.log('passing to fb: ', taskData);
 
     // Create a reference to the task document
-    const taskDocRef = doc(db, "tasks", taskId);
+    const taskRef = doc(db, `users/${userId}/tasks`, taskId);
 
     // Use updateDoc to update the task document
     try {
-        await updateDoc(taskDocRef, taskData);
+        await updateDoc(taskRef, taskData);
         console.log("Task updated successfully");
     } catch (error) {
         console.error("Error updating task:", error);
@@ -531,11 +574,10 @@ export async function editTask(taskDetails) {
 
 
 export async function deleteTask(taskId) {
-    const db = getFirestore(); // Initialize Firestore
-    const taskDocRef = doc(db, "tasks", taskId); // Create a reference to the task document
+    const taskRef = doc(db, `users/${userId}/tasks`, taskId);
 
     try {
-        await deleteDoc(taskDocRef); // Delete the document
+        await deleteDoc(taskRef); // Delete the document
         console.log("Task deleted successfully");
     } catch (error) {
         console.error("Error deleting task:", error);
@@ -556,7 +598,7 @@ export async function fetchSubjects(userId, subjectId = null) {
         q = query(subjectsRef,
             where("userId", "==", userId),
             where("status", "==", "Active"));
-        }
+    }
     const querySnapshot = await getDocs(q);
     const subjects = [];
     querySnapshot.forEach((doc) => {
@@ -608,7 +650,7 @@ export async function editSubject(subjectDetails) {
         status,
     };
 
-    if (description != undefined){
+    if (description != undefined) {
         subjectData.description = description;
     }
     else {
