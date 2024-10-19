@@ -126,20 +126,6 @@ export async function logoutUser() {
 export async function deleteUser(userId) {
     const batch = writeBatch(db);
 
-    // Function to delete all documents in a collection where `userId` matches
-    const deleteCollectionByUserId = async (collectionName) => {
-        const q = query(collection(db, collectionName), where("userId", "==", userId));
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-    };
-
-    // Delete tasks, subjects, and projects
-    await deleteCollectionByUserId("tasks");
-    await deleteCollectionByUserId("subjects");
-    await deleteCollectionByUserId("projects");
-
     // Delete the user document
     const userDocRef = doc(db, "users", userId);
     batch.delete(userDocRef);
