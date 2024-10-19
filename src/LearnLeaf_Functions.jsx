@@ -584,14 +584,14 @@ export async function deleteTask(taskId) {
     }
 }
 
-export async function fetchSubjects(subject = null) {
+export async function fetchSubjects(subjectId = null) {
     const subjectsRef = collection(db, "users/${userId}/subjects");
 
     let q;
 
-    if (subject) {
+    if (subjectId) {
         q = query(subjectsRef,
-            where("__name__", "==", subject));
+            where("__name__", "==", subjectId));
     }
     else {
         q = query(subjectsRef,
