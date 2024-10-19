@@ -676,8 +676,8 @@ export async function archiveSubject(subjectId) {
 }
 
 export async function fetchArchivedSubjects(userId) {
-    const subjectRef = doc(db, `users/${userId}/subjects`, subjectId);
-    const q = query(subjectRef, where("userId", "==", userId), where("subjectStatus", "==", "Archived"), orderBy("subjectName", "asc"));
+    const subjectRef = doc(db, `users/${userId}/subjects`);
+    const q = query(subjectRef, where("subjectStatus", "==", "Archived"), orderBy("subjectName", "asc"));
 
     const querySnapshot = await getDocs(q);
     const archivedSubjects = [];
