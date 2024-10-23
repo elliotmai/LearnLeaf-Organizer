@@ -23,32 +23,62 @@ const TaskList = () => {
     useEffect(() => {
         if (user?.id) {
             setIsLoading(true);
-
+    
+            const loadFromLocalStorage = () => {
+                // Check if tasks, subjects, and projects exist in localStorage
+                const storedSubjects = localStorage.getItem('subjects');
+                const storedProjects = localStorage.getItem('projects');
+                const storedTasks = localStorage.getItem('tasks');
+    
+                if (storedSubjects && storedProjects && storedTasks) {
+                    // Parse and set the data from localStorage
+                    setSubjects(JSON.parse(storedSubjects));
+                    setProjects(JSON.parse(storedProjects));
+                    setTasks(JSON.parse(storedTasks));
+                    setIsLoading(false);
+                    console.log('Data loaded from localStorage');
+                    return true; // Indicate that data was loaded from localStorage
+                }
+    
+                return false; // Indicate that localStorage didn't have the data
+            };
+    
             const fetchData = async () => {
                 try {
                     // Fetch subjects first
                     const fetchedSubjects = await fetchSubjects(null);
                     setSubjects(fetchedSubjects);
-        
+    
                     // After subjects are fetched, fetch projects
                     const fetchedProjects = await fetchProjects(null);
                     setProjects(fetchedProjects);
-        
+    
                     // After projects are fetched, fetch tasks
                     const fetchedTasks = await fetchTasks(null, null);
                     setTasks(fetchedTasks);
+    
+                    // Store fetched data in localStorage for future use
+                    localStorage.setItem('subjects', JSON.stringify(fetchedSubjects));
+                    localStorage.setItem('projects', JSON.stringify(fetchedProjects));
+                    localStorage.setItem('tasks', JSON.stringify(fetchedTasks));
+    
                     setIsLoading(false);
-        
+                    console.log('Data fetched and saved to localStorage');
+    
                 } catch (error) {
                     console.error('Error fetching data:', error);
                     setIsLoading(false); // Set loading state to false in case of error
                 }
             };
-        
-            fetchData();
+    
+            // Try to load data from localStorage first, if not available, fetch from Firestore
+            const isLoadedFromLocalStorage = loadFromLocalStorage();
+            if (!isLoadedFromLocalStorage) {
+                fetchData();
+            }
         }
     }, [user?.id]);
-
+    
     const toggleFormVisibility = () => {
         setIsAddTaskFormOpen(!isAddTaskFormOpen);
     };

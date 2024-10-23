@@ -65,10 +65,6 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
     const [newSubjectName, setNewSubjectName] = useState('');
     const [newProjectName, setNewProjectName] = useState('');
 
-    useEffect(() => {
-        console.log('editing task: ', task);
-    }, [user?.id, task]);
-
     const handleInputChange = (event) => {
         const { name, value } = event.target;
 

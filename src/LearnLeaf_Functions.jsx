@@ -114,13 +114,13 @@ export function resetPassword(email) {
         });
 }
 
-// Function to handle user login
 export async function loginUser(email, password) {
     return signInWithEmailAndPassword(auth, email, password)
         .then(async (userCredential) => {
             // Signed in
             const user = userCredential.user;
             userId = user.uid;
+
             // Fetch user's details from Firestore using the db instance
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (!userDoc.exists()) {
@@ -136,10 +136,23 @@ export async function loginUser(email, password) {
                 dateFormat: userDoc.data().dateFormat,
                 notifications: userDoc.data().notifications,
                 notificationFrequency: userDoc.data().notificationsFrequency,
-            }
+            };
 
             // Set userId and collections
             setUserIdAndCollections(user.uid);
+
+            // Fetch all tasks, projects, and subjects for the user
+            const tasks = await fetchAllTasks();  // Fetch all tasks
+            const projects = await fetchProjects();  // Fetch all active projects
+            const subjects = await fetchSubjects();  // Fetch all active subjects
+
+            // Save the fetched data into localStorage
+            localStorage.setItem('user', JSON.stringify(userData));
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            localStorage.setItem('projects', JSON.stringify(projects));
+            localStorage.setItem('subjects', JSON.stringify(subjects));
+
+            console.log('User, tasks, projects, and subjects saved to localStorage');
 
             return userData;
         })
@@ -148,7 +161,7 @@ export async function loginUser(email, password) {
             console.error("Login error", error);
             throw error; // Propagate the error
         });
-}
+};
 
 export async function updateUserDetails(userId, userDetails) {
     const userDocRef = doc(db, "users", userId);
