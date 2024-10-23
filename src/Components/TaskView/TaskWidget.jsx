@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Snackbar } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
-import {TaskEditForm} from '/src/Components/TaskView/EditForm.jsx'
+import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import { debounce } from 'lodash';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdateTask }) => {
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks, onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -15,10 +15,6 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [openSnackbar, setOpenSnackbar] = useState(false); // State to control the Snackbar visibility
-
-    const toggleFormVisibility = () => {
-        setIsEditTaskFormOpen(!isEditTaskFormOpen);
-    };
 
     const handleTextFieldChange = useCallback(
         debounce((event) => {
@@ -36,19 +32,23 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
     const handleSelectChange = (event) => {
         const { name, value } = event.target;
 
-        if (name === 'subject') {
+        if (name === 'taskSubject') {
             if (value === 'newSubject') {
                 setIsNewSubject(true); // Show text field for new subject
+                // setFormValues((prevDetails) => ({ ...prevDetails, taskSubject: '' }));
             } else {
                 setIsNewSubject(false); // Hide the text field when another subject is selected
+                // setFormValues((prevDetails) => ({ ...prevDetails, taskSubject: value }));
             }
         }
 
-        if (name === 'project') {
+        if (name === 'taskProject') {
             if (value === 'newProject') {
                 setIsNewProject(true); // Show text field for new project
+                // setFormValues((prevDetails) => ({ ...prevDetails, taskProject: '' }));
             } else {
                 setIsNewProject(false); // Hide the text field when another project is selected
+                // setFormValues((prevDetails) => ({ ...prevDetails, taskProject: value }));
             }
         }
 
@@ -71,73 +71,55 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
         setNewProjectName('');
     }, [task]);
 
-    const getValidSubject = () => subjects.some(subj => subj.subjectName === formValues.subject) ? formValues.subject : '';
-    const getValidProject = () => projects.some(proj => proj.projectName === formValues.project) ? formValues.project : '';
-
-    const getSubjectColor = () => {
-        const selectedSubject = subjects.find(subj => subj.subjectName === formValues.subject);
-        return selectedSubject ? selectedSubject.subjectColor : 'black';
-    };
-
-    const handleSave = async (editedTask) => {
+    const handleSave = async () => {
         try {
-            let updatedTask = { ...editedTask };
-    
-            let subjectAdded = false;
-            let projectAdded = false;
-    
+            let updatedTask = { ...formValues };
+
             // If a new subject is being added
             if (isNewSubject && newSubjectName) {
                 const newSubjectDetails = {
-                    userId: updatedTask.userId,
                     subjectName: newSubjectName,
-                    semester: '',
+                    subjectSemester: '',
+                    subjectDescription: '',
                     subjectColor: 'black'
                 };
-                await addSubject(newSubjectDetails);
-                updatedTask.subject = newSubjectName;
-                subjectAdded = true;  // Mark subject as added
+                const subjectRef = await addSubject(newSubjectDetails);
+                updatedTask.taskSubject = subjectRef; // Update taskSubject with the new subject reference
             }
-    
+
             // If a new project is being added
             if (isNewProject && newProjectName) {
                 const newProjectDetails = {
-                    userId: updatedTask.userId,
                     projectName: newProjectName,
-                    subject: ''
+                    projectDescription: '',
+                    projectSubjects: [],
                 };
-                await addProject(newProjectDetails);
-                updatedTask.project = newProjectName;
-                projectAdded = true;  // Mark project as added
+                const projectRef = await addProject(newProjectDetails);
+                updatedTask.taskProject = projectRef; // Update taskProject with the new project reference
             }
-    
+
             // Save the task with the new subject or project
-            await editTask(updatedTask);
-    
+            const refreshedTask = await editTask(updatedTask);
+
             // Only after a successful save, update the local state
-            onUpdateTask(updatedTask);
-    
+            onUpdateTask(refreshedTask);
+
             // Show the Snackbar indicating success
             setOpenSnackbar(true);
-    
+
             // Close the edit modal if it was open
             if (isEditModalOpen) {
                 setEditModalOpen(false);
             }
-    
-            // Optionally, refresh tasks if a new subject or project was added
-            // if (subjectAdded || projectAdded) {
-            //     refreshTasks();
-            // }
-    
+
         } catch (error) {
             console.error('Error updating task:', error);
             // Optionally, show an error Snackbar or handle the error case
         }
-    };    
+    };
 
-    const handleEditClick = (task) => {
-        setEditedTask({ ...task });
+    const handleEditClick = () => {
+        setEditedTask({ ...formValues });
         setEditModalOpen(true); // Open the edit modal
     };
 
@@ -150,15 +132,17 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
             <TaskEditForm
                 key={editedTask.taskId}
                 task={editedTask}
+                subjects={subjects}
+                projects={projects}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
-                onSave={handleSave}               
+                onSave={onUpdateTask}
             />
 
             <Card sx={{ minWidth: 275 }}>
                 <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ color: getSubjectColor(), fontWeight: 'bold' }}>
-                        {formValues.assignment || 'Unnamed Task'}
+                    <Typography variant="h6" gutterBottom sx={{ color: formValues.taskSubject?.subjectColor, fontWeight: 'bold' }}>
+                        {formValues.taskName || 'Unnamed Task'}
                     </Typography>
 
                     <Grid container spacing={2}>
@@ -166,13 +150,13 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                             <FormControl fullWidth>
                                 <InputLabel>Subject</InputLabel>
                                 <Select
-                                    value={isNewSubject ? 'newSubject' : getValidSubject()}
-                                    name="subject"
+                                    value={isNewSubject ? 'newSubject' : formValues.taskSubject?.subjectId || formValues.taskSubject}
+                                    name="taskSubject"
                                     onChange={handleSelectChange}
                                 >
-                                    <MenuItem value="">Select Subject...</MenuItem>
+                                    <MenuItem value="None">Select Subject...</MenuItem>
                                     {subjects.map(subj => (
-                                        <MenuItem key={subj.subjectName} value={subj.subjectName}>
+                                        <MenuItem key={subj.subjectId} value={subj.subjectId}>
                                             {subj.subjectName}
                                         </MenuItem>
                                     ))}
@@ -197,13 +181,13 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                             <FormControl fullWidth>
                                 <InputLabel>Project</InputLabel>
                                 <Select
-                                    value={isNewProject ? 'newProject' : getValidProject()}
-                                    name="project"
+                                    value={isNewProject ? 'newProject' : formValues.taskProject?.projectId || formValues.taskProject}
+                                    name="taskProject"
                                     onChange={handleSelectChange}
                                 >
-                                    <MenuItem value="">Select Project...</MenuItem>
+                                    <MenuItem value="None">Select Project...</MenuItem>
                                     {projects.map(proj => (
-                                        <MenuItem key={proj.projectName} value={proj.projectName}>
+                                        <MenuItem key={proj.projectId} value={proj.projectId}>
                                             {proj.projectName}
                                         </MenuItem>
                                     ))}
@@ -228,8 +212,8 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                             <FormControl fullWidth>
                                 <InputLabel>Priority</InputLabel>
                                 <Select
-                                    name="priority"
-                                    value={formValues.priority || 'Medium'}
+                                    name="taskPriority"
+                                    value={formValues.taskPriority || 'Medium'}
                                     onChange={handleSelectChange}
                                 >
                                     <MenuItem value="High">High</MenuItem>
@@ -243,8 +227,8 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                             <FormControl fullWidth>
                                 <InputLabel>Status</InputLabel>
                                 <Select
-                                    name="status"
-                                    value={formValues.status || 'Not Started'}
+                                    name="taskStatus"
+                                    value={formValues.taskStatus || 'Not Started'}
                                     onChange={handleSelectChange}
                                 >
                                     <MenuItem value="Not Started">Not Started</MenuItem>
@@ -257,10 +241,10 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                         <Grid item xs={6}>
                             <TextField
                                 label="Start Date"
-                                name="startDate"
+                                name="taskStartDate"
                                 type="date"
-                                value={formValues.startDate || ''} // Ensure the field is cleared
-                                onChange={(e) => handleDateChange(e, 'startDate')}
+                                value={formValues.taskStartDate || ''} // Ensure the field is cleared
+                                onChange={(e) => handleDateChange(e, 'taskStartDate')}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
                             />
@@ -269,10 +253,10 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                         <Grid item xs={6}>
                             <TextField
                                 label="Deadline"
-                                name="dueDate"
+                                name="taskDueDate"
                                 type="date"
-                                value={formValues.dueDate || ''} // Ensure the field is cleared
-                                onChange={(e) => handleDateChange(e, 'dueDate')}
+                                value={formValues.taskDueDate || ''} // Ensure the field is cleared
+                                onChange={(e) => handleDateChange(e, 'taskDueDate')}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
                             />
@@ -281,9 +265,9 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                         <Grid item xs={12}>
                             <TextField
                                 label="Time Due"
-                                name="dueTime"
+                                name="taskDueTime"
                                 type="time"
-                                value={formValues.dueTime || ''}
+                                value={formValues.taskDueTime || ''}
                                 onChange={handleTimeFieldChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
@@ -340,7 +324,6 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                     </Button>
                 </CardActions>
 
-
                 {/* Snackbar Notification positioned at the top of the widget */}
                 <Snackbar
                     open={openSnackbar}
@@ -360,5 +343,5 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
     );
 };
 
-// Use React.memo correctly to wrap TaskWidget
+// Use React.memo to prevent unnecessary re-renders
 export default React.memo(TaskWidget);

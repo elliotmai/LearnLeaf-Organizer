@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
-import { fetchTasks, logoutUser, deleteTask } from '/src/LearnLeaf_Functions.jsx';
+import { fetchTasks, fetchSubjects, fetchProjects, deleteTask } from '/src/LearnLeaf_Functions.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -14,6 +14,8 @@ import '/src/Components/PageFormat.css';
 const TaskList = () => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [tasks, setTasks] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const { user, updateUser } = useUser();
     const navigate = useNavigate();
@@ -21,15 +23,29 @@ const TaskList = () => {
     useEffect(() => {
         if (user?.id) {
             setIsLoading(true);
-            fetchTasks(user.id, null, null)
-                .then(fetchedTasks => {
+
+            const fetchData = async () => {
+                try {
+                    // Fetch subjects first
+                    const fetchedSubjects = await fetchSubjects(null);
+                    setSubjects(fetchedSubjects);
+        
+                    // After subjects are fetched, fetch projects
+                    const fetchedProjects = await fetchProjects(null);
+                    setProjects(fetchedProjects);
+        
+                    // After projects are fetched, fetch tasks
+                    const fetchedTasks = await fetchTasks(null, null);
                     setTasks(fetchedTasks);
                     setIsLoading(false);
-                })
-                .catch(error => {
-                    console.error("Error fetching tasks:", error);
-                    setIsLoading(false);
-                });
+        
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    setIsLoading(false); // Set loading state to false in case of error
+                }
+            };
+        
+            fetchData();
         }
     }, [user?.id]);
 
@@ -39,7 +55,7 @@ const TaskList = () => {
 
     const refreshTasks = async () => {
         setIsLoading(true);
-        const updatedTasks = await fetchTasks(user.id, null, null);
+        const updatedTasks = await fetchTasks(null, null);
         setTasks(updatedTasks);
         setIsLoading(false);
     };
@@ -47,38 +63,38 @@ const TaskList = () => {
     const sortTasks = (tasks) => {
         return tasks.sort((a, b) => {
             // Convert date strings to Date objects for comparison
-            const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-            const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-    
+            const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
+            const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
+
             // Compare by dueDate first
             if (dateA < dateB) return -1;
             if (dateA > dateB) return 1;
-    
+
             // If due dates are the same, compare due times
             // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-            const timeA = a.dueTime ? a.dueTime : '23:59';
-            const timeB = b.dueTime ? b.dueTime : '23:59';
-    
+            const timeA = a.taskDueTime ? a.taskDueTime : '23:59';
+            const timeB = b.taskDueTime ? b.taskDueTime : '23:59';
+
             if (timeA < timeB) return -1;
             if (timeA > timeB) return 1;
-    
+
             // Finally, compare assignments
-            return a.assignment.localeCompare(b.assignment);
-        });    
-    };    
+            return a.taskName.localeCompare(b.taskName);
+        });
+    };
 
     const handleAddTask = (newTask) => {
         if (!newTask) {
             console.error("New task is undefined!");
             return;
         }
-    
+
         setTasks((prevTasks) => {
             const updatedTasks = [...prevTasks, newTask];
             return sortTasks(updatedTasks);
         });
     };
-    
+
 
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
@@ -100,9 +116,10 @@ const TaskList = () => {
     };
 
     const updateTaskInState = (updatedTask) => {
+        console.log(updatedTask);
         setTasks((prevTasks) => {
             let updatedTasks;
-            if (updatedTask.status !== 'Completed') {
+            if (updatedTask.taskStatus !== 'Completed') {
                 updatedTasks = prevTasks.map((task) =>
                     task.taskId === updatedTask.taskId ? updatedTask : task
                 );
@@ -111,16 +128,6 @@ const TaskList = () => {
             }
             return sortTasks(updatedTasks);
         });
-    };
-
-    const handleLogout = async () => {
-        try {
-            await logoutUser();
-            updateUser(null);
-            navigate('/');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
     };
 
     return (
@@ -136,6 +143,8 @@ const TaskList = () => {
                     onClose={handleCloseAddTaskForm}
                     onAddTask={handleAddTask}
                     refreshTasks={refreshTasks}
+                    subjects={subjects}
+                    projects={projects}
                 />
             )}
 
@@ -150,6 +159,8 @@ const TaskList = () => {
                 ) : (
                     <TasksTable
                         tasks={tasks}
+                        subjects={subjects}
+                        projects={projects}
                         refreshTasks={refreshTasks}
                         onDelete={handleDeleteTask}
                         onUpdateTask={updateTaskInState} // Pass update function to TasksTable

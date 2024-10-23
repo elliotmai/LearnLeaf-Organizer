@@ -10,17 +10,15 @@ import TaskFilterBar from '../../pages/TaskFilterBar';
 import './TaskView.css';
 import '/src/Components/PageFormat.css';
 
-const TasksTable = ({ tasks, refreshTasks, onDelete, onUpdateTask }) => {
-    const [subjects, setSubjects] = useState([]);
-    const [projects, setProjects] = useState([]);
+const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdateTask }) => {
     const [filterCriteria, setFilterCriteria] = useState({
         searchQuery: '',
-        priority: '',
-        status: '',
-        startDate: '',
-        startDateComparison: '',
-        dueDate: '',
-        dueDateComparison: '',
+        taskPriority: '',
+        taskStatus: '',
+        taskStartDate: '',
+        taskStartDateComparison: '',
+        taskDueDate: '',
+        taskDueDateComparison: '',
     });
 
     const { user } = useUser();
@@ -38,21 +36,6 @@ const TasksTable = ({ tasks, refreshTasks, onDelete, onUpdateTask }) => {
         if (isXLargeScreen) return 4;
         return 3; // Default to 3 items per row
     }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
-
-    useEffect(() => {
-        const loadSubjectsAndProjects = async () => {
-            try {
-                const fetchedSubjects = await fetchSubjects(user.id, null);
-                const fetchedProjects = await fetchProjects(user.id, null);
-                setSubjects(fetchedSubjects);
-                setProjects(fetchedProjects);
-            } catch (error) {
-                console.error('Error fetching subjects or projects:', error);
-            }
-        };
-
-        loadSubjectsAndProjects();
-    }, [user?.id]);
 
     // Debounce search query handling
     const handleSearchChange = useCallback(
@@ -87,22 +70,22 @@ const TasksTable = ({ tasks, refreshTasks, onDelete, onUpdateTask }) => {
 
     const getFilteredTasks = (tasks, filterCriteria) => {
         return tasks.filter((task) => {
-            const matchesSearchQuery = filterCriteria.searchQuery === '' || task.assignment.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
-            const matchesPriority = !filterCriteria.priority || task.priority === filterCriteria.priority;
-            const matchesStatus = !filterCriteria.status || task.status === filterCriteria.status;
+            const matchesSearchQuery = filterCriteria.searchQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
+            const matchesPriority = !filterCriteria.taskPriority || task.taskPriority === filterCriteria.taskPriority;
+            const matchesStatus = !filterCriteria.taskStatus || task.taskStatus === filterCriteria.taskStatus;
 
             let matchesStartDate = true;
-            if (filterCriteria.startDateComparison === "none") {
-                matchesStartDate = !task.startDate;
-            } else if (filterCriteria.startDate) {
-                matchesStartDate = filterByDate(task.startDate, filterCriteria.startDate, filterCriteria.startDateComparison);
+            if (filterCriteria.taskStartDateComparison === "none") {
+                matchesStartDate = !task.taskStartDate;
+            } else if (filterCriteria.taskStartDate) {
+                matchesStartDate = filterByDate(task.taskStartDate, filterCriteria.taskStartDate, filterCriteria.taskStartDateComparison);
             }
 
             let matchesDueDate = true;
-            if (filterCriteria.dueDateComparison === "none") {
-                matchesDueDate = !task.dueDate;
-            } else if (filterCriteria.dueDate) {
-                matchesDueDate = filterByDate(task.dueDate, filterCriteria.dueDate, filterCriteria.dueDateComparison);
+            if (filterCriteria.taskDueDateComparison === "none") {
+                matchesDueDate = !task.taskDueDate;
+            } else if (filterCriteria.taskDueDate) {
+                matchesDueDate = filterByDate(task.taskDueDate, filterCriteria.taskDueDate, filterCriteria.taskDueDateComparison);
             }
 
             return matchesSearchQuery && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
@@ -112,12 +95,12 @@ const TasksTable = ({ tasks, refreshTasks, onDelete, onUpdateTask }) => {
     const clearFilters = () => {
         setFilterCriteria({
             searchQuery: '',
-            priority: '',
-            status: '',
-            startDate: '',
-            startDateComparison: '',
-            dueDate: '',
-            dueDateComparison: '',
+            taskPriority: '',
+            taskStatus: '',
+            taskStartDate: '',
+            taskStartDateComparison: '',
+            taskDueDate: '',
+            taskDueDateComparison: '',
         });
     };
 

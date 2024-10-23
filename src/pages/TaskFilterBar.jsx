@@ -65,8 +65,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             <Select
                                                 labelId="statusFilterLabel"
                                                 id="statusFilter"
-                                                value={filterCriteria.status}
-                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, status: e.target.value })}
+                                                value={filterCriteria.taskStatus}
+                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, taskStatus: e.target.value })}
                                                 label="Status"
                                             >
                                                 <MenuItem value="">Show All</MenuItem>
@@ -82,8 +82,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             <Select
                                                 labelId="priorityFilterLabel"
                                                 id="priorityFilter"
-                                                value={filterCriteria.priority}
-                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, priority: e.target.value })}
+                                                value={filterCriteria.taskPriority}
+                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, taskPriority: e.target.value })}
                                                 label="Priority"
                                             >
                                                 <MenuItem value="">Show All</MenuItem>
@@ -105,8 +105,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             <Select
                                                 labelId="startDateFilterLabel"
                                                 id="startDateFilter"
-                                                value={filterCriteria.startDateComparison}
-                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, startDateComparison: e.target.value })}
+                                                value={filterCriteria.taskStartDateComparison}
+                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, taskStartDateComparison: e.target.value })}
                                                 label="Start Date"
                                             >
                                                 <MenuItem value="">Show All</MenuItem>
@@ -129,8 +129,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             InputLabelProps={{
                                                 shrink: true,
                                             }}
-                                            value={filterCriteria.startDate}
-                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, startDate: e.target.value })}
+                                            value={filterCriteria.taskStartDate}
+                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, taskStartDate: e.target.value })}
                                         />
                                     </Grid>
                                 </Grid>
@@ -145,8 +145,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             <Select
                                                 labelId="dueDateFilterLabel"
                                                 id="dueDateFilter"
-                                                value={filterCriteria.dueDateComparison}
-                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, dueDateComparison: e.target.value })}
+                                                value={filterCriteria.taskDueDateComparison}
+                                                onChange={(e) => setFilterCriteria({ ...filterCriteria, taskDueDateComparison: e.target.value })}
                                                 label="Due Date"
                                             >
                                                 <MenuItem value="">Show All</MenuItem>
@@ -169,8 +169,8 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                                             InputLabelProps={{
                                                 shrink: true,
                                             }}
-                                            value={filterCriteria.dueDate}
-                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, dueDate: e.target.value })}
+                                            value={filterCriteria.taskDueDate}
+                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, taskDueDate: e.target.value })}
                                         />
                                     </Grid>
                                 </Grid>
