@@ -178,7 +178,6 @@ const TaskList = () => {
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
                     onAddTask={handleAddTask}
-                    refreshTasks={refreshTasks}
                     subjects={subjects}
                     projects={projects}
                 />

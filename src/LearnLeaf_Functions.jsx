@@ -424,7 +424,7 @@ export async function fetchAllTasks(subject = null, project = null) {
         if (subject) {
             tasksQuery = query(
                 tasksQuery,
-                where('taskSubject', '==', doc(db, subject)) // Convert subject to DocumentReference
+                where('taskSubject', '==', doc(subjectCollection, subject)) // Convert subject to DocumentReference
             );
         }
 
@@ -432,7 +432,7 @@ export async function fetchAllTasks(subject = null, project = null) {
         if (project) {
             tasksQuery = query(
                 tasksQuery,
-                where('taskProject', '==', doc(db, project)) // Convert project to DocumentReference
+                where('taskProject', '==', doc(projectCollection, project)) // Convert project to DocumentReference
             );
         }
 
@@ -904,22 +904,46 @@ export async function archiveSubject(subjectId) {
     const subjectRef = doc(subjectCollection, subjectId);
 
     try {
-        // Update the status field of the subject to 'Archived'
+        // Step 1: Update the status field of the subject to 'Archived' in Firebase
         await updateDoc(subjectRef, {
             subjectStatus: 'Archived'
         });
 
-        // Update localStorage
+        // Step 2: Fetch all tasks that reference this subject from Firebase
+        const tasksQuery = query(taskCollection, where('taskSubject', '==', subjectRef));
+        const tasksSnapshot = await getDocs(tasksQuery);
+
+        // Step 3: Update the taskStatus of these tasks to 'Completed' in Firebase
+        const batch = writeBatch(db);  // Use a batch to update all tasks at once
+
+        tasksSnapshot.forEach(taskDoc => {
+            const taskRef = doc(taskCollection, taskDoc.id);
+            batch.update(taskRef, { taskStatus: 'Completed' });
+        });
+
+        await batch.commit();  // Commit the batch update
+
+        // Step 4: Update localStorage for tasks
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        const updatedTasks = storedTasks.map(task => {
+            if (task.taskSubject.subjectId === subjectId) {
+                return { ...task, taskStatus: 'Completed' };  // Update taskStatus in localStorage
+            }
+            return task;
+        });
+
+        localStorage.setItem('tasks', JSON.stringify(updatedTasks));  // Update tasks in localStorage
+
+        // Step 5: Update localStorage for subjects
         const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
         const updatedSubjects = storedSubjects.map(subject =>
             subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject
         );
-        localStorage.setItem('subjects', JSON.stringify(updatedSubjects));  // Update localStorage
+        localStorage.setItem('subjects', JSON.stringify(updatedSubjects));  // Update subjects in localStorage
 
-
-        console.log("Subject archived successfully");
+        console.log("Subject archived successfully, and related tasks updated in Firebase and localStorage.");
     } catch (error) {
-        console.error("Error archiving subject:", error);
+        console.error("Error archiving subject and updating tasks:", error);
     }
 }
 
@@ -1039,6 +1063,7 @@ export async function fetchProjects(projectId = null, projectStatus = null) {
 
             // Resolve subjects within the project
             const projectSubjects = projectData.projectSubjects || [];
+
             const subjectsPromises = projectSubjects.map(async (subjectRef) => {
                 const subjectDoc = await getDoc(subjectRef);
                 if (subjectDoc.exists()) {
@@ -1046,7 +1071,7 @@ export async function fetchProjects(projectId = null, projectStatus = null) {
                 }
                 return null;
             });
-
+            
             const subjects = await Promise.all(subjectsPromises);
 
             // Fetch tasks for this project
@@ -1064,7 +1089,7 @@ export async function fetchProjects(projectId = null, projectStatus = null) {
             return {
                 ...projectData,
                 projectId: projectDoc.id,
-                subjects: subjects.filter(s => s !== null),
+                projectSubjects: subjects.filter(s => s !== null),
                 nextTaskName: nextTask?.taskName,
                 nextTaskDueDate: nextTask?.taskDueDate,
                 nextTaskDueTime: nextTask?.taskDueTime,

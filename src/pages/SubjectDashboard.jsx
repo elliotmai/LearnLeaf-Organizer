@@ -80,8 +80,8 @@ const SubjectsDashboard = () => {
     const fetchData = async () => {
         try {
             // Fetch subjects from Firestore
-            const fetchedSubjects = await fetchSubjects(null, 'Active');
-            setSubjects(fetchedSubjects);
+            const fetchedSubjects = await fetchSubjects(null, null);
+            setSubjects(fetchedSubjects.filter(subject => subject.subjectStatus === 'Active'));
 
             // Store fetched data in localStorage for future use
             localStorage.setItem('subjects', JSON.stringify(fetchedSubjects));
@@ -131,7 +131,6 @@ const SubjectsDashboard = () => {
         });
     };
 
-    // Function to update a task and update both localStorage and state
     const handleSubject = () => {
 
         updateState();

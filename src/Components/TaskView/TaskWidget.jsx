@@ -69,9 +69,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
 
     const handleTimeFieldChange = (event) => {
         const { name, value } = event.target;
-        setFormValues((prevDetails) => ({ 
-            ...prevDetails, 
-            [name]: value }));
+        setFormValues((prevDetails) => ({
+            ...prevDetails,
+            [name]: value
+        }));
     };
 
     useEffect(() => {
@@ -228,6 +229,38 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                         )}
 
                         <Grid item xs={6}>
+                            <FormControl fullWidth>
+                                <InputLabel>Priority</InputLabel>
+                                <Select
+                                    value={formValues.taskPriority || 'Medium'}
+                                    name="taskPriority"
+                                    onChange={handleSelectChange}
+                                    className={isFieldUnsaved('taskPriority') ? 'unsaved-bg' : ''}
+                                >
+                                    <MenuItem value="High">High</MenuItem>
+                                    <MenuItem value="Medium">High</MenuItem>
+                                    <MenuItem value="Low">High</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        <Grid item xs={6}>
+                            <FormControl fullWidth>
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={formValues.taskStatus || 'Not Started'}
+                                    name="taskStatus"
+                                    onChange={handleSelectChange}
+                                    className={isFieldUnsaved('taskStatus') ? 'unsaved-bg' : ''}
+                                >
+                                    <MenuItem value="Not Started">Not Started</MenuItem>
+                                    <MenuItem value="In Progress">In Progress</MenuItem>
+                                    <MenuItem value="Completed">Completed</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        <Grid item xs={6}>
                             <TextField
                                 label="Start Date"
                                 name="taskStartDate"
@@ -282,7 +315,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                             onClick={handleSave}
                             variant="contained"
                             sx={{
-                                backgroundColor:'#B6CDC8',
+                                backgroundColor: '#B6CDC8',
                                 color: '#355147',
                                 '&:hover': { backgroundColor: '#a8bdb8' },
                                 mr: 3,

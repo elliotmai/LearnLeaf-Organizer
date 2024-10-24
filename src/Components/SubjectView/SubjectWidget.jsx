@@ -17,17 +17,20 @@ const CustomIconButton = styled(IconButton)({
 });
 
 const SubjectWidget = ({ subject, refreshSubjects }) => {
-    const [editedSubject, setEditedSubject] = useState({...subject});
+    const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
-        try {
-            await archiveSubject(subject.subjectId);
-            console.log("Subject archived successfully.");
-            refreshSubjects(); // Call refreshSubjects to update the dashboard
-        } catch (error) {
-            console.error("Error archiving subject:", error);
+        const confirmation = window.confirm("Are you sure you want to archive this subject?\nThis will mark all outstanding tasks as Completed.");
+        if (confirmation) {
+            try {
+                await archiveSubject(subject.subjectId);
+                console.log("Subject archived successfully.");
+                refreshSubjects(); // Call refreshSubjects to update the dashboard
+            } catch (error) {
+                console.error("Error archiving subject:", error);
+            }
         }
     };
 

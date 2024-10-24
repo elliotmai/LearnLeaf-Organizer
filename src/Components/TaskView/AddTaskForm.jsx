@@ -43,7 +43,7 @@ const cancelButtonStyle = {
     },
 };
 
-export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initialProject, initialDueDate, refreshTasks, subjects, projects }) {
+export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initialProject, initialDueDate, subjects, projects }) {
     const { user } = useUser();
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');

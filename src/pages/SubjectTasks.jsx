@@ -13,106 +13,150 @@ import '/src/Components/FormUI.css';
 const SubjectTasks = () => {
     const { subjectId } = useParams(); // Get subjectId from URL
     const { user } = useUser();
+    const [pageSubject, setPageSubject] = useState(null); // Initialize subject as null
     const [tasks, setTasks] = useState([]);
-    const [subject, setSubject] = useState(null); // Initialize subject as null
+    const [subjects, setSubjects] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
 
-    // First useEffect to fetch the subject data
-    useEffect(() => {
-        if (user?.id && subjectId) {
-            // console.log("Fetching subject...");
-            setTasks([]); // Clear tasks while loading new subject
-            fetchSubjects(user.id, subjectId)
-                .then(fetchedSubjects => {
-                    // console.log("Fetched Subjects:", fetchedSubjects);
-                    if (fetchedSubjects.length > 0) {
-                        setSubject(fetchedSubjects[0]); // Set the first fetched subject
-                        // console.log("Subject set: ", fetchedSubjects[0]);
-                    } else {
-                        setSubject(null);
-                        console.log("No subjects found");
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching subject:", error);
-                    setSubject(null);
-                });
-        } else {
-            setSubject(null);
-            console.log("User or subjectId is missing");
-        }
-    }, [user?.id, subjectId]); // This runs when the user or subjectId changes
+    const loadFromLocalStorage = () => {
+        // Parse and filter subjects, projects, and tasks from localStorage
+        const activeSubjects = (JSON.parse(localStorage.getItem('subjects')) || [])
+            .filter(subject => subject.subjectStatus === 'Active');
 
-    // Second useEffect to fetch the tasks after the subject is set
-    useEffect(() => {
-        // Fetch tasks only if the subject has been set
-        if (user?.id && subject?.subjectName) {
-            // console.log("Fetching tasks for subject:", subject.subjectName); // Debugging output for subject name
-            fetchTasks(user.id, subject.subjectName, null)
-                .then(fetchedTasks => {
-                    setTasks(fetchedTasks);
-                    // console.log("Fetched tasks:", fetchedTasks);
-                })
-                .catch(error => console.error("Error fetching tasks:", error));
+        const activeProjects = (JSON.parse(localStorage.getItem('projects')) || [])
+            .filter(project => project.projectStatus === 'Active');
+
+        const activeTasks = (JSON.parse(localStorage.getItem('tasks')) || [])
+            .filter(task => task.taskStatus !== 'Completed');
+
+        // Check if localStorage contains the required data
+        if (activeSubjects.length > 0 && activeProjects.length > 0 && activeTasks.length > 0) {
+            const sortedTasks = sortTasks(activeTasks.filter(task => task.taskSubject.subjectId === subjectId));
+            const foundSubject = activeSubjects.find(subject => subject.subjectId === subjectId);
+
+            if (foundSubject) {
+                setPageSubject(foundSubject);
+            } else {
+                console.error(`Subject with ID ${subjectId} not found`);
+            }
+
+            // Set the filtered data from localStorage
+            setSubjects(activeSubjects);
+            setProjects(activeProjects);
+            setTasks(sortedTasks);
+            setIsLoading(false);
+            console.log('Data loaded from localStorage');
+            return true; // Indicate that data was loaded from localStorage
         }
-    }, [user?.id, subject]); // Re-fetch tasks when the user or subject changes
+
+        return false; // Indicate that localStorage didn't have the data
+    };
+
+    const fetchData = async () => {
+        try {
+            // Fetch subjects from Firestore
+            const fetchedSubjects = await fetchSubjects(null, 'Active');
+            setSubjects(fetchedSubjects);
+
+            if (foundSubject) {
+                setPageSubject(foundSubject);
+            } else {
+                console.error(`Subject with ID ${subjectId} not found`);
+            }
+
+            const foundSubject = fetchedSubjects.find(subject => subject.subjectId === subjectId);
+
+            if (foundSubject) {
+                setPageSubject(foundSubject);
+            } else {
+                console.error(`Subject with ID ${subjectId} not found`);
+            }
+
+            // Fetch projects from Firestore
+            const fetchedProjects = await fetchProjects(null, 'Active');
+            setProjects(fetchedProjects);
+
+            // Fetch tasks from Firestore
+            const fetchedTasks = await fetchTasks(null, null);
+            const sortedTasks = sortTasks(fetchedTasks);
+            const filteredTasks = sortedTasks.filter(task => task.taskSubject.subjectId === subjectId);
+
+            setTasks(filteredTasks);
+
+            // Store fetched data in localStorage for future use
+            localStorage.setItem('subjects', JSON.stringify(fetchedSubjects));
+            localStorage.setItem('projects', JSON.stringify(fetchedProjects));
+            localStorage.setItem('tasks', JSON.stringify(sortedTasks));
+
+            setIsLoading(false);
+            console.log('Data fetched and saved to localStorage');
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setIsLoading(false); // Handle error and stop loading
+        }
+    };
+
+    const updateState = async () => {
+        setIsLoading(true);
+
+        // Try to load data from localStorage first, if not available, fetch from Firestore
+        const isLoadedFromLocalStorage = loadFromLocalStorage();
+        if (!isLoadedFromLocalStorage) {
+            fetchData(); // Fetch from Firestore if localStorage data is not available
+        }
+    }
+
+    useEffect(() => {
+        if (user?.id) {
+            updateState();
+        }
+    }, [user?.id]);
 
     const toggleFormVisibility = () => {
         setIsAddTaskFormOpen(!isAddTaskFormOpen);
     };
 
-    const refreshTasks = async () => {
-        // Fetch tasks from the database and update state
-        if (subject?.subjectName) {
-            const updatedTasks = await fetchTasks(user.id, subject.subjectName, null);
-            setTasks(updatedTasks);
-        }
-    };
-
     const sortTasks = (tasks) => {
         return tasks.sort((a, b) => {
             // Convert date strings to Date objects for comparison
-            const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-            const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-    
+            const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
+            const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
+
             // Compare by dueDate first
             if (dateA < dateB) return -1;
             if (dateA > dateB) return 1;
-    
+
             // If due dates are the same, compare due times
             // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-            const timeA = a.dueTime ? a.dueTime : '23:59';
-            const timeB = b.dueTime ? b.dueTime : '23:59';
-    
+            const timeA = a.taskDueTime ? a.taskDueTime : '23:59';
+            const timeB = b.taskDueTime ? b.taskDueTime : '23:59';
+
             if (timeA < timeB) return -1;
             if (timeA > timeB) return 1;
-    
-            // Finally, compare assignments
-            return a.assignment.localeCompare(b.assignment);
-        });    
-    };    
 
-    const handleAddTask = (newTask) => {
-        if (!newTask) {
-            console.error("New task is undefined!");
-            return;
-        }
-    
-        setTasks((prevTasks) => {
-            const updatedTasks = [...prevTasks, newTask];
-            return sortTasks(updatedTasks);
+            // Finally, compare assignments
+            return a.assignment.localeCompare(b.taskName);
         });
     };
 
+    const handleAddTask = (newTask) => {
+        updateState();
+
+        console.log("Task added, state and localStorage updated");
+    };
+
+    // Function to delete a task and update both localStorage and state
     const handleDeleteTask = async (taskId) => {
         const confirmation = window.confirm("Are you sure you want to delete this task?");
         if (confirmation) {
             try {
                 await deleteTask(taskId);
-                setTasks((prevTasks) => {
-                    const updatedTasks = prevTasks.filter((task) => task.taskId !== taskId);
-                    return updatedTasks;
-                });
+
+                updateState();
+
+                console.log("Task deleted, state and localStorage updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -124,18 +168,12 @@ const SubjectTasks = () => {
         setIsAddTaskFormOpen(false);
     };
 
-    const updateTaskInState = (updatedTask) => {
-        setTasks((prevTasks) => {
-            let updatedTasks;
-            if (updatedTask.status !== 'Completed') {
-                updatedTasks = prevTasks.map((task) =>
-                    task.taskId === updatedTask.taskId ? updatedTask : task
-                );
-            } else {
-                updatedTasks = prevTasks.filter((task) => task.taskId !== updatedTask.taskId);
-            }
-            return sortTasks(updatedTasks);
-        });
+    // Function to update a task and update both localStorage and state
+    const handleEditTask = (updatedTask) => {
+
+        updateState();
+
+        console.log("Task updated, state and localStorage updated");
     };
 
     return (
@@ -149,27 +187,28 @@ const SubjectTasks = () => {
                 <AddTaskForm
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
-                    refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
-                    initialSubject = {subject?.subjectName}
-                    initialProject = {null}
-                    initialDueDate = {null}
+                    onAddTask={handleAddTask}
+                    subjects={subjects}
+                    projects={projects}
+                    initialSubject={pageSubject.subjectId}
                 />
             )}
 
             <div>
                 <h1 style={{ color: '#907474' }}>
                     {/* Conditional Rendering for Subject Name */}
-                    Upcoming Tasks for {subject?.subjectName ? subject.subjectName : "Loading..."}
+                    Upcoming Tasks for {pageSubject?.subjectName ? pageSubject.subjectName : "Loading..."}
                 </h1>
 
                 {/* Conditional Rendering for Tasks Table */}
-                {subject?.subjectName ? (
+                {pageSubject?.subjectName ? (
                     <TasksTable
                         tasks={tasks}
-                        refreshTasks={refreshTasks}
+                        subjects={subjects}
+                        projects={projects}
+                        refreshTasks={updateState}
                         onDelete={handleDeleteTask}
-                        onUpdateTask={updateTaskInState}
+                        onUpdateTask={handleEditTask}
                     />
                 ) : (
                     // Display spinner with loading message
