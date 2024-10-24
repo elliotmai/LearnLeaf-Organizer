@@ -49,11 +49,11 @@ const TaskList = () => {
     const fetchData = async () => {
         try {
             // Fetch subjects from Firestore
-            const fetchedSubjects = await fetchSubjects(null);
+            const fetchedSubjects = await fetchSubjects(null, 'Active');
             setSubjects(fetchedSubjects);
 
             // Fetch projects from Firestore
-            const fetchedProjects = await fetchProjects(null);
+            const fetchedProjects = await fetchProjects(null, 'Active');
             setProjects(fetchedProjects);
 
             // Fetch tasks from Firestore
