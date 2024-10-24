@@ -1,32 +1,37 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Snackbar } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
-import { debounce } from 'lodash';
 import './TaskView.css';
 
 const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks, onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task });
+    const [originalValues, setOriginalValues] = useState({ ...task }); // Store original values for comparison
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
-    const [openSnackbar, setOpenSnackbar] = useState(false); // State to control the Snackbar visibility
 
-    const handleTextFieldChange = useCallback(
-        debounce((event) => {
-            const { name, value } = event.target;
-            setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
-        }, 300),
-        []
-    );
+    // Check if the form has any unsaved changes
+    const hasUnsavedChanges = () => {
+        return JSON.stringify(formValues) !== JSON.stringify(originalValues);
+    };
 
-    const handleTimeFieldChange = (event) => {
+    // Check if a specific field has unsaved changes
+    const isFieldUnsaved = (fieldName) => {
+        return formValues[fieldName] !== originalValues[fieldName];
+    };
+
+    // Handle input changes
+    const handleInputChange = (event) => {
         const { name, value } = event.target;
-        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
+        setFormValues((prevValues) => ({
+            ...prevValues,
+            [name]: value,
+        }));
     };
 
     const handleSelectChange = (event) => {
@@ -35,36 +40,43 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
         if (name === 'taskSubject') {
             if (value === 'newSubject') {
                 setIsNewSubject(true); // Show text field for new subject
-                // setFormValues((prevDetails) => ({ ...prevDetails, taskSubject: '' }));
             } else {
                 setIsNewSubject(false); // Hide the text field when another subject is selected
-                // setFormValues((prevDetails) => ({ ...prevDetails, taskSubject: value }));
             }
         }
 
         if (name === 'taskProject') {
             if (value === 'newProject') {
                 setIsNewProject(true); // Show text field for new project
-                // setFormValues((prevDetails) => ({ ...prevDetails, taskProject: '' }));
             } else {
                 setIsNewProject(false); // Hide the text field when another project is selected
-                // setFormValues((prevDetails) => ({ ...prevDetails, taskProject: value }));
             }
         }
 
-        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
+        setFormValues((prevValues) => ({
+            ...prevValues,
+            [name]: value,
+        }));
     };
 
     const handleDateChange = (event, field) => {
-        const value = event.target.value || ''; // Handle "Clear" action by setting to empty string
+        const value = event.target.value || ''; // Handle "Clear" action by setting to an empty string
         setFormValues((prevValues) => ({
             ...prevValues,
             [field]: value,
         }));
     };
 
+    const handleTimeFieldChange = (event) => {
+        const { name, value } = event.target;
+        setFormValues((prevDetails) => ({ 
+            ...prevDetails, 
+            [name]: value }));
+    };
+
     useEffect(() => {
         setFormValues({ ...task });
+        setOriginalValues({ ...task });
         setIsNewSubject(false);
         setNewSubjectName('');
         setIsNewProject(false);
@@ -85,13 +97,13 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     subjectName: newSubjectName,
                     subjectSemester: '',
                     subjectDescription: '',
-                    subjectColor: 'black'
+                    subjectColor: 'black',
                 };
                 const addedSubject = await addSubject(newSubjectDetails);
                 updatedTask.taskSubject = addedSubject.subjectId; // Update taskSubject with the new subject reference
 
                 const updatedSubjects = [...storedSubjects, addedSubject];
-                setSubjects(updatedSubjects);
+                localStorage.setItem('subjects', JSON.stringify(updatedSubjects)); // Save to localStorage
             }
 
             // If a new project is being added
@@ -105,17 +117,17 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                 updatedTask.taskProject = addedProject.projectId; // Update taskProject with the new project reference
 
                 const updatedProjects = [...storedProjects, addedProject];
-                setProjects(updatedProjects);
+                localStorage.setItem('projects', JSON.stringify(updatedProjects)); // Save to localStorage
             }
 
             // Save the task with the new subject or project
             const refreshedTask = await editTask(updatedTask);
 
-            // Only after a successful save, update the local state
+            // Update the local state after a successful save
             onUpdateTask(refreshedTask);
 
-            // Show the Snackbar indicating success
-            setOpenSnackbar(true);
+            // Reset original values to reflect the new saved state
+            setOriginalValues(refreshedTask);
 
             // Close the edit modal if it was open
             if (isEditModalOpen) {
@@ -124,17 +136,12 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
 
         } catch (error) {
             console.error('Error updating task:', error);
-            // Optionally, show an error Snackbar or handle the error case
         }
     };
 
     const handleEditClick = () => {
         setEditedTask({ ...formValues });
         setEditModalOpen(true); // Open the edit modal
-    };
-
-    const handleCloseSnackbar = () => {
-        setOpenSnackbar(false); // Hide the Snackbar after timeout or action
     };
 
     return (
@@ -163,9 +170,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                     value={isNewSubject ? 'newSubject' : formValues.taskSubject?.subjectId || formValues.taskSubject}
                                     name="taskSubject"
                                     onChange={handleSelectChange}
+                                    className={isFieldUnsaved('taskSubject') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="None">Select Subject...</MenuItem>
-                                    {subjects.map(subj => (
+                                    {subjects.map((subj) => (
                                         <MenuItem key={subj.subjectId} value={subj.subjectId}>
                                             {subj.subjectName}
                                         </MenuItem>
@@ -194,9 +202,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                     value={isNewProject ? 'newProject' : formValues.taskProject?.projectId || formValues.taskProject}
                                     name="taskProject"
                                     onChange={handleSelectChange}
+                                    className={isFieldUnsaved('taskProject') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="None">Select Project...</MenuItem>
-                                    {projects.map(proj => (
+                                    {projects.map((proj) => (
                                         <MenuItem key={proj.projectId} value={proj.projectId}>
                                             {proj.projectName}
                                         </MenuItem>
@@ -219,44 +228,15 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                         )}
 
                         <Grid item xs={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Priority</InputLabel>
-                                <Select
-                                    name="taskPriority"
-                                    value={formValues.taskPriority || 'Medium'}
-                                    onChange={handleSelectChange}
-                                >
-                                    <MenuItem value="High">High</MenuItem>
-                                    <MenuItem value="Medium">Medium</MenuItem>
-                                    <MenuItem value="Low">Low</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select
-                                    name="taskStatus"
-                                    value={formValues.taskStatus || 'Not Started'}
-                                    onChange={handleSelectChange}
-                                >
-                                    <MenuItem value="Not Started">Not Started</MenuItem>
-                                    <MenuItem value="In Progress">In Progress</MenuItem>
-                                    <MenuItem value="Completed">Completed</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={6}>
                             <TextField
                                 label="Start Date"
                                 name="taskStartDate"
                                 type="date"
-                                value={formValues.taskStartDate || ''} // Ensure the field is cleared
+                                value={formValues.taskStartDate || ''}
                                 onChange={(e) => handleDateChange(e, 'taskStartDate')}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                className={isFieldUnsaved('taskStartDate') ? 'unsaved-bg' : ''}
                             />
                         </Grid>
 
@@ -265,10 +245,11 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 label="Deadline"
                                 name="taskDueDate"
                                 type="date"
-                                value={formValues.taskDueDate || ''} // Ensure the field is cleared
+                                value={formValues.taskDueDate || ''}
                                 onChange={(e) => handleDateChange(e, 'taskDueDate')}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                className={isFieldUnsaved('taskDueDate') ? 'unsaved-bg' : ''}
                             />
                         </Grid>
 
@@ -281,6 +262,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 onChange={handleTimeFieldChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                className={isFieldUnsaved('taskDueTime') ? 'unsaved-bg' : ''}
                             />
                         </Grid>
                     </Grid>
@@ -291,31 +273,31 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingRight: 2
+                        paddingRight: 2,
                     }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <Button
                             size="small"
-                            onClick={() => handleSave(formValues)}
+                            onClick={handleSave}
                             variant="contained"
                             sx={{
-                                backgroundColor: '#B6CDC8',
+                                backgroundColor:'#B6CDC8',
                                 color: '#355147',
                                 '&:hover': { backgroundColor: '#a8bdb8' },
                                 mr: 3,
-                                ml: 1
+                                ml: 1,
                             }}
                         >
                             Save
                         </Button>
 
                         <EditIcon
-                            onClick={() => handleEditClick(task)}
+                            onClick={handleEditClick}
                             sx={{
                                 color: '#9F6C5B',
                                 fontSize: 'xl',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
                             }}
                         />
                     </div>
@@ -333,25 +315,9 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                         Delete
                     </Button>
                 </CardActions>
-
-                {/* Snackbar Notification positioned at the top of the widget */}
-                <Snackbar
-                    open={openSnackbar}
-                    autoHideDuration={3000}
-                    onClose={handleCloseSnackbar}
-                    message="Task has been successfully saved!"
-                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Position the Snackbar at the top
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)', // Center it within the widget
-                    }}
-                />
             </Card>
         </div>
     );
 };
 
-// Use React.memo to prevent unnecessary re-renders
 export default React.memo(TaskWidget);
