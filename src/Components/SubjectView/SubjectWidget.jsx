@@ -17,28 +17,19 @@ const CustomIconButton = styled(IconButton)({
 });
 
 const SubjectWidget = ({ subject, refreshSubjects }) => {
-    const [editedSubject, setEditedSubject] = useState({
-        subjectId: subject.id,
-        ...subject,
-    });
+    const [editedSubject, setEditedSubject] = useState({...subject});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
         try {
-            await archiveSubject(subject.id);
+            await archiveSubject(subject.subjectId);
             console.log("Subject archived successfully.");
             refreshSubjects(); // Call refreshSubjects to update the dashboard
         } catch (error) {
             console.error("Error archiving subject:", error);
         }
     };
-
-    useEffect(() => {
-        if (subject.description === undefined) {
-            subject.description = '';
-        }
-    }, []);
 
     const widgetStyle = {
         border: `3px solid ${subject.subjectColor}`,
@@ -56,7 +47,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
         const confirmation = window.confirm("Are you sure you want to delete this subject?\n(This will not delete any associated tasks.)");
         if (confirmation) {
             try {
-                await deleteSubject(subject.id);
+                await deleteSubject(subject.subjectId);
                 refreshSubjects(); // Call this function to refresh the subjects in the parent component
             } catch (error) {
                 console.error("Error deleting subject:", error);
@@ -85,7 +76,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
             >
                 <CardContent>
                     <Link
-                        href={`/subjects/${subject.id}`}
+                        href={`/subjects/${subject.subjectId}`}
                         underline="hover"
                         variant="h6"
                         color="inherit"
@@ -104,7 +95,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                         variant="body1"
                         color="textPrimary"
                     >
-                        {subject.semester}
+                        {subject.subjectSemester}
                     </Typography>
 
                     {/* Description Typography with ellipsis and click event to expand */}
@@ -125,7 +116,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {subject.description}
+                        {subject.subjectDescription}
                     </Typography>
 
                     {/* Dialog to show full description */}
@@ -162,7 +153,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                                     fontStyle: 'italic',
                                 }}
                             >
-                                {subject.description}
+                                {subject.subjectDescription}
                             </Typography>
                         </DialogContent>
                     </Dialog>

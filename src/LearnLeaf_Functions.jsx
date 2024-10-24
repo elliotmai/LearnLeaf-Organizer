@@ -775,7 +775,7 @@ export async function deleteTask(taskId) {
     }
 }
 
-export async function fetchSubjects(subjectId = null) {
+export async function fetchSubjects(subjectId = null, subjectStatus = null) {
     // Ensure the Firestore instance and userId are initialized before running the query
     if (!db) {
         console.error("Firestore is not initialized.");
@@ -797,6 +797,10 @@ export async function fetchSubjects(subjectId = null) {
         let subjectsQuery = query(
             subjectCollection,
         );
+
+        if (subjectStatus) {
+            subjectsQuery = query(subjectsQuery, where('subjectStatus', '==', subjectStatus));
+        }
 
         // Step 2: Conditionally filter by subjectId if provided
         if (subjectId) {
@@ -905,6 +909,14 @@ export async function archiveSubject(subjectId) {
             subjectStatus: 'Archived'
         });
 
+        // Update localStorage
+        const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
+        const updatedSubjects = storedSubjects.map(subject =>
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject
+        );
+        localStorage.setItem('subjects', JSON.stringify(updatedSubjects));  // Update localStorage
+
+
         console.log("Subject archived successfully");
     } catch (error) {
         console.error("Error archiving subject:", error);
@@ -969,6 +981,15 @@ export async function reactivateSubject(subjectId) {
         await updateDoc(subjectRef, {
             subjectStatus: 'Active'
         });
+
+        // Update localStorage
+        const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
+        const updatedSubjects = storedSubjects.map(subject =>
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Active' } : subject
+        );
+        localStorage.setItem('subjects', JSON.stringify(updatedSubjects));  // Update localStorage
+
+
         console.log("Subject reactivated successfully");
     } catch (error) {
         console.error("Error reactivating subject:", error);
@@ -994,20 +1015,21 @@ export async function deleteSubject(subjectId) {
 }
 
 
-export async function fetchProjects(projectId = null) {
+export async function fetchProjects(projectId = null, projectStatus = null) {
     if (!db || !userId || !projectCollection) {
         console.error("Firestore or collections are not initialized properly.");
         return;
     }
 
     try {
-        let projectsQuery;
+        let projectsQuery= query(projectCollection);
         
         if (projectId) {
             projectsQuery = query(projectCollection, where('_name_', '==', projectId));
         }
-        else {
-            projectsQuery = query(projectCollection);
+
+        if (projectStatus) {
+            projectsQuery = query(projectsQuery, where('projectStatus', '==', projectStatus));
         }
 
         const querySnapshot = await getDocs(projectsQuery);
@@ -1139,6 +1161,14 @@ export async function archiveProject(projectId) {
         await updateDoc(projectRef, {
             projectStatus: 'Archived'
         });
+
+        // Update localStorage
+        const storedProjects = JSON.parse(localStorage.getItem('projects')) || [];
+        const updatedProjects = storedProjects.map(project =>
+            project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project
+        );
+        localStorage.setItem('projects', JSON.stringify(updatedProjects));  // Update localStorage
+
         console.log("Project archived successfully");
     } catch (error) {
         console.error("Error archiving project:", error);
@@ -1273,6 +1303,14 @@ export async function reactivateProject(projectId) {
         await updateDoc(projectRef, {
             projectStatus: 'Active'
         });
+
+        // Update localStorage
+        const storedProjects = JSON.parse(localStorage.getItem('projects')) || [];
+        const updatedProjects = storedProjects.map(project =>
+            project.projectId === projectId ? { ...project, projectStatus: 'Active' } : project
+        );
+        localStorage.setItem('projects', JSON.stringify(updatedProjects));  // Update localStorage
+
         console.log("project reactivated successfully");
     } catch (error) {
         console.error("Error reactivating project:", error);

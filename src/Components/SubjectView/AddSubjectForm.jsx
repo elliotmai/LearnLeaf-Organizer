@@ -42,10 +42,9 @@ const cancelButtonStyle = {
 export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
     const { user } = useUser();
     const [subjectDetails, setSubjectDetails] = useState({
-        userId: user.id,
         subjectName: '',
-        semester: '',
-        description: '',
+        subjectSemester: '',
+        subjectDescription: '',
         subjectColor: 'black',
     });
 
@@ -84,17 +83,17 @@ export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
                         fullWidth
                         margin="normal"
                         id="semester"
-                        name="semester"
+                        name="subjectSemester"
                         label="Semester"
-                        value={subjectDetails.semester}
+                        value={subjectDetails.subjectSemester}
                         onChange={handleInputChange}
                     />
                     <TextField
                         fullWidth
                         margin="normal"
                         label="Description"
-                        name="description"
-                        value={subjectDetails.description}
+                        name="subjectDescription"
+                        value={subjectDetails.subjectDescription}
                         onChange={handleInputChange}
                         multiline
                         maxRows={4}

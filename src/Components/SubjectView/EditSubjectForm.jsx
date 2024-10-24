@@ -37,10 +37,7 @@ const cancelButtonStyle = {
 };
 
 export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
-    const [formValues, setFormValues] = useState({
-        subjectId: subject.id,
-        ...subject,
-    });
+    const [formValues, setFormValues] = useState({...subject});
 
     useEffect(() => {
         setFormValues({
@@ -63,15 +60,14 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
         try {
             const updatedSubjectData = {
                 subjectId: formValues.subjectId,
-                userId: formValues.userId,
                 subjectName: formValues.subjectName,
-                semester: formValues.semester,
-                description: formValues.description,
+                subjectSemester: formValues.subjectSemester,
+                subjectDescription: formValues.subjectDescription,
                 subjectColor: formValues.subjectColor,
-                status: formValues.status,
+                subjectStatus: formValues.subjectStatus,
             };
             await editSubject(updatedSubjectData);
-            onSave(updatedSubjectData); // Callback to update the parent component's state with the new subject data
+            onSave();
             console.log('Subject has been updated successfully.');
             onClose(); // Close the modal after saving
         } catch (error) {
@@ -97,17 +93,17 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                     <TextField
                         fullWidth
                         margin="normal"
-                        name="semester"
+                        name="subjectSemester"
                         label="Semester"
-                        value={formValues.semester}
+                        value={formValues.subjectSemester}
                         onChange={handleChange}
                     />
                     <TextField
                         fullWidth
                         margin="normal"
                         label="Description"
-                        name="description"
-                        value={formValues.description}
+                        name="subjectDescription"
+                        value={formValues.subjectDescription}
                         onChange={handleChange}
                         multiline
                         maxRows={4}
