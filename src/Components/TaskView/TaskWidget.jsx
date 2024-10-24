@@ -75,6 +75,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
         try {
             let updatedTask = { ...formValues };
 
+            // Retrieve subjects and projects from localStorage
+            const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
+            const storedProjects = JSON.parse(localStorage.getItem('projects')) || [];
+
             // If a new subject is being added
             if (isNewSubject && newSubjectName) {
                 const newSubjectDetails = {
@@ -83,8 +87,11 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     subjectDescription: '',
                     subjectColor: 'black'
                 };
-                const subjectRef = await addSubject(newSubjectDetails);
-                updatedTask.taskSubject = subjectRef; // Update taskSubject with the new subject reference
+                const addedSubject = await addSubject(newSubjectDetails);
+                updatedTask.taskSubject = addedSubject.subjectId; // Update taskSubject with the new subject reference
+
+                const updatedSubjects = [...storedSubjects, addedSubject];
+                setSubjects(updatedSubjects);
             }
 
             // If a new project is being added
@@ -94,8 +101,11 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     projectDescription: '',
                     projectSubjects: [],
                 };
-                const projectRef = await addProject(newProjectDetails);
-                updatedTask.taskProject = projectRef; // Update taskProject with the new project reference
+                const addedProject = await addProject(newProjectDetails);
+                updatedTask.taskProject = addedProject.projectId; // Update taskProject with the new project reference
+
+                const updatedProjects = [...storedProjects, addedProject];
+                setProjects(updatedProjects);
             }
 
             // Save the task with the new subject or project

@@ -18,67 +18,76 @@ const TaskList = () => {
     const [isLoading, setIsLoading] = useState(true);
     const { user, updateUser } = useUser();
 
-    useEffect(() => {
-        if (user?.id) {
-            setIsLoading(true);
+    const loadFromLocalStorage = () => {
+        // Parse and filter subjects, projects, and tasks from localStorage
+        const activeSubjects = (JSON.parse(localStorage.getItem('subjects')) || [])
+            .filter(subject => subject.subjectStatus === 'Active');
 
-            const loadFromLocalStorage = () => {
-                // Parse and filter subjects, projects, and tasks from localStorage
-                const activeSubjects = (JSON.parse(localStorage.getItem('subjects')) || [])
-                    .filter(subject => subject.subjectStatus === 'Active');
+        const activeProjects = (JSON.parse(localStorage.getItem('projects')) || [])
+            .filter(project => project.projectStatus === 'Active');
 
-                const activeProjects = (JSON.parse(localStorage.getItem('projects')) || [])
-                    .filter(project => project.projectStatus === 'Active');
+        const activeTasks = (JSON.parse(localStorage.getItem('tasks')) || [])
+            .filter(task => task.taskStatus !== 'Completed');
 
-                const activeTasks = (JSON.parse(localStorage.getItem('tasks')) || [])
-                    .filter(task => task.taskStatus !== 'Completed');
+        // Check if localStorage contains the required data
+        if (activeSubjects.length > 0 && activeProjects.length > 0 && activeTasks.length > 0) {
+            const sortedTasks = sortTasks(activeTasks);  // Sort the updated tasks
 
-                // Check if localStorage contains the required data
-                if (activeSubjects.length > 0 && activeProjects.length > 0 && activeTasks.length > 0) {
-                    // Set the filtered data from localStorage
-                    setSubjects(activeSubjects);
-                    setProjects(activeProjects);
-                    setTasks(activeTasks);
-                    setIsLoading(false);
-                    console.log('Data loaded from localStorage');
-                    return true; // Indicate that data was loaded from localStorage
-                }
+            setTasks(sortedTasks);
+            // Set the filtered data from localStorage
+            setSubjects(activeSubjects);
+            setProjects(activeProjects);
+            setTasks(sortedTasks);
+            setIsLoading(false);
+            console.log('Data loaded from localStorage');
+            return true; // Indicate that data was loaded from localStorage
+        }
 
-                return false; // Indicate that localStorage didn't have the data
-            };
+        return false; // Indicate that localStorage didn't have the data
+    };
 
-            const fetchData = async () => {
-                try {
-                    // Fetch subjects from Firestore
-                    const fetchedSubjects = await fetchSubjects(null);
-                    setSubjects(fetchedSubjects);
+    const fetchData = async () => {
+        try {
+            // Fetch subjects from Firestore
+            const fetchedSubjects = await fetchSubjects(null);
+            setSubjects(fetchedSubjects);
 
-                    // Fetch projects from Firestore
-                    const fetchedProjects = await fetchProjects(null);
-                    setProjects(fetchedProjects);
+            // Fetch projects from Firestore
+            const fetchedProjects = await fetchProjects(null);
+            setProjects(fetchedProjects);
 
-                    // Fetch tasks from Firestore
-                    const fetchedTasks = await fetchTasks(null, null);
-                    setTasks(fetchedTasks);
+            // Fetch tasks from Firestore
+            const fetchedTasks = await fetchTasks(null, null);
+            const sortedTasks = sortTasks(fetchedTasks);  // Sort the updated tasks
 
-                    // Store fetched data in localStorage for future use
-                    localStorage.setItem('subjects', JSON.stringify(fetchedSubjects));
-                    localStorage.setItem('projects', JSON.stringify(fetchedProjects));
-                    localStorage.setItem('tasks', JSON.stringify(fetchedTasks));
+            setTasks(sortedTasks);
 
-                    setIsLoading(false);
-                    console.log('Data fetched and saved to localStorage');
-                } catch (error) {
-                    console.error('Error fetching data:', error);
-                    setIsLoading(false); // Handle error and stop loading
-                }
-            };
+            // Store fetched data in localStorage for future use
+            localStorage.setItem('subjects', JSON.stringify(fetchedSubjects));
+            localStorage.setItem('projects', JSON.stringify(fetchedProjects));
+            localStorage.setItem('tasks', JSON.stringify(fetchedTasks));
+
+            setIsLoading(false);
+            console.log('Data fetched and saved to localStorage');
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setIsLoading(false); // Handle error and stop loading
+        }
+    };
+
+    const updateState = async() => {
+        setIsLoading(true);
 
             // Try to load data from localStorage first, if not available, fetch from Firestore
             const isLoadedFromLocalStorage = loadFromLocalStorage();
             if (!isLoadedFromLocalStorage) {
                 fetchData(); // Fetch from Firestore if localStorage data is not available
             }
+    }
+
+    useEffect(() => {
+        if (user?.id) {
+            updateState();
         }
     }, [user?.id]);
 
@@ -128,21 +137,7 @@ const TaskList = () => {
 
     // Function to add a task and update both localStorage and state
     const handleAddTask = (newTask) => {
-        if (!newTask) {
-            console.error("New task is undefined!");
-            return;
-        }
-
-        // Update state and localStorage simultaneously
-        setTasks((prevTasks) => {
-            const updatedTasks = [...prevTasks, newTask];
-            const sortedTasks = sortTasks(updatedTasks);  // Sort the updated tasks
-
-            // Save the updated tasks to localStorage
-            saveTasksToLocalStorage(sortedTasks);
-
-            return sortedTasks; // Update state
-        });
+        updateState();
 
         console.log("Task added, state and localStorage updated");
     };
@@ -154,15 +149,7 @@ const TaskList = () => {
             try {
                 await deleteTask(taskId);
 
-                // Update state and localStorage simultaneously
-                setTasks((prevTasks) => {
-                    const updatedTasks = prevTasks.filter((task) => task.taskId !== taskId);
-
-                    // Save the updated tasks to localStorage
-                    saveTasksToLocalStorage(updatedTasks);
-
-                    return updatedTasks; // Update state
-                });
+                updateState();
 
                 console.log("Task deleted, state and localStorage updated");
             } catch (error) {
@@ -172,27 +159,9 @@ const TaskList = () => {
     };
 
     // Function to update a task and update both localStorage and state
-    const updateTaskInState = (updatedTask) => {
-        console.log(updatedTask);
+    const handleEditTask = (updatedTask) => {
 
-        // Update state and localStorage simultaneously
-        setTasks((prevTasks) => {
-            let updatedTasks;
-            if (updatedTask.taskStatus !== 'Completed') {
-                updatedTasks = prevTasks.map((task) =>
-                    task.taskId === updatedTask.taskId ? updatedTask : task
-                );
-            } else {
-                updatedTasks = prevTasks.filter((task) => task.taskId !== updatedTask.taskId);
-            }
-
-            const sortedTasks = sortTasks(updatedTasks);  // Sort the updated tasks
-
-            // Save the updated tasks to localStorage
-            saveTasksToLocalStorage(sortedTasks);
-
-            return sortedTasks; // Update state
-        });
+        updateState();
 
         console.log("Task updated, state and localStorage updated");
     };
@@ -230,7 +199,7 @@ const TaskList = () => {
                         projects={projects}
                         refreshTasks={refreshTasks}
                         onDelete={handleDeleteTask}
-                        onUpdateTask={updateTaskInState} // Pass update function to TasksTable
+                        onUpdateTask={handleEditTask}
                     />
                 )}
             </div>

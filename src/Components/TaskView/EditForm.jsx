@@ -58,7 +58,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
         taskDueTime: task?.taskDueTime || '',
         taskProject: task?.taskProject?.projectId || 'None',
     });
-    
+
     const [errors, setErrors] = useState({}); // State to track validation errors
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [isNewProject, setIsNewProject] = useState(false);
@@ -134,23 +134,33 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
 
         let updatedTaskDetails = { ...formValues };
 
+        // If a new subject is being added
         if (isNewSubject && newSubjectName) {
             const newSubjectDetails = {
                 subjectName: newSubjectName,
-                subjectDescription: '',
                 subjectSemester: '',
+                subjectDescription: '',
                 subjectColor: 'black'
             };
-            updatedTaskDetails.taskSubject = await addSubject(newSubjectDetails);
+            const addedSubject = await addSubject(newSubjectDetails);
+            updatedTaskDetails.taskSubject = addedSubject.subjectId; // Update taskSubject with the new subject reference
+
+            const updatedSubjects = [...storedSubjects, addedSubject];
+            setSubjects(updatedSubjects);
         }
 
+        // If a new project is being added
         if (isNewProject && newProjectName) {
             const newProjectDetails = {
                 projectName: newProjectName,
                 projectDescription: '',
-                projectSubjects: []
+                projectSubjects: [],
             };
-            updatedTaskDetails.taskProject = await addProject(newProjectDetails);
+            const addedProject = await addProject(newProjectDetails);
+            updatedTaskDetails.taskProject = addedProject.projectId; // Update taskProject with the new project reference
+
+            const updatedProjects = [...storedProjects, addedProject];
+            setProjects(updatedProjects);
         }
 
         const newTaskData = await editTask(updatedTaskDetails);

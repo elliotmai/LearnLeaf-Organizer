@@ -70,6 +70,21 @@ const initUserFromLocalStorage = () => {
 // Call this function instead of using Firebase auth listener directly
 initUserFromLocalStorage();
 
+// Helper function to update tasks in localStorage
+const updateLocalStorageTasks = (updatedTasks) => {
+    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
+};
+
+// Helper function to update subjects in localStorage
+const updateLocalStorageSubjects = (updatedSubjects) => {
+    localStorage.setItem('subjects', JSON.stringify(updatedSubjects));
+};
+
+// Helper function to update projects in localStorage
+const updateLocalStorageProjects = (updatedProjects) => {
+    localStorage.setItem('projects', JSON.stringify(updatedProjects));
+};
+
 // Function to handle user registration
 export function registerUser(email, password, name) {
     return createUserWithEmailAndPassword(auth, email, password)
@@ -559,6 +574,7 @@ export async function fetchArchivedTasks() {
 // Function to create a new task
 export async function addTask(taskDetails) {
     const { taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
     const taskId = `${Date.now()}_${userId}`;  // Generate a unique task ID
 
     let subjectData = {};
@@ -632,6 +648,11 @@ export async function addTask(taskDetails) {
 
     try {
         await setDoc(taskRef, taskData);  // Add the task to Firestore
+
+        // Update localStorage
+        const updatedTasks = [...storedTasks, addedTask];
+        updateLocalStorageTasks(updatedTasks);
+
         console.log("Task added successfully");
     } catch (error) {
         console.error("Error adding task:", error);
@@ -641,8 +662,9 @@ export async function addTask(taskDetails) {
 }
 
 export async function editTask(taskDetails) {
-    console.log('editing: ', taskDetails);
     const { taskId, taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, taskStartDate, taskDueDate, taskDueTime } = taskDetails;
+
+    const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
 
     let subjectData = {};
     let projectData = {};
@@ -722,6 +744,11 @@ export async function editTask(taskDetails) {
     };
     try {
         await updateDoc(taskRef, taskData);
+
+        // Update localStorage
+        const updatedTasks = storedTasks.map(task => task.taskId === taskDetails.taskId ? editedTask : task);
+        updateLocalStorageTasks(updatedTasks);
+
         console.log("Task updated successfully", editedTask);
         return editedTask;
     } catch (error) {
@@ -732,10 +759,16 @@ export async function editTask(taskDetails) {
 };
 
 export async function deleteTask(taskId) {
+    const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
     const taskRef = doc(taskCollection, taskId);
 
     try {
         await deleteDoc(taskRef); // Delete the document
+
+        // Update localStorage
+        const updatedTasks = storedTasks.filter(task => task.taskId !== taskId);
+        updateLocalStorageTasks(updatedTasks);
+
         console.log("Task deleted successfully");
     } catch (error) {
         console.error("Error deleting task:", error);
@@ -763,7 +796,6 @@ export async function fetchSubjects(subjectId = null) {
         // Step 1: Start with the basic subjects query
         let subjectsQuery = query(
             subjectCollection,
-            where("subjectStatus", "==", "Active") // Default query for active subjects
         );
 
         // Step 2: Conditionally filter by subjectId if provided
@@ -800,6 +832,7 @@ export async function fetchSubjects(subjectId = null) {
 }
 
 export async function addSubject({ subjectName, subjectDescription, subjectSemester, subjectColor }) {
+    const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
     const subjectId = `${Date.now()}_${userId}`;
 
     const subjectData = {
@@ -810,14 +843,18 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
         subjectColor,
     };
 
-    // console.log("Attmepting to add: ", subjectData);
-
     const subjectRef = doc(subjectCollection, subjectId);
+    const addedSubject = {...subjectData, subjectId};
 
     try {
         await setDoc(subjectRef, subjectData);
+
+        // Update localStorage
+        const updatedSubjects = [...storedSubjects, addedSubject];
+        updateLocalStorageSubjects(updatedSubjects);
+        
         console.log("Subject added successfully");
-        return subjectId;
+        return addedSubject;
     } catch (error) {
         console.error("Error adding subject:", error);
     }
@@ -825,6 +862,7 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
 
 export async function editSubject(subjectDetails) {
     const { subjectId, subjectName, subjectSemester, subjectDescription, subjectColor, subjectStatus } = subjectDetails;
+    const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
 
     if (!subjectId) {
         throw new Error("subjectId is undefined, cannot update subject");
@@ -841,11 +879,18 @@ export async function editSubject(subjectDetails) {
 
     // Create a reference to the subject document
     const subjectRef = doc(subjectCollection, subjectId);
+    const editedSubject = {...subjectData, subjectId}
 
     // Use updateDoc to update the task document
     try {
         await updateDoc(subjectRef, subjectData);
+
+        // Update localStorage
+        const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectDetails.subjectId ? subjectDetails : subject);
+        updateLocalStorageSubjects(updatedSubjects);
+        
         console.log("Subject updated successfully");
+        return editedSubject;
     } catch (error) {
         console.error("Error updating subject:", error);
     }
@@ -932,10 +977,16 @@ export async function reactivateSubject(subjectId) {
 
 // Function to delete a subject
 export async function deleteSubject(subjectId) {
+    const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
     const subjectRef = doc(subjectCollection, subjectId);
 
     try {
         await deleteDoc(subjectRef); // Delete the document
+
+        // Update localStorage
+        const updatedSubjects = storedSubjects.filter(subject => subject.subjectId !== subjectId);
+        updateLocalStorageSubjects(updatedSubjects);
+
         console.log("Subject deleted successfully");
     } catch (error) {
         console.error("Error deleting subject:", error);
@@ -951,11 +1002,12 @@ export async function fetchProjects(projectId = null) {
 
     try {
         let projectsQuery;
-
+        
         if (projectId) {
-            projectsQuery = query(projectCollection, where("__name__", "==", projectId));
-        } else {
-            projectsQuery = query(projectCollection, where("projectStatus", "==", "Active"));
+            projectsQuery = query(projectCollection, where('_name_', '==', projectId));
+        }
+        else {
+            projectsQuery = query(projectCollection);
         }
 
         const querySnapshot = await getDocs(projectsQuery);
@@ -1030,12 +1082,13 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
 
     // Step 3: Create a reference to the new project document
     const projectRef = doc(projectCollection, projectId);
+    const addedProject = {...projectData, projectId}
 
     try {
         // Step 4: Write the project data to Firestore
         await setDoc(projectRef, projectData);
         console.log("Project added successfully");
-        return projectId;
+        return addedProject;
     } catch (error) {
         console.error("Error adding project:", error);
     }
@@ -1067,6 +1120,7 @@ export async function editProject(projectDetails) {
 
     // Create a reference to the project document
     const projectRef = doc(projectCollection, projectId);
+    const editedProject = {...projectData, projectId}
 
     // Use updateDoc to update the project document
     try {
