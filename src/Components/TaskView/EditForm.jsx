@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { editTask, fetchSubjects, addSubject, fetchProjects, addProject, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
+import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import './TaskView.css';
 import Modal from '@mui/material/Modal';
@@ -44,7 +45,7 @@ const cancelButtonStyle = {
     },
 };
 
-export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave }) => {
+export const TaskEditForm = ({ key, task, subjects, projects, isOpen, onClose, onSave }) => {
     const { user } = useUser();
     const [formValues, setFormValues] = useState({
         taskId: task?.taskId || '',
@@ -59,7 +60,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
         taskProject: task?.taskProject?.projectId || 'None',
     });
 
-    const [errors, setErrors] = useState({}); // State to track validation errors
+    const [errors, setErrors] = useState({});
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [isNewProject, setIsNewProject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
@@ -71,51 +72,31 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
         const isNewItemSelected = value === "newSubject" || value === "newProject";
 
         if (name === "taskSubject") {
-            if (isNewItemSelected) {
-                setIsNewSubject(value === "newSubject");
-                setFormValues(prevDetails => ({ ...prevDetails, taskSubject: 'None' }));
-            } else {
-                setIsNewSubject(false);
-                setFormValues(prevDetails => ({ ...prevDetails, taskSubject: value }));
-            }
-        } else if (name === "newSubjectName" && isNewSubject) {
-            setFormValues(prevDetails => ({ ...prevDetails, taskSubject: value }));
-        }
-
-        if (name === "taskProject") {
-            if (isNewItemSelected) {
-                setIsNewProject(value === "newProject");
-                setFormValues(prevDetails => ({ ...prevDetails, taskProject: 'None' }));
-            } else {
-                setIsNewProject(false);
-                setFormValues(prevDetails => ({ ...prevDetails, taskProject: value }));
-            }
-        } else if (name === "newProjectName" && isNewProject) {
-            setFormValues(prevDetails => ({ ...prevDetails, taskProject: value }));
-        }
-
-        // Validation logic for dueDateInput when dueTimeInput is provided
-        if (name === 'taskDueTime' && value) {
+            setIsNewSubject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskSubject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskProject") {
+            setIsNewProject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskProject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskDueTime" && value) {
             if (!formValues.taskDueDate) {
-                setErrors((prevErrors) => ({
+                setErrors(prevErrors => ({
                     ...prevErrors,
                     taskDueDate: 'Due date is required when due time is added.',
                 }));
             } else {
-                setErrors((prevErrors) => ({
-                    ...prevErrors,
-                    taskDueDate: '', // Clear the error if dueDate is already set
-                }));
+                setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
             }
-        } else if (name === 'taskDueDate') {
-            setErrors((prevErrors) => ({
-                ...prevErrors,
-                taskDueDate: '', // Clear the error when the due date is provided
-            }));
+        } else if (name === "taskDueDate") {
+            setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
         }
 
-        // Handle all other inputs normally
-        if (!["taskSubject", "taskProject", "newSubjectName", "newProjectName"].includes(name)) {
+        if (!["taskSubject", "taskProject"].includes(name)) {
             setFormValues(prevDetails => ({ ...prevDetails, [name]: value }));
         }
     };
@@ -123,13 +104,12 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
     const handleSave = async (e) => {
         e.preventDefault();
 
-        // Check if dueTimeInput is present but dueDateInput is missing
         if (formValues.taskDueTime && !formValues.taskDueDate) {
-            setErrors((prevErrors) => ({
+            setErrors(prevErrors => ({
                 ...prevErrors,
                 taskDueDate: 'Due date is required when due time is added.',
             }));
-            return; // Prevent form submission if validation fails
+            return;
         }
 
         let updatedTaskDetails = { ...formValues };
@@ -140,13 +120,11 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                 subjectName: newSubjectName,
                 subjectSemester: '',
                 subjectDescription: '',
-                subjectColor: 'black'
+                subjectColor: 'black',
+                subjectStatus: 'Active',
             };
             const addedSubject = await addSubject(newSubjectDetails);
-            updatedTaskDetails.taskSubject = addedSubject.subjectId; // Update taskSubject with the new subject reference
-
-            const updatedSubjects = [...storedSubjects, addedSubject];
-            setSubjects(updatedSubjects);
+            updatedTaskDetails.taskSubject = addedSubject.subjectId;
         }
 
         // If a new project is being added
@@ -155,12 +133,10 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                 projectName: newProjectName,
                 projectDescription: '',
                 projectSubjects: [],
+                projectStatus: 'Active',
             };
             const addedProject = await addProject(newProjectDetails);
-            updatedTaskDetails.taskProject = addedProject.projectId; // Update taskProject with the new project reference
-
-            const updatedProjects = [...storedProjects, addedProject];
-            setProjects(updatedProjects);
+            updatedTaskDetails.taskProject = addedProject.projectId;
         }
 
         const newTaskData = await editTask(updatedTaskDetails);
@@ -207,7 +183,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         margin="normal"
                         label="Name"
                         name="taskName"
-                        value={formValues.taskName ? formValues.taskName : ''}
+                        value={formValues.taskName || ''}
                         onChange={handleInputChange}
                     />
                     <TextField
@@ -215,7 +191,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         margin="normal"
                         label="Description"
                         name="taskDescription"
-                        value={formValues.taskDescription ? formValues.taskDescription : ''}
+                        value={formValues.taskDescription || ''}
                         onChange={handleInputChange}
                         multiline
                         maxRows={4}
@@ -225,7 +201,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         <Select
                             labelId="priority-label"
                             id="priority"
-                            value={formValues.taskPriority ? formValues.taskPriority : 'Medium'}
+                            value={formValues.taskPriority || 'Medium'}
                             label="Priority"
                             name="taskPriority"
                             onChange={handleInputChange}
@@ -240,7 +216,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         <Select
                             labelId="status-label"
                             id="status"
-                            value={formValues.taskStatus ? formValues.taskStatus : 'Not Started'}
+                            value={formValues.taskStatus || 'Not Started'}
                             label="Status"
                             name="taskStatus"
                             onChange={handleInputChange}
@@ -256,7 +232,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         label="Start Date"
                         name="taskStartDate"
                         type="date"
-                        value={formValues.taskStartDate ? formValues.taskStartDate : ''}
+                        value={formValues.taskStartDate || ''}
                         onChange={handleInputChange}
                         InputLabelProps={{ shrink: true }}
                     />
@@ -266,11 +242,11 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         label="Due Date"
                         name="taskDueDate"
                         type="date"
-                        value={formValues.taskDueDate ? formValues.taskDueDate : ''}
+                        value={formValues.taskDueDate || ''}
                         onChange={handleInputChange}
                         InputLabelProps={{ shrink: true }}
-                        error={!!errors.taskDueDate} // Display error styling if there is an error
-                        helperText={errors.taskDueDate} // Display the error message
+                        error={!!errors.taskDueDate}
+                        helperText={errors.taskDueDate}
                     />
                     <TextField
                         fullWidth
@@ -278,7 +254,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                         label="Time Due"
                         name="taskDueTime"
                         type="time"
-                        value={formValues.taskDueTime ? formValues.taskDueTime : ''}
+                        value={formValues.taskDueTime || ''}
                         onChange={handleInputChange}
                         InputLabelProps={{ shrink: true }}
                     />

@@ -1,16 +1,15 @@
 // @flow
 import React, { useState, useEffect } from 'react';
-import { deleteTask, fetchTasks, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { getAllFromStore, deleteFromStore } from '/src/db.js'; // Use your IndexedDB functions
 import './ArchiveDashboard.css';
-import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx'
+import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import IconButton from '@mui/material/IconButton';
 import { styled } from '@mui/material/styles';
 import format from 'date-fns/format';
-
 
 const CustomIconButton = styled(IconButton)({
     border: '1px solid rgba(0, 0, 0, 0.23)',
@@ -19,26 +18,22 @@ const CustomIconButton = styled(IconButton)({
     },
 });
 
-function formatFormDate(timestamp) {
-    if (!timestamp) return '';
-    const date = new Date(timestamp.seconds * 1000);
-
-    const utcYear = date.getUTCFullYear(); // Gets the year (4 digits for 4-digit years) in UTC
-    const utcMonth = date.getUTCMonth() + 1; // getUTCMonth returns 0-11; add 1 to make it 1-12
-    const utcDay = date.getUTCDate(); // Gets the day of the month (1-31) in UTC
-
-    // Construct the date string in YYYY-MM-DD format
+function formatFormDate(date) {
+    if (!date) return '';
+    const utcYear = date.getUTCFullYear();
+    const utcMonth = date.getUTCMonth() + 1;
+    const utcDay = date.getUTCDate();
     return `${utcYear}-${String(utcMonth).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
 }
 
-function formatFormTime(timestamp) {
-    if (!timestamp) return '';
-    const date = new Date(timestamp.seconds * 1000);
+function formatFormTime(date) {
+    if (!date) return '';
     return format(date, 'HH:mm');
 }
 
-
-const TasksTable = ({ tasks, refreshTasks }) => {
+const TasksTable = ({ refreshTasks }) => {
+    const { user } = useUser();
+    const [tasks, setTasks] = useState([]);
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState({
@@ -49,13 +44,24 @@ const TasksTable = ({ tasks, refreshTasks }) => {
         dueDateComparison: '',
     });
 
+    useEffect(() => {
+        const loadCompletedTasks = async () => {
+            const allTasks = await getAllFromStore('tasks');
+            const completedTasks = allTasks.filter(task => task.taskStatus === 'Completed');
+            setTasks(completedTasks);
+        };
+
+        if (user?.id) {
+            loadCompletedTasks();
+        }
+    }, [user?.id]);
+
     const filterByDate = (taskDateStr, filterDateStr, comparisonType) => {
         let taskDate = new Date(taskDateStr);
         taskDate = new Date(taskDate.getTime() - taskDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
 
         let filterDate = new Date(filterDateStr);
         filterDate = new Date(filterDate.getTime() - filterDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
-
 
         switch (comparisonType) {
             case 'before':
@@ -75,21 +81,17 @@ const TasksTable = ({ tasks, refreshTasks }) => {
 
     const getFilteredTasks = (tasks, filterCriteria) => {
         const filteredTasks = tasks.filter((task) => {
-            // Search filter
-            const matchesAssignmentQuery = filterCriteria.assignmentQuery === '' || task.assignment.toLowerCase().includes(filterCriteria.assignmentQuery.toLowerCase());
-            const matchesSubjectQuery = filterCriteria.subjectQuery === '' || task.subject.toLowerCase().includes(filterCriteria.subjectQuery.toLowerCase());
-            const matchesProjectQuery = filterCriteria.projectQuery === '' || task.project.toLowerCase().includes(filterCriteria.projectQuery.toLowerCase());
+            const matchesAssignmentQuery = filterCriteria.assignmentQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.assignmentQuery.toLowerCase());
+            const matchesSubjectQuery = filterCriteria.subjectQuery === '' || task.taskSubject.subjectName.toLowerCase().includes(filterCriteria.subjectQuery.toLowerCase());
+            const matchesProjectQuery = filterCriteria.projectQuery === '' || task.taskProject.projectName.toLowerCase().includes(filterCriteria.projectQuery.toLowerCase());
 
-            // Due Date filtering
             let matchesDueDate = true;
             if (filterCriteria.dueDateComparison === "none") {
-                matchesDueDate = !task.dueDate; // Match tasks with no due date
+                matchesDueDate = !task.taskDueDate;
             } else if (filterCriteria.dueDate) {
-                // Apply date comparison logic if dueDate is provided and comparison isn't "none"
-                matchesDueDate = filterByDate(task.dueDate, filterCriteria.dueDate, filterCriteria.dueDateComparison);
+                matchesDueDate = filterByDate(task.taskDueDate, filterCriteria.dueDate, filterCriteria.dueDateComparison);
             }
 
-            // Return true if task matches all criteria
             return matchesAssignmentQuery && matchesSubjectQuery && matchesProjectQuery && matchesDueDate;
         });
 
@@ -106,34 +108,28 @@ const TasksTable = ({ tasks, refreshTasks }) => {
         });
     };
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilterCriteria(prev => ({ ...prev, [name]: value }));
-    };
-
     const handleEditClick = (task) => {
-        // Format the due date and time only if they exist
-        const formattedDueDate = task.dueDate ? formatFormDate(task.dueDate) : '';
-        const formattedDueTime = task.dueTime ? formatFormTime(task.dueTime) : '';
-        const formattedStartDate = task.startDate ? formatFormDate(task.startDate) : '';
+        const formattedDueDate = task.taskDueDate ? formatFormDate(new Date(task.taskDueDate)) : '';
+        const formattedDueTime = task.taskDueTime ? formatFormTime(new Date(task.taskDueTime)) : '';
+        const formattedStartDate = task.taskStartDate ? formatFormDate(new Date(task.taskStartDate)) : '';
 
         setEditedTask({
             ...task,
-            dueDate: formattedDueDate,
-            dueTime: formattedDueTime,
-            startDate: formattedStartDate
+            taskDueDate: formattedDueDate,
+            taskDueTime: formattedDueTime,
+            taskStartDate: formattedStartDate,
         });
 
-        setEditModalOpen(true); // Open the edit modal
+        setEditModalOpen(true);
     };
-
 
     const handleDeleteClick = async (taskId) => {
         const confirmation = window.confirm("Are you sure you want to delete this task?");
         if (confirmation) {
             try {
                 await deleteTask(taskId);
-                refreshTasks(); // Call this function to refresh the tasks in the parent component
+                await deleteFromStore('tasks', taskId);
+                refreshTasks();
             } catch (error) {
                 console.error("Error deleting task:", error);
             }
@@ -144,7 +140,7 @@ const TasksTable = ({ tasks, refreshTasks }) => {
         <>
             <div className="filter-bar">
                 <div className="filter-item">
-                    <label htmlFor="searchTask">Search by Assignment:</label>
+                    <label htmlFor="searchTask">Search by Name:</label>
                     <input
                         id="searchTask"
                         type="text"
@@ -214,7 +210,7 @@ const TasksTable = ({ tasks, refreshTasks }) => {
                 <thead>
                     <tr>
                         <th>Subject</th>
-                        <th>Assignment</th>
+                        <th>Name</th>
                         <th>Due Date</th>
                         <th>Due Time</th>
                         <th>Project</th>
@@ -224,20 +220,19 @@ const TasksTable = ({ tasks, refreshTasks }) => {
                 </thead>
                 <tbody>
                     {getFilteredTasks(tasks, filterCriteria).map((task, index) => (
-                        <tr key={task.id || index}>
-                            <td>{task.subject}</td>
-                            <td>{task.assignment}</td>
-                            <td> {task.dueDate ? formatDateDisplay(formatFormDate(task.dueDate)) : ''}</td>
-                            <td> {task.dueTime ? formatTimeDisplay(formatFormTime(task.dueTime)) : ''}</td>
-                            <td>{task.project}</td>
+                        <tr key={task.taskId || index}>
+                            <td>{task.taskSubject.subjectName}</td>
+                            <td>{task.taskName}</td>
+                            <td>{task.taskDueDate ? formatDateDisplay(task.dueDate) : ''}</td>
+                            <td>{task.taskDueTime ? formatTimeDisplay(task.dueTime) : ''}</td>
+                            <td>{task.taskProject.projectName}</td>
                             <td>
-
                                 <CustomIconButton aria-label="edit" onClick={() => handleEditClick(task, index)}>
                                     <EditIcon />
                                 </CustomIconButton>
                             </td>
                             <td>
-                                <IconButton aria-label="delete" onClick={() => handleDeleteClick(task.id)}>
+                                <IconButton aria-label="delete" onClick={() => handleDeleteClick(task.taskId)}>
                                     <DeleteIcon />
                                 </IconButton>
                             </td>

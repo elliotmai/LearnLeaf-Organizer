@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { addTask, fetchSubjects, addSubject, fetchProjects, addProject, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
+import { addTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -43,7 +44,7 @@ const cancelButtonStyle = {
     },
 };
 
-export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initialProject, initialDueDate, subjects, projects }) {
+export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, initialSubject, initialProject, initialDueDate }) {
     const { user } = useUser();
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
@@ -61,67 +62,34 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
         taskProject: initialProject || 'None',
     });
 
-    const [errors, setErrors] = useState({}); // State to track validation errors
-
-    useEffect(() => {
-        setTaskDetails(prevDetails => ({
-            ...prevDetails,
-            subject: subjects.some(subj => subj.subjectId === initialSubject) ? initialSubject : 'None',
-            project: projects.some(proj => proj.projectId === initialProject) ? initialProject : 'None'
-        }));
-    }, [user?.id]);
+    const [errors, setErrors] = useState({});
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
-
         const isNewItemSelected = value === "newSubject" || value === "newProject";
 
         if (name === "taskSubject") {
-            if (isNewItemSelected) {
-                setIsNewSubject(value === "newSubject");
-                setTaskDetails(prevDetails => ({ ...prevDetails, taskSubject: 'None' }));
-            } else {
-                setIsNewSubject(false);
-                setTaskDetails(prevDetails => ({ ...prevDetails, taskSubject: value }));
-            }
-        } else if (name === "newSubjectName" && isNewSubject) {
-            setTaskDetails(prevDetails => ({ ...prevDetails, taskSubject: value }));
-        }
-
-        if (name === "taskProject") {
-            if (isNewItemSelected) {
-                setIsNewProject(value === "newProject");
-                setTaskDetails(prevDetails => ({ ...prevDetails, taskProject: 'None' }));
-            } else {
-                setIsNewProject(false);
-                setTaskDetails(prevDetails => ({ ...prevDetails, taskProject: value }));
-            }
-        } else if (name === "newProjectName" && isNewProject) {
-            setTaskDetails(prevDetails => ({ ...prevDetails, taskProject: value }));
-        }
-
-        // Validation logic for dueDateInput when dueTimeInput is provided
-        if (name === 'dueTimeInput' && value) {
-            if (!taskDetails.dueDateInput) {
-                setErrors((prevErrors) => ({
-                    ...prevErrors,
-                    dueDateInput: 'Due date is required when due time is added.',
-                }));
-            } else {
-                setErrors((prevErrors) => ({
-                    ...prevErrors,
-                    dueDateInput: '', // Clear the error if dueDateInput is already set
-                }));
-            }
-        } else if (name === 'dueDateInput') {
-            setErrors((prevErrors) => ({
-                ...prevErrors,
-                dueDateInput: '', // Clear the error when the due date is provided
+            setIsNewSubject(isNewItemSelected);
+            setTaskDetails(prevDetails => ({
+                ...prevDetails,
+                taskSubject: isNewItemSelected ? 'None' : value,
             }));
+        } else if (name === "taskProject") {
+            setIsNewProject(isNewItemSelected);
+            setTaskDetails(prevDetails => ({
+                ...prevDetails,
+                taskProject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === 'dueTimeInput' && value && !taskDetails.dueDateInput) {
+            setErrors(prevErrors => ({
+                ...prevErrors,
+                dueDateInput: 'Due date is required when due time is added.',
+            }));
+        } else if (name === 'dueDateInput') {
+            setErrors(prevErrors => ({ ...prevErrors, dueDateInput: '' }));
         }
 
-        // Handle all other inputs normally
-        if (!["taskSubject", "taskProject", "newSubjectName", "newProjectName"].includes(name)) {
+        if (!["taskSubject", "taskProject"].includes(name)) {
             setTaskDetails(prevDetails => ({ ...prevDetails, [name]: value }));
         }
     };
@@ -129,13 +97,12 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Check if dueTimeInput is present but dueDateInput is missing
         if (taskDetails.dueTimeInput && !taskDetails.dueDateInput) {
-            setErrors((prevErrors) => ({
+            setErrors(prevErrors => ({
                 ...prevErrors,
                 dueDateInput: 'Due date is required when due time is added.',
             }));
-            return; // Prevent form submission if validation fails
+            return;
         }
 
         let updatedTaskDetails = { ...taskDetails };
@@ -145,9 +112,10 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                 subjectName: newSubjectName,
                 subjectDescription: '',
                 subjectSemester: '',
-                subjectColor: 'black' // Default color
+                subjectColor: 'black'
             };
-            updatedTaskDetails.taskSubject = await addSubject(newSubjectDetails);
+            const addedSubject = await addSubject(newSubjectDetails);
+            updatedTaskDetails.taskSubject = addedSubject.subjectId;
         }
 
         if (isNewProject && newProjectName) {
@@ -156,12 +124,13 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                 projectDescription: '',
                 projectSubjects: []
             };
-            updatedTaskDetails.taskProject = await addProject(newProjectDetails);
+            const addedProject = await addProject(newProjectDetails);
+            updatedTaskDetails.taskProject = addedProject.projectId;
         }
 
-        const newTaskData = await addTask(taskDetails);
+        const newTaskData = await addTask(updatedTaskDetails);
 
-        onAddTask(newTaskData);  // Immediately update the parent component with the new task
+        onAddTask(newTaskData);
         onClose();
     };
 
@@ -199,16 +168,16 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                         />
                     )}
                     <TextField fullWidth margin="normal" label="Name" name="taskName" value={taskDetails.taskName} onChange={handleInputChange} required />
-                    <TextField fullWidth margin="normal" label="Description" name="taskDescription" value={taskDetails.taskDescription} onChange={handleInputChange} multiline maxRows={4}/>
+                    <TextField fullWidth margin="normal" label="Description" name="taskDescription" value={taskDetails.taskDescription} onChange={handleInputChange} multiline maxRows={4} />
 
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="priority-label">Priority</InputLabel>
-                        <Select 
-                        labelId="priority-label" 
-                        id="priority" 
-                        value={'Medium'}
-                        name="taskPriority" 
-                        onChange={handleInputChange}>
+                        <Select
+                            labelId="priority-label"
+                            id="priority"
+                            value={taskDetails.taskPriority}
+                            name="taskPriority"
+                            onChange={handleInputChange}>
                             <MenuItem value="High">High</MenuItem>
                             <MenuItem value="Medium">Medium</MenuItem>
                             <MenuItem value="Low">Low</MenuItem>
@@ -217,27 +186,27 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
 
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="status-label">Status</InputLabel>
-                        <Select 
-                        labelId="status-label" 
-                        id="status" 
-                        value={'Not Started'}
-                        name="taskStatus" 
-                        onChange={handleInputChange}>
+                        <Select
+                            labelId="status-label"
+                            id="status"
+                            value={taskDetails.taskStatus}
+                            name="taskStatus"
+                            onChange={handleInputChange}>
                             <MenuItem value="Not Started">Not Started</MenuItem>
                             <MenuItem value="In Progress">In Progress</MenuItem>
                             <MenuItem value="Completed">Completed</MenuItem>
                         </Select>
                     </FormControl>
 
-                    <TextField 
-                        fullWidth 
-                        margin="normal" 
-                        label="Start Date" 
-                        name="startDateInput" 
-                        type="date" 
-                        value={taskDetails.startDateInput} 
-                        onChange={handleInputChange} 
-                        InputLabelProps={{ shrink: true }} 
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Start Date"
+                        name="startDateInput"
+                        type="date"
+                        value={taskDetails.startDateInput}
+                        onChange={handleInputChange}
+                        InputLabelProps={{ shrink: true }}
                     />
                     <TextField
                         fullWidth
@@ -248,18 +217,18 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, initialSubject, initia
                         value={taskDetails.dueDateInput}
                         onChange={handleInputChange}
                         InputLabelProps={{ shrink: true }}
-                        error={!!errors.dueDateInput}  // Display error styling if there is an error
-                        helperText={errors.dueDateInput}  // Display the error message
+                        error={!!errors.dueDateInput}
+                        helperText={errors.dueDateInput}
                     />
-                    <TextField 
-                        fullWidth 
-                        margin="normal" 
-                        label="Time Due" 
-                        name="dueTimeInput" 
-                        type="time" 
-                        value={taskDetails.dueTimeInput} 
-                        onChange={handleInputChange} 
-                        InputLabelProps={{ shrink: true }} 
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Time Due"
+                        name="dueTimeInput"
+                        type="time"
+                        value={taskDetails.dueTimeInput}
+                        onChange={handleInputChange}
+                        InputLabelProps={{ shrink: true }}
                     />
                     <FormControl fullWidth margin="normal">
                         <InputLabel id="project-label">Project</InputLabel>

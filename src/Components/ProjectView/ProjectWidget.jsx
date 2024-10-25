@@ -16,7 +16,7 @@ const CustomIconButton = styled(IconButton)({
     color: '#9F6C5B'
 });
 
-const ProjectWidget = ({ project, refreshProjects }) => {
+const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     const [editedProject, setEditedProject] = useState({
         ...project,
     });
@@ -64,10 +64,16 @@ const ProjectWidget = ({ project, refreshProjects }) => {
         }
     };
 
+    const handleProjectClick = () => {
+        ProjectTasks(project);
+        navigate(`/projects/${project.projectId}`);
+    };
+
     return (
         <>
             <EditProjectForm
                 project={editedProject}
+                subjects={subejcts}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
                 onSave={() => {

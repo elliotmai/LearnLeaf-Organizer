@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { addProject, fetchSubjects, addSubject } from '/src/LearnLeaf_Functions.jsx';
+import { addProject, addSubject } from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
+import { getAllFromStore } from '/src/db.js'; // IndexedDB utility functions
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -34,9 +35,8 @@ const cancelButtonStyle = {
     '&:hover': { backgroundColor: '#a8bdb8' },
 };
 
-export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
+export function AddProjectForm({ subjects, isOpen, onClose, refreshProjects }) {
     const { user } = useUser();
-    const [subjects, setSubjects] = useState([]);
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [projectDetails, setProjectDetails] = useState({
@@ -46,15 +46,6 @@ export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
         projectDueDateInput: '',
         projectDueTimeInput: '',
     });
-
-    useEffect(() => {
-        const loadSubjects = async () => {
-            const fetchedSubjects = await fetchSubjects(user.id);
-            setSubjects(fetchedSubjects || []);
-        };
-        loadSubjects();
-        // console.log(subjects);
-    }, [user.id]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -72,6 +63,7 @@ export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         if (projectDetails.subject === "None") {
             projectDetails.subject = '';
         }
@@ -83,13 +75,13 @@ export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
                 semester: '',
                 subjectColor: 'black' // Default color
             };
-            await addSubject(newSubjectDetails);
-            projectDetails.subject = newSubjectName;
+            const addedSubject = await addSubject(newSubjectDetails);
+            projectDetails.subject = newSubjectName; // Update project details with new subject
         }
 
-        await addProject(projectDetails);
+        const newProject = await addProject(projectDetails);
         onClose();
-        await refreshProjects();
+        await refreshProjects(); // Refresh the project list
     };
 
     return (
@@ -117,7 +109,7 @@ export function AddProjectForm({ isOpen, onClose, refreshProjects }) {
                         >
                             <MenuItem value="None">None</MenuItem>
                             {subjects.map(subject => (
-                                <MenuItem key={subject.subjectName} value={subject.subjectName}>{subject.subjectName}</MenuItem>
+                                <MenuItem key={subject.subjectId} value={subject.subjectName}>{subject.subjectName}</MenuItem>
                             ))}
                             <MenuItem value="newSubject">Add New Subject...</MenuItem>
                         </Select>

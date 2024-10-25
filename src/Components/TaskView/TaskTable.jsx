@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import debounce from 'lodash.debounce';
-import { fetchProjects, fetchSubjects } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import Grid from '@mui/material/Grid';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -10,7 +10,7 @@ import TaskFilterBar from '../../pages/TaskFilterBar';
 import './TaskView.css';
 import '/src/Components/PageFormat.css';
 
-const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdateTask }) => {
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     const [filterCriteria, setFilterCriteria] = useState({
         searchQuery: '',
         taskPriority: '',
@@ -45,6 +45,7 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
         []
     );
 
+    // Filter by date
     const filterByDate = (taskDateStr, filterDateStr, comparisonType) => {
         let taskDate = new Date(taskDateStr);
         taskDate = new Date(taskDate.getTime() - taskDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
@@ -68,6 +69,7 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
         }
     };
 
+    // Filter tasks based on criteria
     const getFilteredTasks = (tasks, filterCriteria) => {
         return tasks.filter((task) => {
             const matchesSearchQuery = filterCriteria.searchQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
@@ -92,6 +94,7 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
         });
     };
 
+    // Clear all filters
     const clearFilters = () => {
         setFilterCriteria({
             searchQuery: '',
@@ -104,16 +107,18 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
         });
     };
 
+    // Handle filter changes
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilterCriteria(prev => ({ ...prev, [name]: value }));
     };
 
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 550; // Adjust the item size based on the widget height
+    const rowHeight = 550;
     const filteredTasks = getFilteredTasks(tasks, filterCriteria);
     const totalRows = Math.ceil(filteredTasks.length / itemsPerRow);
 
+    // Render each row of tasks
     const Row = React.memo(({ index, style }) => {
         const startIndex = index * itemsPerRow;
         return (
@@ -130,8 +135,7 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
                                         onDelete={onDelete}
                                         subjects={subjects}
                                         projects={projects}
-                                        refreshTasks={refreshTasks}
-                                        onUpdateTask={onUpdateTask} // Pass update function from parent
+                                        onUpdateTask={onUpdateTask}
                                     />
                                 </Grid>
                             ) : null;
@@ -147,11 +151,13 @@ const TasksTable = ({ tasks, subjects, projects, refreshTasks, onDelete, onUpdat
                 filterCriteria={filterCriteria}
                 setFilterCriteria={setFilterCriteria}
                 clearFilters={clearFilters}
+                onSearchChange={handleSearchChange}
+                onFilterChange={handleFilterChange}
             />
             <List
                 height={600}
                 itemCount={totalRows}
-                itemSize={rowHeight} // Adjust the row height to fit the content
+                itemSize={rowHeight}
                 width="100%"
             >
                 {({ index, style }) => (

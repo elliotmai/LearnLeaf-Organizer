@@ -7,7 +7,7 @@ import './TaskView.css';
 
 const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks, onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task });
-    const [originalValues, setOriginalValues] = useState({ ...task }); // Store original values for comparison
+    const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isNewSubject, setIsNewSubject] = useState(false);
@@ -15,64 +15,35 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
 
-    // Check if the form has any unsaved changes
-    const hasUnsavedChanges = () => {
-        return JSON.stringify(formValues) !== JSON.stringify(originalValues);
-    };
+    const hasUnsavedChanges = () => JSON.stringify(formValues) !== JSON.stringify(originalValues);
 
-    // Check if a specific field has unsaved changes
-    const isFieldUnsaved = (fieldName) => {
-        return formValues[fieldName] !== originalValues[fieldName];
-    };
+    const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
-    // Handle input changes
     const handleInputChange = (event) => {
         const { name, value } = event.target;
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            [name]: value,
-        }));
+        setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     };
 
     const handleSelectChange = (event) => {
         const { name, value } = event.target;
 
         if (name === 'taskSubject') {
-            if (value === 'newSubject') {
-                setIsNewSubject(true); // Show text field for new subject
-            } else {
-                setIsNewSubject(false); // Hide the text field when another subject is selected
-            }
+            setIsNewSubject(value === 'newSubject');
         }
-
         if (name === 'taskProject') {
-            if (value === 'newProject') {
-                setIsNewProject(true); // Show text field for new project
-            } else {
-                setIsNewProject(false); // Hide the text field when another project is selected
-            }
+            setIsNewProject(value === 'newProject');
         }
-
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            [name]: value,
-        }));
+        setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     };
 
     const handleDateChange = (event, field) => {
-        const value = event.target.value || ''; // Handle "Clear" action by setting to an empty string
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            [field]: value,
-        }));
+        const value = event.target.value || '';
+        setFormValues((prevValues) => ({ ...prevValues, [field]: value }));
     };
 
     const handleTimeFieldChange = (event) => {
         const { name, value } = event.target;
-        setFormValues((prevDetails) => ({
-            ...prevDetails,
-            [name]: value
-        }));
+        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
     };
 
     useEffect(() => {
@@ -88,11 +59,6 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
         try {
             let updatedTask = { ...formValues };
 
-            // Retrieve subjects and projects from localStorage
-            const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
-            const storedProjects = JSON.parse(localStorage.getItem('projects')) || [];
-
-            // If a new subject is being added
             if (isNewSubject && newSubjectName) {
                 const newSubjectDetails = {
                     subjectName: newSubjectName,
@@ -101,13 +67,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     subjectColor: 'black',
                 };
                 const addedSubject = await addSubject(newSubjectDetails);
-                updatedTask.taskSubject = addedSubject.subjectId; // Update taskSubject with the new subject reference
-
-                const updatedSubjects = [...storedSubjects, addedSubject];
-                localStorage.setItem('subjects', JSON.stringify(updatedSubjects)); // Save to localStorage
+                updatedTask.taskSubject = addedSubject.subjectId;
+                await refreshTasks();
             }
 
-            // If a new project is being added
             if (isNewProject && newProjectName) {
                 const newProjectDetails = {
                     projectName: newProjectName,
@@ -115,26 +78,16 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     projectSubjects: [],
                 };
                 const addedProject = await addProject(newProjectDetails);
-                updatedTask.taskProject = addedProject.projectId; // Update taskProject with the new project reference
-
-                const updatedProjects = [...storedProjects, addedProject];
-                localStorage.setItem('projects', JSON.stringify(updatedProjects)); // Save to localStorage
+                updatedTask.taskProject = addedProject.projectId;
+                await refreshTasks();
             }
 
-            // Save the task with the new subject or project
             const refreshedTask = await editTask(updatedTask);
-
-            // Update the local state after a successful save
             onUpdateTask(refreshedTask);
-
-            // Reset original values to reflect the new saved state
             setOriginalValues(refreshedTask);
-
-            // Close the edit modal if it was open
             if (isEditModalOpen) {
                 setEditModalOpen(false);
             }
-
         } catch (error) {
             console.error('Error updating task:', error);
         }
@@ -142,7 +95,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
 
     const handleEditClick = () => {
         setEditedTask({ ...formValues });
-        setEditModalOpen(true); // Open the edit modal
+        setEditModalOpen(true);
     };
 
     return (
@@ -238,8 +191,8 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                     className={isFieldUnsaved('taskPriority') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="High">High</MenuItem>
-                                    <MenuItem value="Medium">High</MenuItem>
-                                    <MenuItem value="Low">High</MenuItem>
+                                    <MenuItem value="Medium">Medium</MenuItem>
+                                    <MenuItem value="Low">Low</MenuItem>
                                 </Select>
                             </FormControl>
                         </Grid>

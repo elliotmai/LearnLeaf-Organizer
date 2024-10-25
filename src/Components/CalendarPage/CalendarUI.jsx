@@ -6,8 +6,7 @@ import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import { enUS } from 'date-fns/locale';
 import parseISO from 'date-fns/parseISO';
-import { useUser } from '/src/UserState.jsx';
-import { fetchTasks, editTask, deleteTask, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx'
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import Dialog from '@mui/material/Dialog';
@@ -111,7 +110,7 @@ const CalendarUI = ({events, refreshTasks}) => {
                         event: CustomAgendaEvent, // Use custom event component for agenda
                     }
                 }}
-                views={['month', 'week', 'day', 'agenda']}
+                views={['month', 'week', 'day']}
                 step={1440} // Sets the time slot size to one day
                 timeslots={1} // Only one time slot per day
                 style={{ height: 700 }}
@@ -130,13 +129,13 @@ const CalendarUI = ({events, refreshTasks}) => {
                             </b>
                             <br />
                             <br />
-                            Subject: {selectedEvent.task.subject}
+                            Subject: {selectedEvent.task.taskSubject.subjectName}
                             <br />
-                            Due Date: {format(parseISO(selectedEvent.task.dueDate), 'PPP')}
+                            Due Date: {format(parseISO(selectedEvent.task.taskDueDate), 'PPP')}
                             <br />
-                            Due Time: {formatTimeDisplay(selectedEvent.task.dueTime)}
+                            Due Time: {formatTimeDisplay(selectedEvent.task.taskDueTime)}
                             <br />
-                            Project: {selectedEvent.task.project}
+                            Project: {selectedEvent.task.taskProject.projectName}
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions>
@@ -150,6 +149,8 @@ const CalendarUI = ({events, refreshTasks}) => {
                 <TaskEditForm
                     key={editedTask.taskId}
                     task={editedTask}
+                    subjects={subjects}
+                    projects={projects}
                     isOpen={isEditModalOpen}
                     onClose={() => setEditModalOpen(false)}
                     onSave={(updatedTask) => {
@@ -160,6 +161,8 @@ const CalendarUI = ({events, refreshTasks}) => {
             )}
             {openAddTask && (
                 <AddTaskForm
+                    subjects={subjects}
+                    projects={projects}
                     isOpen={openAddTask}
                     onClose={handleCloseAddTask}
                     refreshTasks={refreshTasks}

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { editProject, fetchSubjects, addSubject } from '/src/LearnLeaf_Functions.jsx'; // Ensure you have this function defined similarly to addProject
 import { useUser } from '/src/UserState.jsx';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
@@ -9,6 +8,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
+import { getAllFromStore, saveToStore } from '/src/db.js'; // Use IndexedDB functions
 
 // Styles
 const boxStyle = {
@@ -19,9 +19,9 @@ const boxStyle = {
     width: 400,
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2, // Padding top
-    pb: 3, // Padding bottom
-    px: 4, // Padding left and right
+    pt: 2,
+    pb: 3,
+    px: 4,
 };
 
 const submitButtonStyle = {
@@ -41,21 +41,11 @@ const cancelButtonStyle = {
     },
 };
 
-export const EditProjectForm = ({ project, isOpen, onClose, onSave }) => {
+export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) => {
     const { user } = useUser();
-    const [subjects, setSubjects] = useState([]);
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [formValues, setFormValues] = useState(project);
-
-    useEffect(() => {
-        setFormValues({ ...project });
-        async function loadSelections() {
-            const fetchedSubjects = await fetchSubjects(user.id);
-            setSubjects(fetchedSubjects);
-        }
-        loadSelections();
-    }, [project, user.id]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -77,19 +67,21 @@ export const EditProjectForm = ({ project, isOpen, onClose, onSave }) => {
             formValues.subject = '';
         }
 
+        // Add new subject to IndexedDB if needed
         if (isNewSubject && newSubjectName) {
             const newSubjectDetails = {
                 userId: user.id,
                 subjectName: newSubjectName,
                 semester: '',
-                subjectColor: 'black' // Default color
+                subjectColor: 'black', // Default color
             };
-            await addSubject(newSubjectDetails);
+            await saveToStore('subjects', [newSubjectDetails]); // Save the new subject in IndexedDB
             formValues.subject = newSubjectName;
         }
 
-        await editProject(formValues);
-        onSave(formValues); 
+        // Save the updated project details to IndexedDB
+        await saveToStore('projects', [formValues]);
+        onSave(formValues); // Pass the updated project back to the parent component
         onClose();
     };
 
