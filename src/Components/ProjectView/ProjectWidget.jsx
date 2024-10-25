@@ -5,8 +5,9 @@ import { archiveProject, deleteProject, formatDateDisplay, formatTimeDisplay } f
 import ProjectTasks from '/src/pages/ProjectTasks.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
-import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box } from '@mui/material';
+import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
@@ -17,10 +18,10 @@ const CustomIconButton = styled(IconButton)({
 
 const ProjectWidget = ({ project, refreshProjects }) => {
     const [editedProject, setEditedProject] = useState({
-        projectId: project.id,
         ...project,
     });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isDescriptionOpen, setDescriptionOpen] = useState(false);
     const navigate = useNavigate();
     const theme = useTheme();
     const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg')); // Large screen detection
@@ -35,11 +36,14 @@ const ProjectWidget = ({ project, refreshProjects }) => {
     ];
 
     const handleArchiveProject = async () => {
-        try {
-            await archiveProject(project.projectId);
-            refreshProjects();
-        } catch (error) {
-            console.error("Error archiving project:", error);
+        const confirmation = window.confirm("Are you sure you want to archive this project?\nThis will mark all outstanding tasks as Completed.");
+        if (confirmation) {
+            try {
+                await archiveProject(project.projectId);
+                refreshProjects();
+            } catch (error) {
+                console.error("Error archiving project:", error);
+            }
         }
     };
 
@@ -60,18 +64,13 @@ const ProjectWidget = ({ project, refreshProjects }) => {
         }
     };
 
-    const handleProjectClick = () => {
-        ProjectTasks(project);
-        navigate(`/projects/${project.projectId}`);
-    };
-
     return (
         <>
             <EditProjectForm
                 project={editedProject}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
-                onSave={(updatedProject) => {
+                onSave={() => {
                     refreshProjects();
                     setEditModalOpen(false);
                 }}
@@ -101,8 +100,69 @@ const ProjectWidget = ({ project, refreshProjects }) => {
                     </Link>
 
                     <Typography variant="body2" color="textSecondary" gutterBottom>
-                        {project.subject ? `Subject: ${project.subject}` : ' '}
+                        {project.projectSubjects && project.projectSubjects.length > 0
+                            ? `Subjects: ${project.projectSubjects.map(subject => subject.subjectName).join(', ')}`
+                            : ''}
                     </Typography>
+
+                    <Typography
+                        variant="body2"
+                        color="textSecondary"
+                        onClick={() => setDescriptionOpen(true)}
+                        sx={{
+                            whiteSpace: 'pre-wrap',
+                            fontStyle: 'italic',
+                            textAlign: 'center',
+                            padding: '8px',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
+                        {project.projectDescription}
+                    </Typography>
+
+                    {/* Dialog to show full description */}
+                    <Dialog
+                        open={isDescriptionOpen}
+                        onClose={() => setDescriptionOpen(false)}
+                        aria-labelledby="description-dialog-title"
+                    >
+                        <DialogTitle
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingRight: '16px'
+                            }}
+                        >
+                            Full Description
+                            <IconButton
+                                aria-label="close"
+                                onClick={() => setDescriptionOpen(false)}
+                                sx={{
+                                    color: (theme) => theme.palette.grey[500],
+                                }}
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </DialogTitle>
+                        <DialogContent>
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    fontStyle: 'italic',
+                                }}
+                            >
+                                {project.projectDescription}
+                            </Typography>
+                        </DialogContent>
+                    </Dialog>
 
                     {project.nextTaskName ? (
                         <Typography

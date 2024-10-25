@@ -96,7 +96,6 @@ export function registerUser(email, password, name) {
             await setDoc(doc(db, "users", user.uid), {
                 name: name,
                 email: email,
-                password: password,
                 timeFormat: '12h', // Initialize time format as 12 Hour
                 dateFormat: 'MM/DD/YYYY', // Initialize date format as MM/DD/YYYY
                 notifications: false, // Initialize notifications as Disabled
@@ -146,7 +145,6 @@ export async function loginUser(email, password) {
                 id: user.uid,
                 name: userDoc.data().name,
                 email: userDoc.data().email,
-                userPassword: userDoc.data().password,
                 userTimeFormat: userDoc.data().timeFormat,
                 dateFormat: userDoc.data().dateFormat,
                 notifications: userDoc.data().notifications,
@@ -155,17 +153,17 @@ export async function loginUser(email, password) {
 
             // Set userId and collections
             setUserIdAndCollections(user.uid);
+            localStorage.setItem('user', JSON.stringify(userData));
 
             // Fetch all tasks, projects, and subjects for the user
             const tasks = await fetchAllTasks();  // Fetch all tasks
-            const projects = await fetchProjects();  // Fetch all active projects
-            const subjects = await fetchSubjects();  // Fetch all active subjects
-
-            // Save the fetched data into localStorage
-            localStorage.setItem('user', JSON.stringify(userData));
             localStorage.setItem('tasks', JSON.stringify(tasks));
-            localStorage.setItem('projects', JSON.stringify(projects));
+
+            const subjects = await fetchSubjects();  // Fetch all active subjects
             localStorage.setItem('subjects', JSON.stringify(subjects));
+
+            const projects = await fetchProjects();  // Fetch all active projects
+            localStorage.setItem('projects', JSON.stringify(projects));
 
             console.log('User, tasks, projects, and subjects saved to localStorage');
 
@@ -196,6 +194,7 @@ export async function logoutUser() {
     return signOut(auth) // this removes the user's access and clears their login status.
         .then(() => {
             setUserIdAndCollections(null);
+            // localStorage.clear(); // Clear local storage after successful logout
             console.log(successlogout);
         })
         .catch((error) => {
@@ -219,6 +218,9 @@ export async function deleteUser(userId) {
     if (user && user.uid === userId) {
         await deleteFirebaseUser(user);
     }
+
+    // Clear local storage after successful user deletion
+    localStorage.clear();
 }
 
 // document.addEventListener('DOMContentLoaded', function () {
@@ -848,7 +850,7 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
     };
 
     const subjectRef = doc(subjectCollection, subjectId);
-    const addedSubject = {...subjectData, subjectId};
+    const addedSubject = { ...subjectData, subjectId };
 
     try {
         await setDoc(subjectRef, subjectData);
@@ -856,7 +858,7 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
         // Update localStorage
         const updatedSubjects = [...storedSubjects, addedSubject];
         updateLocalStorageSubjects(updatedSubjects);
-        
+
         console.log("Subject added successfully");
         return addedSubject;
     } catch (error) {
@@ -883,7 +885,7 @@ export async function editSubject(subjectDetails) {
 
     // Create a reference to the subject document
     const subjectRef = doc(subjectCollection, subjectId);
-    const editedSubject = {...subjectData, subjectId}
+    const editedSubject = { ...subjectData, subjectId }
 
     // Use updateDoc to update the task document
     try {
@@ -892,7 +894,7 @@ export async function editSubject(subjectDetails) {
         // Update localStorage
         const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectDetails.subjectId ? subjectDetails : subject);
         updateLocalStorageSubjects(updatedSubjects);
-        
+
         console.log("Subject updated successfully");
         return editedSubject;
     } catch (error) {
@@ -1046,54 +1048,59 @@ export async function fetchProjects(projectId = null, projectStatus = null) {
     }
 
     try {
-        let projectsQuery= query(projectCollection);
-        
+        // Step 1: Start with base query on projectCollection
+        let projectsQuery = query(projectCollection);
+
+        // Step 2: Apply filtering by projectId (if provided)
         if (projectId) {
-            projectsQuery = query(projectCollection, where('_name_', '==', projectId));
+            projectsQuery = query(projectCollection, where('__name__', '==', projectId));
         }
 
+        // Step 3: Apply filtering by projectStatus (if provided)
         if (projectStatus) {
             projectsQuery = query(projectsQuery, where('projectStatus', '==', projectStatus));
         }
 
+        // Step 4: Fetch the project documents from Firestore
         const querySnapshot = await getDocs(projectsQuery);
 
-        const projectsWithDetails = await Promise.all(querySnapshot.docs.map(async (projectDoc) => {
-            const projectData = projectDoc.data();
+        // Step 5: Get the subjects from local storage
+        const storedSubjects = JSON.parse(localStorage.getItem('subjects')) || [];
 
-            // Resolve subjects within the project
+        // Step 6: Process each project document asynchronously
+        const projectsWithDetails = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const projectData = doc.data();
+
+            // Step 7: Resolve subjects within the project (projectSubjects is an array of Firebase document references)
             const projectSubjects = projectData.projectSubjects || [];
 
-            const subjectsPromises = projectSubjects.map(async (subjectRef) => {
-                const subjectDoc = await getDoc(subjectRef);
-                if (subjectDoc.exists()) {
-                    return { ...subjectDoc.data(), subjectId: subjectDoc.id };
+            // Use the storedSubjects from local storage to resolve the subject information
+            const resolvedSubjects = projectSubjects.map(subjectRef => {
+                // Find the matching subject in localStorage by subjectId
+                const matchingSubject = storedSubjects.find(subject => subject.subjectId === subjectRef.id);
+
+                // If a match is found, return the subject details, else return null
+                if (matchingSubject) {
+                    return {
+                        subjectId: matchingSubject.subjectId,
+                        subjectName: matchingSubject.subjectName,
+                        subjectColor: matchingSubject.subjectColor,
+                        subjectDescription: matchingSubject.subjectDescription,
+                        subjectSemester: matchingSubject.subjectSemester,
+                        subjectStatus: matchingSubject.subjectStatus,
+                    };
                 }
-                return null;
+                return null; // If no matching subject is found
             });
-            
-            const subjects = await Promise.all(subjectsPromises);
 
-            // Fetch tasks for this project
-            const tasksAll = await fetchAllTasks(null, `users/${userId}/projects/${projectDoc.id}`);
-            const tasksShow = await fetchTasks(null, `users/${userId}/projects/${projectDoc.id}`);
+            // Filter out any null subjects
+            const finalSubjects = resolvedSubjects.filter(subject => subject !== null);
 
-            // Count statuses and find the next task
-            const statusCounts = tasksAll.reduce((acc, task) => {
-                acc[task.taskStatus] = (acc[task.taskStatus] || 0) + 1;
-                return acc;
-            }, {});
-
-            const nextTask = tasksShow.sort((a, b) => new Date(a.taskDueDate) - new Date(b.taskDueDate))[0];
-
+            // Step 8: Return the final project object with subjects resolved from localStorage
             return {
+                projectId: doc.id,
                 ...projectData,
-                projectId: projectDoc.id,
-                projectSubjects: subjects.filter(s => s !== null),
-                nextTaskName: nextTask?.taskName,
-                nextTaskDueDate: nextTask?.taskDueDate,
-                nextTaskDueTime: nextTask?.taskDueTime,
-                statusCounts
+                projectSubjects: finalSubjects // Use the resolved subject data from localStorage
             };
         }));
 
@@ -1129,7 +1136,7 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
 
     // Step 3: Create a reference to the new project document
     const projectRef = doc(projectCollection, projectId);
-    const addedProject = {...projectData, projectId}
+    const addedProject = { ...projectData, projectId }
 
     try {
         // Step 4: Write the project data to Firestore
@@ -1167,7 +1174,7 @@ export async function editProject(projectDetails) {
 
     // Create a reference to the project document
     const projectRef = doc(projectCollection, projectId);
-    const editedProject = {...projectData, projectId}
+    const editedProject = { ...projectData, projectId }
 
     // Use updateDoc to update the project document
     try {
@@ -1182,23 +1189,49 @@ export async function archiveProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
 
     try {
-        // Update the status field of the project to 'Archived'
+        // Step 1: Update the status field of the project to 'Archived' in Firebase
         await updateDoc(projectRef, {
             projectStatus: 'Archived'
         });
 
-        // Update localStorage
+        // Step 2: Fetch all tasks that reference this project from Firebase
+        const tasksQuery = query(taskCollection, where('taskProject', '==', projectRef));
+        const tasksSnapshot = await getDocs(tasksQuery);
+
+        // Step 3: Update the taskStatus of these tasks to 'Completed' in Firebase
+        const batch = writeBatch(db);  // Use a batch to update all tasks at once
+
+        tasksSnapshot.forEach(taskDoc => {
+            const taskRef = doc(taskCollection, taskDoc.id);
+            batch.update(taskRef, { taskStatus: 'Completed' });
+        });
+
+        await batch.commit();  // Commit the batch update
+
+        // Step 4: Update localStorage for tasks
+        const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        const updatedTasks = storedTasks.map(task => {
+            if (task.taskProject.projectId === projectId) {
+                return { ...task, taskStatus: 'Completed' };  // Update taskStatus in localStorage
+            }
+            return task;
+        });
+
+        localStorage.setItem('tasks', JSON.stringify(updatedTasks));  // Update tasks in localStorage
+
+        // Step 5: Update localStorage for projects
         const storedProjects = JSON.parse(localStorage.getItem('projects')) || [];
         const updatedProjects = storedProjects.map(project =>
             project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project
         );
-        localStorage.setItem('projects', JSON.stringify(updatedProjects));  // Update localStorage
+        localStorage.setItem('projects', JSON.stringify(updatedProjects));  // Update projects in localStorage
 
-        console.log("Project archived successfully");
+        console.log("Project archived successfully, and related tasks updated in Firebase and localStorage.");
     } catch (error) {
-        console.error("Error archiving project:", error);
+        console.error("Error archiving project and updating tasks:", error);
     }
 }
+
 
 export async function fetchArchivedProjects(projectId = null) {
     // Ensure Firestore instance and userId are initialized
