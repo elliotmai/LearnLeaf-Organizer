@@ -160,7 +160,9 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                             required
                         >
                             <MenuItem value="None">Select Subject...</MenuItem>
-                            {subjects.map((subject) => (
+                            {subjects
+                                .filter(subject => subject.subjectStatus === "Active")
+                                .map((subject) => (
                                 <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
                             ))}
                             <MenuItem value="newSubject">Add New Subject...</MenuItem>
@@ -251,7 +253,9 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                             required
                         >
                             <MenuItem value="None">Select Project...</MenuItem>
-                            {projects.map((project) => (
+                            {projects
+                                .filter(project => project.projectStatus === "Active")
+                                .map((project) => (
                                 <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
                             ))}
                             <MenuItem value="newProject">Add New Project...</MenuItem>

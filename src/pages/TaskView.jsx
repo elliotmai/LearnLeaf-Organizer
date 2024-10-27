@@ -24,28 +24,26 @@ const TaskList = () => {
             const activeSubjects = (await getAllFromStore('subjects')) || [];
             const activeProjects = (await getAllFromStore('projects')) || [];
             const activeTasks = (await getAllFromStore('tasks')) || [];
-    
-            const filteredSubjects = activeSubjects.filter(subject => subject.subjectStatus === 'Active' && subject.subjectId !== 'None');
-            const filteredProjects = activeProjects.filter(project => project.projectStatus === 'Active' && project.projectId !== 'None');
+
             const filteredTasks = activeTasks.filter(task => task.taskStatus !== 'Completed');
-    
-            if (filteredSubjects.length > 0 && filteredProjects.length > 0 && filteredTasks.length > 0) {
+
+            if (activeSubjects.length > 0 && activeProjects.length > 0 && filteredTasks.length > 0) {
                 // Add subject and project info into tasks
                 const tasksWithDetails = filteredTasks.map(task => {
                     const taskSubject = activeSubjects.find(subject => subject.subjectId === task.taskSubject); // Use activeSubjects, including 'None'
                     const taskProject = activeProjects.find(project => project.projectId === task.taskProject);
-    
+
                     return {
                         ...task,
                         taskSubject, // Attach full subject details, including 'None'
                         taskProject  // Attach full project details
                     };
                 });
-    
+
                 const sortedTasks = sortTasks(tasksWithDetails);
-                const sortedSubjects = filteredSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
-                const sortedProjects = filteredProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
-    
+                const sortedSubjects = activeSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+                const sortedProjects = activeProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+
                 setTasks(sortedTasks);
                 setSubjects(sortedSubjects); // Excludes 'None' subject
                 setProjects(sortedProjects);
@@ -58,7 +56,7 @@ const TaskList = () => {
             console.error('Error loading data from IndexedDB:', error);
             return false;
         }
-    };    
+    };
 
     const updateState = async () => {
         setIsLoading(true);
@@ -99,13 +97,25 @@ const TaskList = () => {
     };
 
     const handleEditTask = async (updatedTask) => {
+        console.log('subjects: ', subjects, '\nprojects: ', projects, '\nedited task: ', updatedTask);
+
         setTasks(prevTasks => {
-            // Update the specific task
-            const updatedTasks = prevTasks.map(task =>
-                task.taskId === updatedTask.taskId ? updatedTask : task
-            );
+            // Update the specific task, attach taskSubject and taskProject details, and sort the tasks
+            const updatedTasks = prevTasks.map(task => {
+                if (task.taskId === updatedTask.taskId) {
+                    const taskSubject = subjects.find(subject => subject.subjectId === updatedTask.taskSubject); 
+                    const taskProject = projects.find(project => project.projectId === updatedTask.taskProject);
     
-            // Sort the updated list of tasks
+                    return {
+                        ...updatedTask,      // Use updated task details
+                        taskSubject,         // Attach full subject details
+                        taskProject          // Attach full project details
+                    };
+                }
+                return task;
+            });
+    
+            // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
     

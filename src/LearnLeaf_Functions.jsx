@@ -517,18 +517,19 @@ export async function editTask(taskDetails) {
             taskDueDate: taskData.taskDueDate instanceof Timestamp ? formatDate(taskData.taskDueDate) : '',
             taskDueTime: taskData.taskDueTime instanceof Timestamp ? formatTime(taskData.taskDueTime) : '',
             taskStartDate: taskData.taskStartDate instanceof Timestamp ? formatDate(taskData.taskStartDate) : '',
-            taskSubject: fullTaskSubject,
-            taskProject: fullTaskProject
+            taskSubject: taskData.taskSubject.id,
+            taskProject: taskData.taskProject.id
         };
 
         // Save updated task data to IndexedDB
         await saveToStore('tasks', [localTaskData]);
         console.log("Task updated successfully in both Firestore and IndexedDB");
+        return localTaskData;
     } catch (error) {
         console.error("Error updating task:", error);
     }
 
-    return { ...taskData, taskId };
+    
 }
 
 export async function deleteTask(taskId) {
@@ -606,16 +607,6 @@ export async function archiveSubject(subjectId) {
 
     try {
         await updateDoc(subjectRef, { subjectStatus: 'Archived' });
-
-        const tasksSnapshot = await getDocs(query(taskCollection, where('taskSubject', '==', subjectRef)));
-
-        const batch = writeBatch(firestore);
-        tasksSnapshot.forEach(taskDoc => batch.update(doc(taskCollection, taskDoc.id), { taskStatus: 'Completed' }));
-        await batch.commit();
-
-        const storedTasks = await getAllFromStore('tasks');
-        const updatedTasks = storedTasks.map(task => task.taskSubject.subjectId === subjectId ? { ...task, taskStatus: 'Completed' } : task);
-        await saveToStore('tasks', updatedTasks);
 
         const storedSubjects = await getAllFromStore('subjects');
         const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject);
@@ -702,16 +693,6 @@ export async function archiveProject(projectId) {
 
     try {
         await updateDoc(projectRef, { projectStatus: 'Archived' });
-
-        const tasksSnapshot = await getDocs(query(taskCollection, where('taskProject', '==', projectRef)));
-
-        const batch = writeBatch(firestore);
-        tasksSnapshot.forEach(taskDoc => batch.update(doc(taskCollection, taskDoc.id), { taskStatus: 'Completed' }));
-        await batch.commit();
-
-        const storedTasks = await getAllFromStore('tasks');
-        const updatedTasks = storedTasks.map(task => task.taskProject.projectId === projectId ? { ...task, taskStatus: 'Completed' } : task);
-        await saveToStore('tasks', updatedTasks);
 
         const storedProjects = await getAllFromStore('projects');
         const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project);

@@ -115,7 +115,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
             }
 
             const refreshedTask = await editTask(updatedTask);
-            onUpdateTask(formValues);
+            onUpdateTask(refreshedTask);
             setOriginalValues(refreshedTask);
             if (isEditModalOpen) {
                 setEditModalOpen(false);
@@ -159,11 +159,17 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     className={isFieldUnsaved('taskSubject') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="None">Select Subject...</MenuItem>
-                                    {subjects.map((subj) => (
-                                        <MenuItem key={subj.subjectId} value={subj.subjectId}>
-                                            {subj.subjectName}
-                                        </MenuItem>
-                                    ))}
+                                    {subjects
+                                        .filter((subj) =>
+                                            subj.subjectStatus === "Active" ||
+                                            subj.subjectId === (formValues.taskSubject?.subjectId || formValues.taskSubject)
+                                        )
+                                        .map((subj) => (
+                                            <MenuItem key={subj.subjectId} value={subj.subjectId}>
+                                                {subj.subjectName}
+                                            </MenuItem>
+                                        ))}
+
                                     <MenuItem value="newSubject">Add New Subject...</MenuItem>
                                 </Select>
                             </FormControl>
@@ -190,12 +196,17 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     onChange={handleInputChange}
                                     className={isFieldUnsaved('taskProject') ? 'unsaved-bg' : ''}
                                 >
-                                    <MenuItem value="None">Select Project...</MenuItem>
-                                    {projects.map((proj) => (
-                                        <MenuItem key={proj.projectId} value={proj.projectId}>
-                                            {proj.projectName}
-                                        </MenuItem>
-                                    ))}
+                                    <MenuItem key="None" value="None">Select Project...</MenuItem>
+                                    {projects
+                                        .filter((
+                                            proj) => proj.projectStatus === "Active" ||
+                                            proj.projectId === (formValues.taskProject?.projectId || formValues.taskProject)
+                                        )
+                                        .map((proj) => (
+                                            <MenuItem key={proj.projectId} value={proj.projectId}>
+                                                {proj.projectName}
+                                            </MenuItem>
+                                        ))}
                                     <MenuItem value="newProject">Add New Project...</MenuItem>
                                 </Select>
                             </FormControl>
@@ -333,21 +344,21 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                         </Tooltip>
                     </div>
                     <Tooltip title="Delete Task">
-                    <DeleteIcon
-                        onClick={() => onDelete(task.taskId)}
-                        sx={{
-                            color: '#d1566e',
-                            fontSize: 'xl',
-                            cursor: 'pointer',
-                            padding: '6px',          // Add padding to give space within the circle
-                            borderRadius: '50%',
-                            '&:hover': {
-                                transform: 'scale(1.05)',
-                                backgroundColor: '#d1566e',
-                                color: '#fff',
-                            },
-                        }}
-                    />
+                        <DeleteIcon
+                            onClick={() => onDelete(task.taskId)}
+                            sx={{
+                                color: '#d1566e',
+                                fontSize: 'xl',
+                                cursor: 'pointer',
+                                padding: '6px',          // Add padding to give space within the circle
+                                borderRadius: '50%',
+                                '&:hover': {
+                                    transform: 'scale(1.05)',
+                                    backgroundColor: '#d1566e',
+                                    color: '#fff',
+                                },
+                            }}
+                        />
                     </Tooltip>
                 </CardActions>
             </Card>
