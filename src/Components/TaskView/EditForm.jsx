@@ -168,8 +168,9 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                             <MenuItem value="None">Select Subject...</MenuItem>
                             {subjects
                                 .filter((subject) => 
-                                    subject.subjectStatus === 'Active' ||
-                                    subject.subjectId === formValues.taskSubject
+                                    (subject.subjectStatus === 'Active' ||
+                                    subject.subjectId === formValues.taskSubject) &&
+                                    subject.subjectId !== "None"
                                 )
                                 .map(subject => (
                                 <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
@@ -281,8 +282,9 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                             <MenuItem value="None">Select Project...</MenuItem>
                             {projects
                                 .filter((project) => 
-                                    project.projectStatus === 'Active' ||
-                                    project.projectId === formValues.taskProject
+                                    (project.projectStatus === 'Active' ||
+                                    project.projectId === formValues.taskProject) &&
+                                    project.projectId !== 'None'
                                 )
                                 .map(project => (
                                 <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>

@@ -98,29 +98,33 @@ const TaskList = () => {
 
     const handleEditTask = async (updatedTask) => {
         console.log('subjects: ', subjects, '\nprojects: ', projects, '\nedited task: ', updatedTask);
-
-        setTasks(prevTasks => {
-            // Update the specific task, attach taskSubject and taskProject details, and sort the tasks
-            const updatedTasks = prevTasks.map(task => {
-                if (task.taskId === updatedTask.taskId) {
-                    const taskSubject = subjects.find(subject => subject.subjectId === updatedTask.taskSubject); 
-                    const taskProject = projects.find(project => project.projectId === updatedTask.taskProject);
     
-                    return {
-                        ...updatedTask,      // Use updated task details
-                        taskSubject,         // Attach full subject details
-                        taskProject          // Attach full project details
-                    };
-                }
-                return task;
-            });
+        setTasks(prevTasks => {
+            // Update or remove the specific task based on its status
+            const updatedTasks = prevTasks
+                .map(task => {
+                    if (task.taskId === updatedTask.taskId) {
+                        // Attach taskSubject and taskProject details
+                        const taskSubject = subjects.find(subject => subject.subjectId === updatedTask.taskSubject);
+                        const taskProject = projects.find(project => project.projectId === updatedTask.taskProject);
+    
+                        return {
+                            ...updatedTask,
+                            taskSubject, // Attach full subject details
+                            taskProject  // Attach full project details
+                        };
+                    }
+                    return task;
+                })
+                .filter(task => task.taskStatus !== 'Completed'); // Exclude completed tasks from the state
     
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
     
         console.log("Task updated, state and IndexedDB updated");
-    };    
+    };
+      
 
     return (
         <div className="view-container">

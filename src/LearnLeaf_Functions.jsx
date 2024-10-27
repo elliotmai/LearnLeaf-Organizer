@@ -426,31 +426,42 @@ export async function addTask(taskDetails) {
         taskPriority: taskDetails.taskPriority,
         taskStatus: taskDetails.taskStatus,
     };
-
-    // Conditionally add date and time fields only if they are not null
+    
+    // Helper function to create a date object with exact local time components
+    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // month - 1 due to JS Date 0-indexed months
+    }
+    
+    // Set start and due dates exactly as provided
     if (taskDetails.startDateInput) {
-        taskData.taskStartDate = Timestamp.fromDate(new Date(taskDetails.startDateInput));
+        const startDate = createLocalDate(taskDetails.startDateInput, 0, 0, 0, 0); // 00:00:00 local time
+        taskData.taskStartDate = Timestamp.fromDate(startDate);
     }
+    
     if (taskDetails.dueDateInput) {
-        taskData.taskDueDate = Timestamp.fromDate(new Date(taskDetails.dueDateInput));
+        const dueDate = createLocalDate(taskDetails.dueDateInput, 23, 59, 59, 999); // 23:59:59 local time
+        taskData.taskDueDate = Timestamp.fromDate(dueDate);
     }
-    if (taskDetails.dueTimeInput && taskDetails.dueDateInput) {
-        taskData.taskDueTime = Timestamp.fromDate(new Date(`${taskDetails.dueDateInput}T${taskDetails.dueTimeInput}`));
-    }
+    
+    // If both dueDateInput and dueTimeInput are provided, set due time
+    if (taskDetails.dueDateInput && taskDetails.dueTimeInput) {
+        const [hours, minutes] = taskDetails.dueTimeInput.split(':').map(Number);
+        const dueDateTime = createLocalDate(taskDetails.dueDateInput, hours, minutes, 0, 0); // Set to specified due time in local time
+        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+    }    
 
     const taskRef = doc(taskCollection, taskId);
 
-    // Get the full subject and project data from IndexedDB
-    const fullTaskSubject = await getFromStore('subjects', taskData.taskSubject.id);
-    const fullTaskProject = await getFromStore('projects', taskData.taskProject.id);
+    console.log('due date: ', taskDetails.dueDateInput, 'due time:', taskDetails.dueTimeInput, 'start date:',taskDetails.startDateInput);
 
     // Update local IndexedDB task data with full subject and project details
     const localTaskData = {
         ...taskData,
         taskId: taskId,
-        taskDueDate: taskData.taskDueDate instanceof Timestamp ? formatDate(taskData.taskDueDate) : '',
-        taskDueTime: taskData.taskDueTime instanceof Timestamp ? formatTime(taskData.taskDueTime) : '',
-        taskStartDate: taskData.taskStartDate instanceof Timestamp ? formatDate(taskData.taskStartDate) : '',
+        taskDueDate: taskDetails?.dueDateInput || '',
+        taskDueTime: taskDetails?.dueTimeInput || '',
+        taskStartDate: taskDetails?.startDateInput || '',
         taskSubject: taskData.taskSubject.id,
         taskProject: taskData.taskProject.id
     };
@@ -490,36 +501,42 @@ export async function editTask(taskDetails) {
         taskPriority: taskDetails.taskPriority,
         taskStatus: taskDetails.taskStatus,
         taskStartDate: taskDetails.taskStartDate
-            ? Timestamp.fromDate(new Date(taskDetails.taskStartDate))
+            ? (() => {
+                const startDate = new Date(taskDetails.taskStartDate);
+                startDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+                return Timestamp.fromDate(startDate);
+            })()
             : deleteField(),
         taskDueDate: taskDetails.taskDueDate
-            ? Timestamp.fromDate(new Date(taskDetails.taskDueDate))
+            ? (() => {
+                const dueDate = new Date(taskDetails.taskDueDate);
+                dueDate.setHours(23, 59, 59, 999); // Set time to 23:59:59
+                return Timestamp.fromDate(dueDate);
+            })()
             : deleteField(),
         taskDueTime: taskDetails.taskDueTime
             ? Timestamp.fromDate(new Date(taskDetails.taskDueDate + "T" + taskDetails.taskDueTime))
             : deleteField()
-    };
+    };    
 
     const taskRef = doc(taskCollection, taskId);
 
     try {
         // Update Firestore
         await updateDoc(taskRef, taskData);
-
-        // Get the full subject and project data from IndexedDB
-        const fullTaskSubject = await getFromStore('subjects', taskDetails.taskSubject?.subjectId || taskDetails.taskSubject);
-        const fullTaskProject = await getFromStore('projects', taskDetails.taskProject?.projectId || taskDetails.taskProject);
-
+        
         // Update local IndexedDB task data with full subject and project details
         const localTaskData = {
             ...taskData,
             taskId,
-            taskDueDate: taskData.taskDueDate instanceof Timestamp ? formatDate(taskData.taskDueDate) : '',
-            taskDueTime: taskData.taskDueTime instanceof Timestamp ? formatTime(taskData.taskDueTime) : '',
-            taskStartDate: taskData.taskStartDate instanceof Timestamp ? formatDate(taskData.taskStartDate) : '',
+            taskDueDate: taskDetails.taskDueDate,
+            taskDueTime: taskDetails.taskDueTime,
+            taskStartDate: taskDetails.taskStartDate,
             taskSubject: taskData.taskSubject.id,
             taskProject: taskData.taskProject.id
         };
+
+        console.log("local task data:", localTaskData);
 
         // Save updated task data to IndexedDB
         await saveToStore('tasks', [localTaskData]);

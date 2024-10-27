@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography } from '@mui/material';
+import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
@@ -17,6 +19,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
     const [newSubjectName, setNewSubjectName] = useState('');
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
+    const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
@@ -115,6 +118,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
             }
 
             const refreshedTask = await editTask(updatedTask);
+            console.log('refreshed task:', refreshedTask);
             onUpdateTask(refreshedTask);
             setOriginalValues(refreshedTask);
             if (isEditModalOpen) {
@@ -144,9 +148,70 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
 
             <Card sx={{ minWidth: 275 }}>
                 <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ color: formValues.taskSubject?.subjectColor, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: formValues.taskSubject?.subjectColor, fontWeight: 'bold' }}>
                         {formValues.taskName || 'Unnamed Task'}
                     </Typography>
+                    <Tooltip title="Click to view more">
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            onClick={() => setDescriptionOpen(true)}
+                            gutterBottom
+                            sx={{
+                                whiteSpace: 'pre-wrap',
+                                fontStyle: 'italic',
+                                textAlign: 'center',
+                                padding: '8px',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                textOverflow: 'ellipsis',
+                            }}
+                        >
+                            {formValues.taskDescription}
+                        </Typography>
+                    </Tooltip>
+
+                    {/* Dialog to show full description */}
+                    <Dialog
+                        open={isDescriptionOpen}
+                        onClose={() => setDescriptionOpen(false)}
+                        aria-labelledby="description-dialog-title"
+                    >
+                        <DialogTitle
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingRight: '16px'
+                            }}
+                        >
+                            Full Description
+                            <IconButton
+                                aria-label="close"
+                                onClick={() => setDescriptionOpen(false)}
+                                sx={{
+                                    color: (theme) => theme.palette.grey[500],
+                                }}
+                            >
+                                <CloseIcon />
+                            </IconButton>
+                        </DialogTitle>
+                        <DialogContent>
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    fontStyle: 'italic',
+                                }}
+                            >
+                                {formValues.taskDescription}
+                            </Typography>
+                        </DialogContent>
+                    </Dialog>
 
                     <Grid container spacing={2}>
                         <Grid item xs={12}>
@@ -158,11 +223,12 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     onChange={handleInputChange}
                                     className={isFieldUnsaved('taskSubject') ? 'unsaved-bg' : ''}
                                 >
-                                    <MenuItem value="None">Select Subject...</MenuItem>
+                                    <MenuItem key="None" value="None">Select Subject...</MenuItem>
                                     {subjects
                                         .filter((subj) =>
-                                            subj.subjectStatus === "Active" ||
-                                            subj.subjectId === (formValues.taskSubject?.subjectId || formValues.taskSubject)
+                                            (subj.subjectStatus === "Active" ||
+                                            subj.subjectId === (formValues.taskSubject?.subjectId || formValues.taskSubject)) &&
+                                            subj.subjectId !== "None"
                                         )
                                         .map((subj) => (
                                             <MenuItem key={subj.subjectId} value={subj.subjectId}>
@@ -199,8 +265,9 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     <MenuItem key="None" value="None">Select Project...</MenuItem>
                                     {projects
                                         .filter((
-                                            proj) => proj.projectStatus === "Active" ||
-                                            proj.projectId === (formValues.taskProject?.projectId || formValues.taskProject)
+                                            (proj) => proj.projectStatus === "Active" ||
+                                            proj.projectId === (formValues.taskProject?.projectId || formValues.taskProject) &&
+                                            proj.projectId !== "None")
                                         )
                                         .map((proj) => (
                                             <MenuItem key={proj.projectId} value={proj.projectId}>

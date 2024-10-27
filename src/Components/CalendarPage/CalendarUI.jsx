@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -9,20 +9,17 @@ import parseISO from 'date-fns/parseISO';
 import { deleteTask, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx'
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogActions from '@mui/material/DialogActions';
+import { Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Tooltip } from '@mui/material';
 import Button from '@mui/material/Button';
+import CloseIcon from '@mui/icons-material/Close';
+import IconButton from '@mui/material/IconButton';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import './CalendarPage.css'
+import './CalendarPage.css';
 import '/src/Components/FormUI.css';
 
-// Set up the localizer by specifying the Date-Fns localizers and format functions
-const locales = {
-    'en-US': enUS
-};
+const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({
     format,
     parse,
@@ -31,147 +28,225 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-const CustomAgendaEvent = ({ event }) => {
-    return (
-        <div>
-            <strong>{event.title}</strong> {/* Display event title only */}
-            {/* Optionally add more details here */}
-        </div>
-    );
-};
-
-
-const CalendarUI = ({events, refreshTasks}) => {
-    const [open, setOpen] = useState(false);
-    const [openAddTask, setOpenAddTask] = useState(false);
+const CalendarUI = ({ events, refreshTasks, subjects, projects }) => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
+    const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [editedTask, setEditedTask] = useState({});
-    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [editedTask, setEditedTask] = useState(null);
 
-    const eventPropGetter = (event) => {
-        return {
-            style: {
-                backgroundColor: event.style?.backgroundColor || '#3174ad', // Default color if none specified
-                color: 'white', // Ensures text is readable on any background color
-            }
-        };
-    };
+    const eventPropGetter = (event) => ({
+        style: {
+            backgroundColor: event.style?.backgroundColor || '#3174ad',
+            color: 'white',
+        },
+    });
 
     const handleEventClick = (event) => {
         setSelectedEvent(event);
-        setOpen(true);
+        setIsDialogOpen(true);
     };
 
     const handleSelectSlot = (slotInfo) => {
-        const formattedDate = format(slotInfo.start, 'yyyy-MM-dd'); // Formats the date
-        setSelectedDate(formattedDate); // Assumes slot selection gives start date
-        setOpenAddTask(true); // Open the Add Task Form
+        setSelectedDate(format(slotInfo.start, 'yyyy-MM-dd'));
+        setIsAddTaskFormOpen(true);
     };
 
-    const handleClose = () => {
-        setOpen(false);
+    const handleCloseDialog = () => {
+        setIsDialogOpen(false);
     };
 
-    const handleCloseAddTask = () => {
-        setOpenAddTask(false);
-    };
-
-    const handleEditClick = (event) => {
-        // Set the state with the task details from the clicked event
-        setEditedTask({ ...event.task });
-        setEditModalOpen(true); // Open the edit modal
-        handleClose(); // Close the view dialog to open the edit modal
+    const handleEditClick = () => {
+        setEditedTask(selectedEvent.task);
+        setEditModalOpen(true);
+        handleCloseDialog();
     };
 
     const handleDeleteClick = async () => {
         const confirmation = window.confirm("Are you sure you want to delete this task?");
         if (confirmation) {
             try {
-                await deleteTask(selectedEvent.task.taskId); // Use the task ID from the selected event
-                refreshTasks(); // Refresh the tasks to update the calendar
-                handleClose(); // Close the details dialog
+                await deleteTask(selectedEvent.task.taskId);
+                refreshTasks();
+                handleCloseDialog();
             } catch (error) {
                 console.error("Error deleting task:", error);
             }
         }
     };
 
-
     return (
-        <div style={{ height: 500, paddingTop: '20px' }}>
+        <div style={{ height: 700, paddingTop: '20px' }}>
             <Calendar
                 localizer={localizer}
                 events={events}
                 startAccessor="start"
                 endAccessor="end"
-                components={{
-                    agenda: {
-                        event: CustomAgendaEvent, // Use custom event component for agenda
-                    }
-                }}
                 views={['month', 'week', 'day']}
-                step={1440} // Sets the time slot size to one day
-                timeslots={1} // Only one time slot per day
+                step={1440}
+                timeslots={1}
                 style={{ height: 700 }}
                 eventPropGetter={eventPropGetter}
                 onSelectEvent={handleEventClick}
-                selectable={true}
+                selectable
                 onSelectSlot={handleSelectSlot}
             />
-            {open && (
-                <Dialog open={open} onClose={handleClose}>
-                    <DialogTitle style={{ color: '#8E5B9F'}}>Task Details</DialogTitle>
+
+            {isDialogOpen && selectedEvent && (
+                <Dialog
+                    open={isDialogOpen}
+                    onClose={handleCloseDialog}
+                    maxWidth="xs"
+                    fullWidth
+                >
+                    <DialogTitle 
+                        variant='h5'
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingRight: '16px',
+                            // color: '#8E5B9F',
+                            // fontWeight: 'bold'
+                        }}
+                    >
+                        Task Details
+                        <IconButton
+                            aria-label="close"
+                            onClick={handleCloseDialog}
+                            sx={{
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
                     <DialogContent>
-                        <DialogContentText>
-                            <b>
-                                {selectedEvent.title}
-                            </b>
-                            <br />
-                            <br />
-                            Subject: {selectedEvent.task.taskSubject.subjectName}
-                            <br />
-                            Due Date: {format(parseISO(selectedEvent.task.taskDueDate), 'PPP')}
-                            <br />
-                            Due Time: {formatTimeDisplay(selectedEvent.task.taskDueTime)}
-                            <br />
-                            Project: {selectedEvent.task.taskProject.projectName}
+                        <DialogContentText sx={{ fontStyle: 'italic' }}>
+                            {/* Title */}
+                            {selectedEvent.title && (
+                                <Typography variant="h6" 
+                                    sx={{ 
+                                        fontWeight: 'bold',
+                                        color: selectedEvent.task?.taskSubject?.subjectColor || 'defaultColor' }}>
+                                    {selectedEvent.title}
+                                </Typography>
+                            )}
+
+                            {/* Description */}
+                            {selectedEvent.task?.taskDescription && (
+                                <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                                    {selectedEvent.task.taskDescription}
+                                </Typography>
+                            )}
+
+                            {/* Subject */}
+                            {selectedEvent.task?.taskSubject?.subjectName && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    <strong>Subject:</strong> {selectedEvent.task.taskSubject.subjectName}
+                                </Typography>
+                            )}
+
+                            {/* Due Date */}
+                            {selectedEvent.task?.taskDueDate && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    <strong>Due Date:</strong> {formatDateDisplay(selectedEvent.task.taskDueDate)}
+                                </Typography>
+                            )}
+
+                            {/* Due Time */}
+                            {selectedEvent.task?.taskDueTime && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    <strong>Due Time:</strong> {formatTimeDisplay(selectedEvent.task.taskDueTime)}
+                                </Typography>
+                            )}
+
+                            {/* Project */}
+                            {selectedEvent.task?.taskProject?.projectName && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    <strong>Project:</strong> {selectedEvent.task.taskProject.projectName}
+                                </Typography>
+                            )}
                         </DialogContentText>
                     </DialogContent>
-                    <DialogActions>
-                        <Button style={{ color: '#569fb8'}} onClick={() => handleEditClick(selectedEvent)}>Edit</Button>
-                        <Button style={{ color: '#569fb8' }} onClick={handleDeleteClick}>Delete</Button>
-                        <Button style={{ color: '#569fb8' }} onClick={handleClose}>Close</Button>
+                    <DialogActions
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '8px 24px',
+                        }}
+                    >
+                        <Tooltip title="Open Edit Window">
+                            <EditIcon
+                                onClick={handleEditClick}
+                                sx={{
+                                    color: '#9F6C5B',
+                                    fontSize: 'xl',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    borderRadius: '50%',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        backgroundColor: '#9F6C5B',
+                                        color: '#fff',
+                                    },
+                                }}
+                            />
+                        </Tooltip>
+
+                        <Tooltip title="Delete Task">
+                            <IconButton
+                                onClick={handleDeleteClick}
+                                sx={{
+                                    color: '#d1566e',
+                                    fontSize: 'xl',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    borderRadius: '50%',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        backgroundColor: '#d1566e',
+                                        color: '#fff',
+                                    },
+                                }}
+                            >
+                                <DeleteIcon />
+                            </IconButton>
+                        </Tooltip>
                     </DialogActions>
+
                 </Dialog>
+
             )}
-            {isEditModalOpen && (
+
+            {isEditModalOpen && editedTask && (
                 <TaskEditForm
-                    key={editedTask.taskId}
                     task={editedTask}
                     subjects={subjects}
                     projects={projects}
                     isOpen={isEditModalOpen}
                     onClose={() => setEditModalOpen(false)}
-                    onSave={(updatedTask) => {
+                    onSave={() => {
                         refreshTasks();
                         setEditModalOpen(false);
                     }}
                 />
             )}
-            {openAddTask && (
+
+            {isAddTaskFormOpen && (
                 <AddTaskForm
+                    isOpen={isAddTaskFormOpen}
+                    onClose={() => setIsAddTaskFormOpen(false)}
+                    onAddTask={() => refreshTasks()}
                     subjects={subjects}
                     projects={projects}
-                    isOpen={openAddTask}
-                    onClose={handleCloseAddTask}
-                    refreshTasks={refreshTasks}
                     initialDueDate={selectedDate}
                 />
             )}
         </div>
     );
 };
-
 
 export default CalendarUI;
