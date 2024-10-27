@@ -13,6 +13,7 @@ import '/src/Components/FilterBar.css';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
+    const [subjects, setsubjects] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const { user } = useUser();
     const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +38,7 @@ const ProjectsDashboard = () => {
         console.log('Loading from IndexedDB');
         try {
             const activeProjects = (await getAllFromStore('projects')).filter(project => project.projectStatus === 'Active');
+            const activeSubjects = (await getAllFromStore('subjects')).filter(subject => subject.subjectStatus === 'Active');
             const storedTasks = await getAllFromStore('tasks');
 
             const projectsWithDetails = activeProjects.map((project) => {
@@ -62,6 +64,7 @@ const ProjectsDashboard = () => {
                 };
             });
 
+            setsubjects(activeSubjects);
             setProjects(projectsWithDetails);
             setIsLoading(false);
             console.log('Data loaded from IndexedDB');
@@ -78,6 +81,7 @@ const ProjectsDashboard = () => {
         if (!isLoadedFromIndexedDB) {
             console.error('Failed to load data from IndexedDB');
         }
+        console.log('projects:', projects)
     };
 
     useEffect(() => {
@@ -144,7 +148,10 @@ const ProjectsDashboard = () => {
                     filteredProjects.length > 0 ? (
                         filteredProjects.map((project) => (
                             <Grid item xs={12} sm={6} md={4} key={project.projectId}>
-                                <ProjectWidget project={project} />
+                                <ProjectWidget 
+                                    project={project}
+                                    subjects={subjects} 
+                                />
                             </Grid>
                         ))
                     ) : (

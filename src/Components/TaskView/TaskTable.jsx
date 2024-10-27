@@ -129,7 +129,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
                         .map((_, i) => {
                             const taskIndex = startIndex + i;
                             return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={taskIndex}>
+                                <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={filteredTasks[taskIndex].taskId}>
                                     <TaskWidget
                                         task={filteredTasks[taskIndex]}
                                         onDelete={onDelete}

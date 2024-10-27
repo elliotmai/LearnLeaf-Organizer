@@ -73,7 +73,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
         <>
             <EditProjectForm
                 project={editedProject}
-                subjects={subejcts}
+                subjects={subjects}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
                 onSave={() => {

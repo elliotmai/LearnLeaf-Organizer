@@ -1,27 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import DeleteIcon from '@mui/icons-material/Delete';
+import Tooltip from '@mui/material/Tooltip';
+import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks, onUpdateTask }) => {
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task });
     const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [errors, setErrors] = useState({});
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
 
-    const hasUnsavedChanges = () => JSON.stringify(formValues) !== JSON.stringify(originalValues);
-
     const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
-        setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
+
+        const isNewItemSelected = value === "newSubject" || value === "newProject";
+
+        if (name === "taskSubject") {
+            setIsNewSubject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskSubject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskProject") {
+            setIsNewProject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskProject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskDueTime" && value) {
+            if (!formValues.taskDueDate) {
+                setErrors(prevErrors => ({
+                    ...prevErrors,
+                    taskDueDate: 'Due date is required when due time is added.',
+                }));
+            } else {
+                setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
+            }
+        } else if (name === "taskDueDate") {
+            setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
+        }
+
+        if (!["taskSubject", "taskProject"].includes(name)) {
+            setFormValues(prevDetails => ({ ...prevDetails, [name]: value }));
+        }
     };
 
     const handleSelectChange = (event) => {
@@ -36,16 +67,6 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
         setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     };
 
-    const handleDateChange = (event, field) => {
-        const value = event.target.value || '';
-        setFormValues((prevValues) => ({ ...prevValues, [field]: value }));
-    };
-
-    const handleTimeFieldChange = (event) => {
-        const { name, value } = event.target;
-        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
-    };
-
     useEffect(() => {
         setFormValues({ ...task });
         setOriginalValues({ ...task });
@@ -57,6 +78,15 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
 
     const handleSave = async () => {
         try {
+
+            if (formValues.taskDueTime && !formValues.taskDueDate) {
+                setErrors(prevErrors => ({
+                    ...prevErrors,
+                    taskDueDate: 'Due date is required when due time is added.',
+                }));
+                return;
+            }
+
             let updatedTask = { ...formValues };
 
             if (isNewSubject && newSubjectName) {
@@ -67,8 +97,9 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     subjectColor: 'black',
                 };
                 const addedSubject = await addSubject(newSubjectDetails);
+                const sortedSubjects = sortSubjects([...subjects, addedSubject]);
+                subjects = sortedSubjects;
                 updatedTask.taskSubject = addedSubject.subjectId;
-                await refreshTasks();
             }
 
             if (isNewProject && newProjectName) {
@@ -78,12 +109,13 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                     projectSubjects: [],
                 };
                 const addedProject = await addProject(newProjectDetails);
+                const sortedProjects = sortProjects([...projects, addedProject]);
+                projects = sortedProjects;
                 updatedTask.taskProject = addedProject.projectId;
-                await refreshTasks();
             }
 
             const refreshedTask = await editTask(updatedTask);
-            onUpdateTask(refreshedTask);
+            onUpdateTask(formValues);
             setOriginalValues(refreshedTask);
             if (isEditModalOpen) {
                 setEditModalOpen(false);
@@ -123,7 +155,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 <Select
                                     value={isNewSubject ? 'newSubject' : formValues.taskSubject?.subjectId || formValues.taskSubject}
                                     name="taskSubject"
-                                    onChange={handleSelectChange}
+                                    onChange={handleInputChange}
                                     className={isFieldUnsaved('taskSubject') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="None">Select Subject...</MenuItem>
@@ -155,7 +187,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 <Select
                                     value={isNewProject ? 'newProject' : formValues.taskProject?.projectId || formValues.taskProject}
                                     name="taskProject"
-                                    onChange={handleSelectChange}
+                                    onChange={handleInputChange}
                                     className={isFieldUnsaved('taskProject') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="None">Select Project...</MenuItem>
@@ -187,7 +219,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 <Select
                                     value={formValues.taskPriority || 'Medium'}
                                     name="taskPriority"
-                                    onChange={handleSelectChange}
+                                    onChange={handleInputChange}
                                     className={isFieldUnsaved('taskPriority') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="High">High</MenuItem>
@@ -203,7 +235,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 <Select
                                     value={formValues.taskStatus || 'Not Started'}
                                     name="taskStatus"
-                                    onChange={handleSelectChange}
+                                    onChange={handleInputChange}
                                     className={isFieldUnsaved('taskStatus') ? 'unsaved-bg' : ''}
                                 >
                                     <MenuItem value="Not Started">Not Started</MenuItem>
@@ -219,7 +251,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 name="taskStartDate"
                                 type="date"
                                 value={formValues.taskStartDate || ''}
-                                onChange={(e) => handleDateChange(e, 'taskStartDate')}
+                                onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
                                 className={isFieldUnsaved('taskStartDate') ? 'unsaved-bg' : ''}
@@ -232,7 +264,9 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 name="taskDueDate"
                                 type="date"
                                 value={formValues.taskDueDate || ''}
-                                onChange={(e) => handleDateChange(e, 'taskDueDate')}
+                                onChange={handleInputChange}
+                                error={!!errors.taskDueDate}
+                                helperText={errors.taskDueDate}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
                                 className={isFieldUnsaved('taskDueDate') ? 'unsaved-bg' : ''}
@@ -245,7 +279,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                                 name="taskDueTime"
                                 type="time"
                                 value={formValues.taskDueTime || ''}
-                                onChange={handleTimeFieldChange}
+                                onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
                                 className={isFieldUnsaved('taskDueTime') ? 'unsaved-bg' : ''}
@@ -270,36 +304,51 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], refreshTasks
                             sx={{
                                 backgroundColor: '#B6CDC8',
                                 color: '#355147',
-                                '&:hover': { backgroundColor: '#a8bdb8' },
+                                '&:hover': {
+                                    backgroundColor: '#a8bdb8',
+                                    transform: 'scale(1.03)',
+                                },
                                 mr: 3,
                                 ml: 1,
                             }}
                         >
                             Save
                         </Button>
-
-                        <EditIcon
-                            onClick={handleEditClick}
-                            sx={{
-                                color: '#9F6C5B',
-                                fontSize: 'xl',
-                                cursor: 'pointer',
-                            }}
-                        />
+                        <Tooltip title="Open Edit Window">
+                            <EditIcon
+                                onClick={handleEditClick}
+                                sx={{
+                                    color: '#9F6C5B',
+                                    fontSize: 'xl',
+                                    cursor: 'pointer',
+                                    padding: '6px',          // Add padding to give space within the circle
+                                    borderRadius: '50%',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        backgroundColor: '#9F6C5B',
+                                        color: '#fff',
+                                    },
+                                }}
+                            />
+                        </Tooltip>
                     </div>
-
-                    <Button
-                        size="small"
+                    <Tooltip title="Delete Task">
+                    <DeleteIcon
                         onClick={() => onDelete(task.taskId)}
-                        variant="contained"
                         sx={{
-                            backgroundColor: '#ff5252',
-                            color: '#fff',
-                            '&:hover': { backgroundColor: '#ff1744' },
+                            color: '#d1566e',
+                            fontSize: 'xl',
+                            cursor: 'pointer',
+                            padding: '6px',          // Add padding to give space within the circle
+                            borderRadius: '50%',
+                            '&:hover': {
+                                transform: 'scale(1.05)',
+                                backgroundColor: '#d1566e',
+                                color: '#fff',
+                            },
                         }}
-                    >
-                        Delete
-                    </Button>
+                    />
+                    </Tooltip>
                 </CardActions>
             </Card>
         </div>

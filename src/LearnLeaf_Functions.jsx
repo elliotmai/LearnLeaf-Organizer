@@ -1,5 +1,5 @@
 // @flow
-import { saveToStore, getFromStore, getAllFromStore, deleteFromStore } from './db.js';
+import { saveToStore, getFromStore, getAllFromStore, deleteFromStore, clearStore, TASKS_STORE, SUBJECTS_STORE, PROJECTS_STORE } from './db.js';
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteFirebaseUser } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, where, query, Timestamp, deleteDoc, deleteField, updateDoc, writeBatch } from "firebase/firestore";
@@ -75,19 +75,21 @@ async function resolveTaskReferences(tasks, subjects, projects) {
 
 // Function to resolve subject references in projects using the passed-in subjects array
 async function resolveProjectReferences(projects, subjects) {
-    const resolvedProjects = projects.map(project => {
-        // Map over projectSubjects and find the subject object in the passed subjects array
-        const resolvedSubjects = project.projectSubjects
-            .map(subjectId => subjects.find(subject => subject.subjectId === subjectId))
-            .filter(subject => subject !== null); // Filter out any nulls if a reference isn't found
+    return projects.map(project => {
 
-        // Assign the resolved subjects to projectSubjects
-        project.projectSubjects = resolvedSubjects;
+        const resolvedSubjects = project.projectSubjects.map(projectSubject => {
+            // Find the matching subject in the subjects array
+            const subject = subjects.find(sub => sub.subjectId === projectSubject.id);
 
-        return project;
+            // Return the subject object if found, or null if not found
+            return subject ? { ...subject } : null;
+        }).filter(subject => subject !== null); // Filter out any unresolved references
+
+        return {
+            ...project,
+            projectSubjects: resolvedSubjects // Add resolved subjects array to the project
+        };
     });
-
-    return resolvedProjects;
 }
 
 // Formatting functions for date and time
@@ -110,10 +112,9 @@ export function formatDate(input) {
         date = new Date(input);
     } else {
         // Unsupported type, return empty string
-        console.error('Unsupported date type:', input);
         return '';
     }
-  
+
     // Format the date to 'YYYY-MM-DD'
     let year = date.getFullYear();
     let month = (date.getMonth() + 1).toString().padStart(2, '0'); // JS months are 0-indexed
@@ -191,10 +192,9 @@ export function formatTime(input) {
         time = new Date(input);
     } else {
         // Unsupported type, return empty string
-        console.error('Unsupported time type:', input);
         return '';
     }
-  
+
     // Format the time to 'HH:MM'
     let hours = time.getHours().toString().padStart(2, '0');
     let minutes = time.getMinutes().toString().padStart(2, '0');
@@ -207,10 +207,10 @@ export async function fetchAllData() {
         const tasksSnapshot = await getDocs(taskCollection);
         const tasks = tasksSnapshot.docs.map(doc => {
             const data = doc.data();
-            
-            const formattedDueDate = data.taskDueDate ? formatDate(data.taskDueDate) : null;
-            const formattedDueTime = data.taskDueTime ? formatTime(data.taskDueTime) : null;
-            const formattedStartDate = data.taskStartDate ? formatDate(data.taskStartDate) : null;
+
+            const formattedDueDate = data.taskDueDate ? formatDate(data.taskDueDate) : '';
+            const formattedDueTime = data.taskDueTime ? formatTime(data.taskDueTime) : '';
+            const formattedStartDate = data.taskStartDate ? formatDate(data.taskStartDate) : '';
 
             return {
                 taskId: doc.id,
@@ -218,34 +218,58 @@ export async function fetchAllData() {
                 taskDueDate: formattedDueDate,
                 taskDueTime: formattedDueTime,
                 taskStartDate: formattedStartDate,
+                taskProject: data.taskProject.id,
+                taskSubject: data.taskSubject.id
             };
-        });        
+        });
 
         // Fetch all projects
         const projectsSnapshot = await getDocs(projectCollection);
         const projects = projectsSnapshot.docs.map(doc => {
             const data = doc.data();
+            const projectSubjects = data.projectSubjects ? data.projectSubjects.map(subject => subject.id) : []; // Extracts only the ids
 
-            return { 
-                projectId: doc.id, 
+            return {
+                projectId: doc.id,
+                ...data,
                 projectDueDate: data.projectDueDate ? formatDate(data.projectDueDate) : null,
                 projectDueTime: data.projectDueTime ? formatDate(data.projectDueTime) : null,
-                ...data};
-            });
+                projectSubjects // Sets projectSubjects to be an array of subject ids
+            };
+        });
+
+        console.log(projects);
 
         // Fetch all subjects
         const subjectsSnapshot = await getDocs(subjectCollection);
         const subjects = subjectsSnapshot.docs.map(doc => ({ subjectId: doc.id, ...doc.data() }));
 
-        const resolvedTasks = await resolveTaskReferences(tasks, subjects, projects);
-        const resolvedProjects = await resolveProjectReferences(projects, subjects);
+        // Fetch the 'None' project document from the noneProject collection
+        const noneProjectDoc = await getDoc(doc(firestore, 'noneProject', 'None'));
+        const noneProject = {
+            projectId: noneProjectDoc.id,
+            ...noneProjectDoc.data()
+        };
+        projects.push(noneProject); // Add the 'None' project to projects
 
-        console.log('tasks:', resolvedTasks,'projects:',resolvedProjects, 'subjects:', subjects);
+        // Fetch the 'None' subject document from the noneSubject collection
+        const noneSubjectDoc = await getDoc(doc(firestore, 'noneSubject', 'None'));
+        const noneSubject = {
+            subjectId: noneSubjectDoc.id,
+            ...noneSubjectDoc.data()
+        };
+        subjects.push(noneSubject); // Add the 'None' subject to subjects
+
+        // const resolvedProjects = await resolveProjectReferences(projects, subjects);
+
+        // const resolvedTasks = await resolveTaskReferences(tasks, subjects, resolvedProjects);
+
+        // console.log('tasks:', resolvedTasks, 'projects:', resolvedProjects, 'subjects:', subjects);
 
         // Save to IndexedDB
-        await saveToStore('tasks', resolvedTasks);
-        await saveToStore('projects', resolvedProjects);
         await saveToStore('subjects', subjects);
+        await saveToStore('projects', projects);
+        await saveToStore('tasks', tasks);
 
         console.log('Data saved to IndexedDB');
 
@@ -306,7 +330,7 @@ export async function loginUser(email, password) {
             // Fetch and store additional data (tasks, projects, subjects) in Indexedfirestore
             const data = await fetchAllData();
             console.log('Tasks, projects, and subjects saved to Indexedfirestore');
-            
+
             return { ...userData, ...data }; // Return combined user and data
         })
         .catch((error) => {
@@ -335,9 +359,11 @@ export async function logoutUser() {
         .then(async () => {
             setUserIdAndCollections(null);
             await Promise.all([
-                deleteFromStore('tasks', userId),
-                deleteFromStore('projects', userId),
-                deleteFromStore('subjects', userId)
+                localStorage.clear(),
+                clearStore(TASKS_STORE),
+                clearStore(SUBJECTS_STORE),
+                clearStore(PROJECTS_STORE)
+
             ]);
             console.log("You are logged out successfully!");
         })
@@ -388,55 +414,116 @@ export async function deleteUser(userId) {
 // Task functions: addTask, editTask, deleteTask
 
 export async function addTask(taskDetails) {
-    const { taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, startDateInput, dueDateInput, dueTimeInput } = taskDetails;
+    console.log('adding: ', taskDetails);
+
     const taskId = `${Date.now()}_${userId}`;
-    
+
     const taskData = {
-        taskSubject: doc(subjectCollection, taskSubject.subjectId),
-        taskProject: doc(projectCollection, taskProject.projectId),
-        taskName,
-        taskDescription,
-        taskPriority,
-        taskStatus,
-        taskStartDate: startDateInput ? Timestamp.fromDate(new Date(startDateInput)) : null,
-        taskDueDate: dueDateInput ? Timestamp.fromDate(new Date(dueDateInput)) : null,
-        taskDueTime: dueTimeInput ? Timestamp.fromDate(new Date(dueDateInput + "T" + dueTimeInput)) : null
+        taskSubject: doc(subjectCollection, taskDetails.taskSubject),
+        taskProject: doc(projectCollection, taskDetails.taskProject),
+        taskName: taskDetails.taskName,
+        taskDescription: taskDetails.taskDescription,
+        taskPriority: taskDetails.taskPriority,
+        taskStatus: taskDetails.taskStatus,
     };
+
+    // Conditionally add date and time fields only if they are not null
+    if (taskDetails.startDateInput) {
+        taskData.taskStartDate = Timestamp.fromDate(new Date(taskDetails.startDateInput));
+    }
+    if (taskDetails.dueDateInput) {
+        taskData.taskDueDate = Timestamp.fromDate(new Date(taskDetails.dueDateInput));
+    }
+    if (taskDetails.dueTimeInput && taskDetails.dueDateInput) {
+        taskData.taskDueTime = Timestamp.fromDate(new Date(`${taskDetails.dueDateInput}T${taskDetails.dueTimeInput}`));
+    }
 
     const taskRef = doc(taskCollection, taskId);
 
+    // Get the full subject and project data from IndexedDB
+    const fullTaskSubject = await getFromStore('subjects', taskData.taskSubject.id);
+    const fullTaskProject = await getFromStore('projects', taskData.taskProject.id);
+
+    // Update local IndexedDB task data with full subject and project details
+    const localTaskData = {
+        ...taskData,
+        taskId: taskId,
+        taskDueDate: taskData.taskDueDate instanceof Timestamp ? formatDate(taskData.taskDueDate) : '',
+        taskDueTime: taskData.taskDueTime instanceof Timestamp ? formatTime(taskData.taskDueTime) : '',
+        taskStartDate: taskData.taskStartDate instanceof Timestamp ? formatDate(taskData.taskStartDate) : '',
+        taskSubject: taskData.taskSubject.id,
+        taskProject: taskData.taskProject.id
+    };
+
     try {
         await setDoc(taskRef, taskData);
-        await saveToStore('tasks', [{ ...taskData, taskId }]);
+
+        // Save updated task data to IndexedDB
+        await saveToStore('tasks', [localTaskData]);
         console.log("Task added successfully");
     } catch (error) {
         console.error("Error adding task:", error);
     }
 
-    return { ...taskData, taskId };
+    return localTaskData;
 }
 
 export async function editTask(taskDetails) {
-    const { taskId, taskSubject, taskProject, taskName, taskDescription, taskPriority, taskStatus, taskStartDate, taskDueDate, taskDueTime } = taskDetails;
+    const taskId = taskDetails.taskId;
+    console.log('editing task: ', taskDetails);
 
+    // Determine if taskSubject and taskProject are objects or strings, then create Firestore references
+    const taskSubjectRef = typeof taskDetails.taskSubject === 'string'
+        ? doc(subjectCollection, taskDetails.taskSubject)
+        : doc(subjectCollection, taskDetails.taskSubject?.subjectId);
+
+    const taskProjectRef = typeof taskDetails.taskProject === 'string'
+        ? doc(projectCollection, taskDetails.taskProject)
+        : doc(projectCollection, taskDetails.taskProject?.projectId);
+
+    // Prepare the Firestore update data
     const taskData = {
-        taskSubject: doc(subjectCollection, taskSubject.subjectId),
-        taskProject: doc(projectCollection, taskProject.projectId),
-        taskName,
-        taskDescription,
-        taskPriority,
-        taskStatus,
-        taskStartDate: taskStartDate ? Timestamp.fromDate(new Date(taskStartDate)) : deleteField(),
-        taskDueDate: taskDueDate ? Timestamp.fromDate(new Date(taskDueDate)) : deleteField(),
-        taskDueTime: taskDueTime ? Timestamp.fromDate(new Date(taskDueDate + "T" + taskDueTime)) : deleteField()
+        taskSubject: taskSubjectRef,
+        taskProject: taskProjectRef,
+        taskName: taskDetails.taskName,
+        taskDescription: taskDetails.taskDescription,
+        taskPriority: taskDetails.taskPriority,
+        taskStatus: taskDetails.taskStatus,
+        taskStartDate: taskDetails.taskStartDate
+            ? Timestamp.fromDate(new Date(taskDetails.taskStartDate))
+            : deleteField(),
+        taskDueDate: taskDetails.taskDueDate
+            ? Timestamp.fromDate(new Date(taskDetails.taskDueDate))
+            : deleteField(),
+        taskDueTime: taskDetails.taskDueTime
+            ? Timestamp.fromDate(new Date(taskDetails.taskDueDate + "T" + taskDetails.taskDueTime))
+            : deleteField()
     };
 
     const taskRef = doc(taskCollection, taskId);
 
     try {
+        // Update Firestore
         await updateDoc(taskRef, taskData);
-        await saveToStore('tasks', [{ ...taskData, taskId }]);
-        console.log("Task updated successfully");
+
+        // Get the full subject and project data from IndexedDB
+        const fullTaskSubject = await getFromStore('subjects', taskDetails.taskSubject?.subjectId || taskDetails.taskSubject);
+        const fullTaskProject = await getFromStore('projects', taskDetails.taskProject?.projectId || taskDetails.taskProject);
+
+        // Update local IndexedDB task data with full subject and project details
+        const localTaskData = {
+            ...taskData,
+            taskId,
+            taskDueDate: taskData.taskDueDate instanceof Timestamp ? formatDate(taskData.taskDueDate) : '',
+            taskDueTime: taskData.taskDueTime instanceof Timestamp ? formatTime(taskData.taskDueTime) : '',
+            taskStartDate: taskData.taskStartDate instanceof Timestamp ? formatDate(taskData.taskStartDate) : '',
+            taskSubject: fullTaskSubject,
+            taskProject: fullTaskProject
+        };
+
+        // Save updated task data to IndexedDB
+        await saveToStore('tasks', [localTaskData]);
+        console.log("Task updated successfully in both Firestore and IndexedDB");
     } catch (error) {
         console.error("Error updating task:", error);
     }
@@ -454,6 +541,23 @@ export async function deleteTask(taskId) {
         console.error("Error deleting task:", error);
     }
 }
+
+export function sortTasks(tasks) {
+    console.log(tasks);
+    return tasks.sort((a, b) => {
+        const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
+        const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
+        if (dateA < dateB) return -1;
+        if (dateA > dateB) return 1;
+
+        const timeA = a.taskDueTime || '23:59';
+        const timeB = b.taskDueTime || '23:59';
+        if (timeA < timeB) return -1;
+        if (timeA > timeB) return 1;
+
+        return a.taskName.localeCompare(b.taskName);
+    });
+};
 
 // Subject Functions: addSubject, editSubject, deleteSubject, archiveSubject, reactivateSubject
 
@@ -538,6 +642,12 @@ export async function reactivateSubject(subjectId) {
         console.error("Error reactivating subject:", error);
     }
 }
+
+export function sortSubjects(subjects) {
+    return subjects.sort((a, b) => {
+        return a.subjectName.localeCompare(b.subjectName);
+    });
+};
 
 // Project Functions: addProject, editProject, deleteProject, archiveProject, reactivateProject
 
@@ -627,4 +737,56 @@ export async function reactivateProject(projectId) {
     } catch (error) {
         console.error("Error reactivating project:", error);
     }
+}
+
+export function sortProjects(projects) {
+    // Step 1: Fetch all tasks from the store
+    const allTasks = getAllFromStore('tasks');
+
+    // Step 2: Map each project to include its next due task details
+    const projectsWithNextTasks = projects.map(project => {
+        // Filter tasks related to this project
+        const projectTasks = allTasks.filter(task => task.taskProject?.projectId === project.projectId);
+
+        // Find the next task due for the project (smallest due date and time)
+        const nextTask = projectTasks
+            .filter(task => task.taskStatus !== 'Completed' && task.taskDueDate) // Ignore completed or no due date tasks
+            .sort((a, b) => {
+                // Sort tasks by due date, then by due time
+                const dateComparison = (a.taskDueDate || '9999-12-31').localeCompare(b.taskDueDate || '9999-12-31');
+                if (dateComparison !== 0) return dateComparison;
+
+                const timeA = a.taskDueTime || '23:59';
+                const timeB = b.taskDueTime || '23:59';
+                return timeA.localeCompare(timeB);
+            })[0]; // Get the first (earliest) task
+
+        return {
+            ...project,
+            nextTaskDueDate: nextTask?.taskDueDate || null,
+            nextTaskDueTime: nextTask?.taskDueTime || null
+        };
+    });
+
+    // Step 3: Sort projects based on the specified criteria
+    return projectsWithNextTasks.sort((a, b) => {
+        // Sort by nextTaskDueDate
+        const dateComparison = (a.nextTaskDueDate || '9999-12-31').localeCompare(b.nextTaskDueDate || '9999-12-31');
+        if (dateComparison !== 0) return dateComparison;
+
+        // Sort by nextTaskDueTime
+        const timeComparison = (a.nextTaskDueTime || '23:59').localeCompare(b.nextTaskDueTime || '23:59');
+        if (timeComparison !== 0) return timeComparison;
+
+        // Sort by projectDueDate
+        const projectDateComparison = (a.projectDueDate || '9999-12-31').localeCompare(b.projectDueDate || '9999-12-31');
+        if (projectDateComparison !== 0) return projectDateComparison;
+
+        // Sort by projectDueTime
+        const projectTimeComparison = (a.projectDueTime || '23:59').localeCompare(b.projectDueTime || '23:59');
+        if (projectTimeComparison !== 0) return projectTimeComparison;
+
+        // Sort by projectName
+        return a.projectName.localeCompare(b.projectName);
+    });
 }

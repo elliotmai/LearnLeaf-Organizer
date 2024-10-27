@@ -181,7 +181,7 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                         <Grid item xs={12} className="filter-item">
                             <Button
                                 variant="contained"
-                                color="primary"
+                                // color="primary"
                                 fullWidth
                                 onClick={clearFilters}
                             >

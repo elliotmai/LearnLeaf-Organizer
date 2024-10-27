@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import './TaskView.css';
@@ -33,20 +33,20 @@ const submitButtonStyle = {
     color: '#355147',
     '&:hover': {
         backgroundColor: '#a8bdb8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent',
-    color: '#355147',
+    color: '#ff5252',
     marginLeft: 1,
-    '&:hover': {
-        backgroundColor: '#a8bdb8',
-    },
+    '&:hover': { 
+        color: '#fff',
+        backgroundColor: '#ff5252' 
+    }
 };
 
-export const TaskEditForm = ({ key, task, subjects, projects, isOpen, onClose, onSave }) => {
-    const { user } = useUser();
+export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave }) => {
     const [formValues, setFormValues] = useState({
         taskId: task?.taskId || '',
         taskSubject: task?.taskSubject?.subjectId || 'None',
@@ -124,6 +124,8 @@ export const TaskEditForm = ({ key, task, subjects, projects, isOpen, onClose, o
                 subjectStatus: 'Active',
             };
             const addedSubject = await addSubject(newSubjectDetails);
+            const sortedSubjects = sortSubjects([...subjects, addedSubject]);
+            subjects = sortedSubjects;
             updatedTaskDetails.taskSubject = addedSubject.subjectId;
         }
 
@@ -136,9 +138,12 @@ export const TaskEditForm = ({ key, task, subjects, projects, isOpen, onClose, o
                 projectStatus: 'Active',
             };
             const addedProject = await addProject(newProjectDetails);
+            const sortedProjects = sortProjects([...projects, addedProject]);
+            projects = sortedProjects;
             updatedTaskDetails.taskProject = addedProject.projectId;
         }
 
+        console.log(updatedTaskDetails);
         const newTaskData = await editTask(updatedTaskDetails);
 
         onSave(newTaskData);

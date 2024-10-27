@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { deleteTask, sortTasks, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
@@ -23,18 +24,33 @@ const TaskList = () => {
             const activeSubjects = (await getAllFromStore('subjects')) || [];
             const activeProjects = (await getAllFromStore('projects')) || [];
             const activeTasks = (await getAllFromStore('tasks')) || [];
-
-            const filteredSubjects = activeSubjects.filter(subject => subject.subjectStatus === 'Active');
-            const filteredProjects = activeProjects.filter(project => project.projectStatus === 'Active');
+    
+            const filteredSubjects = activeSubjects.filter(subject => subject.subjectStatus === 'Active' && subject.subjectId !== 'None');
+            const filteredProjects = activeProjects.filter(project => project.projectStatus === 'Active' && project.projectId !== 'None');
             const filteredTasks = activeTasks.filter(task => task.taskStatus !== 'Completed');
-
+    
             if (filteredSubjects.length > 0 && filteredProjects.length > 0 && filteredTasks.length > 0) {
-                const sortedTasks = sortTasks(filteredTasks);
+                // Add subject and project info into tasks
+                const tasksWithDetails = filteredTasks.map(task => {
+                    const taskSubject = activeSubjects.find(subject => subject.subjectId === task.taskSubject); // Use activeSubjects, including 'None'
+                    const taskProject = activeProjects.find(project => project.projectId === task.taskProject);
+    
+                    return {
+                        ...task,
+                        taskSubject, // Attach full subject details, including 'None'
+                        taskProject  // Attach full project details
+                    };
+                });
+    
+                const sortedTasks = sortTasks(tasksWithDetails);
+                const sortedSubjects = filteredSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+                const sortedProjects = filteredProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+    
                 setTasks(sortedTasks);
-                setSubjects(filteredSubjects);
-                setProjects(filteredProjects);
+                setSubjects(sortedSubjects); // Excludes 'None' subject
+                setProjects(sortedProjects);
                 setIsLoading(false);
-                console.log('Data loaded from IndexedDB');
+                console.log('Data loaded from IndexedDB with filtered subjects');
                 return true;
             }
             return false;
@@ -42,7 +58,7 @@ const TaskList = () => {
             console.error('Error loading data from IndexedDB:', error);
             return false;
         }
-    };
+    };    
 
     const updateState = async () => {
         setIsLoading(true);
@@ -59,28 +75,13 @@ const TaskList = () => {
         setIsAddTaskFormOpen(!isAddTaskFormOpen);
     };
 
-    const sortTasks = (tasks) => {
-        return tasks.sort((a, b) => {
-            const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
-            const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
-            if (dateA < dateB) return -1;
-            if (dateA > dateB) return 1;
-
-            const timeA = a.taskDueTime || '23:59';
-            const timeB = b.taskDueTime || '23:59';
-            if (timeA < timeB) return -1;
-            if (timeA > timeB) return 1;
-
-            return a.taskName.localeCompare(b.taskName);
-        });
-    };
-
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
     };
 
     const handleAddTask = async (newTask) => {
-        updateState();
+        const sortedTasks = sortTasks([...tasks, newTask]);
+        setTasks(sortedTasks);
         console.log("Task added, state and IndexedDB updated");
     };
 
@@ -89,7 +90,7 @@ const TaskList = () => {
         if (confirmation) {
             try {
                 await deleteTask(taskId);
-                updateState();
+                setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
                 console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
@@ -98,9 +99,18 @@ const TaskList = () => {
     };
 
     const handleEditTask = async (updatedTask) => {
-        updateState();
+        setTasks(prevTasks => {
+            // Update the specific task
+            const updatedTasks = prevTasks.map(task =>
+                task.taskId === updatedTask.taskId ? updatedTask : task
+            );
+    
+            // Sort the updated list of tasks
+            return sortTasks(updatedTasks);
+        });
+    
         console.log("Task updated, state and IndexedDB updated");
-    };
+    };    
 
     return (
         <div className="view-container">

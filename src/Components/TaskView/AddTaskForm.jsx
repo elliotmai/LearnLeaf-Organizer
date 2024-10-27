@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { addTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
+import { addTask, addSubject, addProject, sortTasks, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import Modal from '@mui/material/Modal';
@@ -32,16 +32,17 @@ const submitButtonStyle = {
     color: '#355147',
     '&:hover': {
         backgroundColor: '#a8bdb8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent',
-    color: '#355147',
+    color: '#ff5252',
     marginLeft: 1,
-    '&:hover': {
-        backgroundColor: '#a8bdb8',
-    },
+    '&:hover': { 
+        color: '#fff',
+        backgroundColor: '#ff5252' 
+    }
 };
 
 export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, initialSubject, initialProject, initialDueDate }) {
@@ -97,6 +98,8 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        console.log('task details:', taskDetails, '\nnew subject?', isNewSubject, '\nnew subject:', newSubjectName, '\nnew project?', isNewProject, '\nnew project:', newProjectName);
+
         if (taskDetails.dueTimeInput && !taskDetails.dueDateInput) {
             setErrors(prevErrors => ({
                 ...prevErrors,
@@ -116,6 +119,8 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
             };
             const addedSubject = await addSubject(newSubjectDetails);
             updatedTaskDetails.taskSubject = addedSubject.subjectId;
+            const sortedSubjects = sortSubjects([...subjects, addedSubject])
+            subjects = sortedSubjects;
         }
 
         if (isNewProject && newProjectName) {
@@ -126,11 +131,16 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
             };
             const addedProject = await addProject(newProjectDetails);
             updatedTaskDetails.taskProject = addedProject.projectId;
+
+            const sortedProjects = sortProjects([...projects, addedProject])
+            projects = sortedProjects;
         }
 
         const newTaskData = await addTask(updatedTaskDetails);
+        console.log('new task data: ', newTaskData);
 
         onAddTask(newTaskData);
+
         onClose();
     };
 

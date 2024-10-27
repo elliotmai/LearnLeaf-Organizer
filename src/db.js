@@ -3,9 +3,9 @@ import { openDB } from 'idb';
 
 const DB_NAME = 'learnleaf-db';
 const DB_VERSION = 1;
-const TASKS_STORE = 'tasks';
-const SUBJECTS_STORE = 'subjects';
-const PROJECTS_STORE = 'projects';
+export const TASKS_STORE = 'tasks';
+export const SUBJECTS_STORE = 'subjects';
+export const PROJECTS_STORE = 'projects';
 
 export async function initDB() {
     return openDB(DB_NAME, DB_VERSION, {
@@ -49,5 +49,13 @@ export async function deleteFromStore(storeName, key) {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     await store.delete(key);
+    await tx.done;
+}
+
+export async function clearStore(storeName) {
+    const db = await initDB();
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    await store.clear();
     await tx.done;
 }
