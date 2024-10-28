@@ -10,7 +10,7 @@ import TaskFilterBar from '../../pages/TaskFilterBar';
 import './TaskView.css';
 import '/src/Components/PageFormat.css';
 
-const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask}) => {
     const [filterCriteria, setFilterCriteria] = useState({
         searchQuery: '',
         taskPriority: '',

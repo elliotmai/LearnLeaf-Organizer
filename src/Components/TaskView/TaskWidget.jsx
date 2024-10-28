@@ -9,8 +9,8 @@ import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/s
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
-    const [formValues, setFormValues] = useState({ ...task });
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask}) => {
+    const [formValues, setFormValues] = useState({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
     const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -58,20 +58,8 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
         }
     };
 
-    const handleSelectChange = (event) => {
-        const { name, value } = event.target;
-
-        if (name === 'taskSubject') {
-            setIsNewSubject(value === 'newSubject');
-        }
-        if (name === 'taskProject') {
-            setIsNewProject(value === 'newProject');
-        }
-        setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
-    };
-
     useEffect(() => {
-        setFormValues({ ...task });
+        setFormValues({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
         setOriginalValues({ ...task });
         setIsNewSubject(false);
         setNewSubjectName('');
@@ -81,53 +69,48 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
 
     const handleSave = async () => {
         try {
-
             if (formValues.taskDueTime && !formValues.taskDueDate) {
-                setErrors(prevErrors => ({
-                    ...prevErrors,
-                    taskDueDate: 'Due date is required when due time is added.',
-                }));
+                setErrors({ taskDueDate: 'Due date is required when due time is added.' });
                 return;
             }
-
+    
             let updatedTask = { ...formValues };
-
+    
+            // Add new subject if necessary
             if (isNewSubject && newSubjectName) {
-                const newSubjectDetails = {
+                const newSubject = await addSubject({
                     subjectName: newSubjectName,
                     subjectSemester: '',
                     subjectDescription: '',
                     subjectColor: 'black',
-                };
-                const addedSubject = await addSubject(newSubjectDetails);
-                const sortedSubjects = sortSubjects([...subjects, addedSubject]);
-                subjects = sortedSubjects;
-                updatedTask.taskSubject = addedSubject.subjectId;
+                });
+                updatedTask.taskSubject = newSubject.subjectId;
+                formValues.taskSubject = updatedTask.taskSubject;
+                setIsNewSubject(false);
+                setNewSubjectName('');
             }
-
+    
+            // Add new project if necessary
             if (isNewProject && newProjectName) {
-                const newProjectDetails = {
+                const newProject = await addProject({
                     projectName: newProjectName,
                     projectDescription: '',
                     projectSubjects: [],
-                };
-                const addedProject = await addProject(newProjectDetails);
-                const sortedProjects = sortProjects([...projects, addedProject]);
-                projects = sortedProjects;
-                updatedTask.taskProject = addedProject.projectId;
+                });
+                updatedTask.taskProject = newProject.projectId;
+                formValues.taskProject = updatedTask.taskProject;
+                setIsNewProject(false);
+                setNewProjectName('');
             }
-
+    
+            // Call editTask with updated task
             const refreshedTask = await editTask(updatedTask);
-            console.log('refreshed task:', refreshedTask);
-            onUpdateTask(refreshedTask);
+            setTimeout(() => onUpdateTask(refreshedTask), 1);
             setOriginalValues(refreshedTask);
-            if (isEditModalOpen) {
-                setEditModalOpen(false);
-            }
         } catch (error) {
             console.error('Error updating task:', error);
         }
-    };
+    };    
 
     const handleEditClick = () => {
         setEditedTask({ ...formValues });

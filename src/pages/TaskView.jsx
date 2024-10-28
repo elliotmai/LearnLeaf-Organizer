@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { deleteTask, sortTasks, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks, addSubject, sortSubjects, addProject, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
@@ -97,17 +97,22 @@ const TaskList = () => {
     };
 
     const handleEditTask = async (updatedTask) => {
-        console.log('subjects: ', subjects, '\nprojects: ', projects, '\nedited task: ', updatedTask);
-    
+
+        const activeSubjects = (await getAllFromStore('subjects')) || [];
+        setSubjects(activeSubjects);
+
+        const activeProjects = (await getAllFromStore('projects')) || [];
+        setProjects(activeProjects);
+
         setTasks(prevTasks => {
             // Update or remove the specific task based on its status
             const updatedTasks = prevTasks
                 .map(task => {
                     if (task.taskId === updatedTask.taskId) {
                         // Attach taskSubject and taskProject details
-                        const taskSubject = subjects.find(subject => subject.subjectId === updatedTask.taskSubject);
-                        const taskProject = projects.find(project => project.projectId === updatedTask.taskProject);
-    
+                        const taskSubject = activeSubjects.find(subject => subject.subjectId === updatedTask.taskSubject);
+                        const taskProject = activeProjects.find(project => project.projectId === updatedTask.taskProject);
+
                         return {
                             ...updatedTask,
                             taskSubject, // Attach full subject details
@@ -117,14 +122,14 @@ const TaskList = () => {
                     return task;
                 })
                 .filter(task => task.taskStatus !== 'Completed'); // Exclude completed tasks from the state
-    
+
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
-    
+
         console.log("Task updated, state and IndexedDB updated");
     };
-      
+
 
     return (
         <div className="view-container">

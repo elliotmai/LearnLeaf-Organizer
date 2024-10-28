@@ -22,7 +22,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
-        const confirmation = window.confirm("Are you sure you want to archive this subject?\nThis will mark all outstanding tasks as Completed.");
+        const confirmation = window.confirm("Are you sure you want to archive this subject?\nThis will not affect any associated tasks.");
         if (confirmation) {
             try {
                 await archiveSubject(subject.subjectId);
@@ -47,7 +47,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
     };
 
     const handleDeleteClick = async () => {
-        const confirmation = window.confirm("Are you sure you want to delete this subject?\n(This will not delete any associated tasks.)");
+        const confirmation = window.confirm("Are you sure you want to delete this subject?\nThis will not delete any associated tasks, but will remove their link to this subject.");
         if (confirmation) {
             try {
                 await deleteSubject(subject.subjectId);

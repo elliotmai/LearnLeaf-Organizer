@@ -426,34 +426,34 @@ export async function addTask(taskDetails) {
         taskPriority: taskDetails.taskPriority,
         taskStatus: taskDetails.taskStatus,
     };
-    
+
     // Helper function to create a date object with exact local time components
     function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
         const [year, month, day] = dateString.split('-').map(Number);
         return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // month - 1 due to JS Date 0-indexed months
     }
-    
+
     // Set start and due dates exactly as provided
     if (taskDetails.startDateInput) {
         const startDate = createLocalDate(taskDetails.startDateInput, 0, 0, 0, 0); // 00:00:00 local time
         taskData.taskStartDate = Timestamp.fromDate(startDate);
     }
-    
+
     if (taskDetails.dueDateInput) {
         const dueDate = createLocalDate(taskDetails.dueDateInput, 23, 59, 59, 999); // 23:59:59 local time
         taskData.taskDueDate = Timestamp.fromDate(dueDate);
     }
-    
+
     // If both dueDateInput and dueTimeInput are provided, set due time
     if (taskDetails.dueDateInput && taskDetails.dueTimeInput) {
         const [hours, minutes] = taskDetails.dueTimeInput.split(':').map(Number);
         const dueDateTime = createLocalDate(taskDetails.dueDateInput, hours, minutes, 0, 0); // Set to specified due time in local time
         taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
-    }    
+    }
 
     const taskRef = doc(taskCollection, taskId);
 
-    console.log('due date: ', taskDetails.dueDateInput, 'due time:', taskDetails.dueTimeInput, 'start date:',taskDetails.startDateInput);
+    console.log('due date: ', taskDetails.dueDateInput, 'due time:', taskDetails.dueTimeInput, 'start date:', taskDetails.startDateInput);
 
     // Update local IndexedDB task data with full subject and project details
     const localTaskData = {
@@ -517,14 +517,14 @@ export async function editTask(taskDetails) {
         taskDueTime: taskDetails.taskDueTime
             ? Timestamp.fromDate(new Date(taskDetails.taskDueDate + "T" + taskDetails.taskDueTime))
             : deleteField()
-    };    
+    };
 
     const taskRef = doc(taskCollection, taskId);
 
     try {
         // Update Firestore
         await updateDoc(taskRef, taskData);
-        
+
         // Update local IndexedDB task data with full subject and project details
         const localTaskData = {
             ...taskData,
@@ -546,7 +546,7 @@ export async function editTask(taskDetails) {
         console.error("Error updating task:", error);
     }
 
-    
+
 }
 
 export async function deleteTask(taskId) {
@@ -561,7 +561,6 @@ export async function deleteTask(taskId) {
 }
 
 export function sortTasks(tasks) {
-    console.log(tasks);
     return tasks.sort((a, b) => {
         const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
         const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
@@ -609,13 +608,42 @@ export async function editSubject(subjectDetails) {
 
 export async function deleteSubject(subjectId) {
     const subjectRef = doc(subjectCollection, subjectId);
+    const noneRef = doc(subjectCollection, 'None');
 
     try {
+        // Delete the subject from Firebase and IndexedDB
         await deleteDoc(subjectRef);
         await deleteFromStore('subjects', subjectId);
-        console.log("Subject deleted successfully");
+
+        // Query tasks that are linked to this subject
+        const tasksQuery = query(taskCollection, where('taskSubject', '==', subjectRef));
+        const tasksSnapshot = await getDocs(tasksQuery);
+
+        // Update each task to set taskSubject to 'None'
+        const updatedTasks = [];
+        for (const taskDoc of tasksSnapshot.docs) {
+            const taskRef = taskDoc.ref;
+            const taskData = taskDoc.data();
+
+            const updatedTaskData = {
+                ...taskData,
+                taskId: taskRef.id,
+                taskSubject: 'None',
+                taskProject: taskData.taskProject?.id || 'None'  // Safely access taskProject ID
+            };
+
+            await updateDoc(taskRef, { taskSubject: noneRef }); // Update in Firebase
+            updatedTasks.push(updatedTaskData); // Prepare for IndexedDB
+        }
+
+        console.log(updatedTasks);
+
+        // Update tasks in IndexedDB
+        await saveToStore('tasks', updatedTasks);
+
+        console.log("Subject deleted and tasks updated to 'None' successfully");
     } catch (error) {
-        console.error("Error deleting subject:", error);
+        console.error("Error deleting subject or updating tasks:", error);
     }
 }
 
