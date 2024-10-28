@@ -79,7 +79,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
             >
                 <CardContent>
                     <Link
-                        href={`/subjects/${subject.subjectId}`}
+                        href={`/subjects/${subject.subjectId.split('_')[0]}`}
                         underline="hover"
                         variant="h6"
                         color="inherit"
@@ -93,6 +93,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                     >
                         {subject.subjectName}
                     </Link>
+
 
                     <Typography
                         variant="body1"

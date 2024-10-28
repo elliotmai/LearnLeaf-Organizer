@@ -1,8 +1,8 @@
-import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { getAllFromStore, deleteFromStore } from '/src/db.js'; // Import IndexedDB functions
+import { getAllFromStore } from '/src/db.js';
+import { deleteTask, sortTasks} from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -14,11 +14,14 @@ const SubjectTasks = () => {
     const { subjectId } = useParams();
     const { user } = useUser();
     const [pageSubject, setPageSubject] = useState(null);
+    const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [tasks, setTasks] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
+    
+    
+    const subjectIdFull = user?.id ? `${subjectId}_${user.id}` : null;
 
     // Fetch data from IndexedDB
     const loadFromIndexedDB = async () => {
@@ -28,23 +31,38 @@ const SubjectTasks = () => {
             const allProjects = await getAllFromStore('projects');
             const allTasks = await getAllFromStore('tasks');
 
-            const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
-            const activeProjects = allProjects.filter(project => project.projectStatus === 'Active');
             const activeTasks = allTasks.filter(task => task.taskStatus !== 'Completed');
 
             // Find the specified subject by ID
-            const foundSubject = activeSubjects.find(subject => subject.subjectId === subjectId);
+            const foundSubject = allSubjects.find(subject => subject.subjectId === subjectIdFull);
             if (foundSubject) {
                 setPageSubject(foundSubject);
             } else {
-                console.error(`Subject with ID ${subjectId} not found`);
+                console.error(`Subject with ID ${subjectIdFull} not found`);
             }
 
             // Filter tasks specific to this subject
-            const filteredTasks = sortTasks(activeTasks.filter(task => task.taskSubject?.subjectId === subjectId));
-            setSubjects(activeSubjects);
-            setProjects(activeProjects);
-            setTasks(filteredTasks);
+            const filteredTasks = activeTasks.filter(task => task.taskSubject === subjectIdFull);
+
+            if (filteredTasks.length > 0) {
+                // Add subject and project info into tasks
+                const tasksWithDetails = filteredTasks.map(task => {
+                    const taskSubject = allSubjects.find(subject => subject.subjectId === task.taskSubject); // Use activeSubjects, including 'None'
+                    const taskProject = allProjects.find(project => project.projectId === task.taskProject);
+
+                    return {
+                        ...task,
+                        taskSubject, // Attach full subject details, including 'None'
+                        taskProject  // Attach full project details
+                    };
+                });
+
+                const sortedTasks = sortTasks(tasksWithDetails);
+                setTasks(sortedTasks);
+            }
+            setSubjects(allSubjects);
+            setProjects(allProjects);
+            
             setIsLoading(false);
             console.log('Data loaded from IndexedDB');
             return true;
@@ -56,10 +74,7 @@ const SubjectTasks = () => {
 
     const updateState = async () => {
         setIsLoading(true);
-        const isLoadedFromIndexedDB = await loadFromIndexedDB();
-        if (!isLoadedFromIndexedDB) {
-            console.error('Error loading data from IndexedDB');
-        }
+        await loadFromIndexedDB();
     };
 
     useEffect(() => {
@@ -72,31 +87,22 @@ const SubjectTasks = () => {
         setIsAddTaskFormOpen(!isAddTaskFormOpen);
     };
 
-    const sortTasks = (tasks) => {
-        return tasks.sort((a, b) => {
-            const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
-            const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
-            if (dateA < dateB) return -1;
-            if (dateA > dateB) return 1;
-            const timeA = a.taskDueTime || '23:59';
-            const timeB = b.taskDueTime || '23:59';
-            if (timeA < timeB) return -1;
-            if (timeA > timeB) return 1;
-            return a.taskName.localeCompare(b.taskName);
-        });
+    const handleCloseAddTaskForm = () => {
+        setIsAddTaskFormOpen(false);
     };
 
-    const handleAddTask = (newTask) => {
-        updateState();
+    const handleAddTask = async (newTask) => {
+        const sortedTasks = sortTasks([...tasks, newTask]);
+        setTasks(sortedTasks);
         console.log("Task added, state and IndexedDB updated");
     };
 
     const handleDeleteTask = async (taskId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        const confirmation = window.confirm("Are you sure you want to permanently delete this task?");
         if (confirmation) {
             try {
-                await deleteFromStore('tasks', taskId);
-                updateState();
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
                 console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
@@ -104,12 +110,37 @@ const SubjectTasks = () => {
         }
     };
 
-    const handleCloseAddTaskForm = () => {
-        setIsAddTaskFormOpen(false);
-    };
+    const handleEditTask = async (updatedTask) => {
 
-    const handleEditTask = (updatedTask) => {
-        updateState();
+        const activeSubjects = (await getAllFromStore('subjects')) || [];
+        setSubjects(activeSubjects);
+
+        const activeProjects = (await getAllFromStore('projects')) || [];
+        setProjects(activeProjects);
+
+        setTasks(prevTasks => {
+            // Update or remove the specific task based on its status
+            const updatedTasks = prevTasks
+                .map(task => {
+                    if (task.taskId === updatedTask.taskId) {
+                        // Attach taskSubject and taskProject details
+                        const taskSubject = activeSubjects.find(subject => subject.subjectId === updatedTask.taskSubject);
+                        const taskProject = activeProjects.find(project => project.projectId === updatedTask.taskProject);
+
+                        return {
+                            ...updatedTask,
+                            taskSubject, // Attach full subject details
+                            taskProject  // Attach full project details
+                        };
+                    }
+                    return task;
+                })
+                .filter(task => task.taskStatus !== 'Completed' && task.taskSubject === subjectIdFull); // Exclude completed tasks from the state
+
+            // Sort the updated list of tasks before returning
+            return sortTasks(updatedTasks);
+        });
+
         console.log("Task updated, state and IndexedDB updated");
     };
 

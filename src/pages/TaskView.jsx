@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { deleteTask, sortTasks, addSubject, sortSubjects, addProject, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks} from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
@@ -9,7 +9,7 @@ import Grid from '@mui/material/Grid';
 import '/src/Components/FormUI.css';
 import '/src/Components/TaskView/TaskView.css';
 import '/src/Components/PageFormat.css';
-import { getAllFromStore, saveToStore } from '/src/db.js';
+import { getAllFromStore } from '/src/db.js';
 
 const TaskList = () => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
@@ -84,7 +84,7 @@ const TaskList = () => {
     };
 
     const handleDeleteTask = async (taskId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        const confirmation = window.confirm("Are you sure you want to permanently delete this task?");
         if (confirmation) {
             try {
                 await deleteTask(taskId);
