@@ -52,3 +52,8 @@
 .read-the-docs {
   color: #888;
 }
+
+.MuiInputLabel-root {
+  background-color: white;
+  padding: 0 4px; /* Optional: Adds padding to prevent text overlap */
+}

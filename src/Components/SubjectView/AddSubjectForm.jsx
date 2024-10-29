@@ -22,20 +22,21 @@ const boxStyle = {
 };
 
 const submitButtonStyle = {
-    backgroundColor: '#B6CDC8', // Custom background color
-    color: '#355147', // Custom text color
+    backgroundColor: '#B6CDC8',
+    color: '#355147',
     '&:hover': {
-        backgroundColor: '#a8bdb8', // Darker shade for hover state
+        backgroundColor: '#a8bdb8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent', // No background
-    color: '#355147', // Custom text color
-    marginLeft: 1, // Margin to the left
-    '&:hover': {
-        backgroundColor: '#a8bdb8', // Slight background on hover for visual feedback
-    },
+    color: '#ff5252',
+    marginLeft: 1,
+    '&:hover': { 
+        color: '#fff',
+        backgroundColor: '#ff5252' 
+    }
 };
 
 

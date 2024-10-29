@@ -23,7 +23,7 @@ input[type=email], input[type=password], input[type=text] {
     width: 100%;
     padding: 10px;
     margin: 10px 0;
-    border: 1px solid #ddd;
+    /* border: 1px solid #ddd; */
     border-radius: 4px;
     box-sizing: border-box;
 }
@@ -170,3 +170,7 @@ button {
         border-color: #5B8E9F; /* Highlight color when input is focused */
         outline: none; /* Removing the default outline to use only the border color change */
     }
+
+.add-form label {
+    background-color: white;
+}

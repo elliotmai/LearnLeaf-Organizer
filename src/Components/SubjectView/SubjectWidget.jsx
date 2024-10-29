@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { EditSubjectForm } from './EditSubjectForm.jsx';
 import './SubjectDashboard.css';
@@ -22,7 +22,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
-        const confirmation = window.confirm("Are you sure you want to archive this subject?\nThis will not affect any associated tasks.");
+        const confirmation = window.confirm("Archive this subject?\nThis will not delete any associated tasks.");
         if (confirmation) {
             try {
                 await archiveSubject(subject.subjectId);
@@ -47,7 +47,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
     };
 
     const handleDeleteClick = async () => {
-        const confirmation = window.confirm("Are you sure you want to delete this subject?\nThis will not delete any associated tasks, but will remove their link to this subject.");
+        const confirmation = window.confirm("Delete this subject?\nAssociated tasks won’t be grouped under this subject anymore.");
         if (confirmation) {
             try {
                 await deleteSubject(subject.subjectId);
@@ -78,21 +78,23 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                 }}
             >
                 <CardContent>
-                    <Link
-                        href={`/subjects/${subject.subjectId.split('_')[0]}`}
-                        underline="hover"
-                        variant="h6"
-                        color="inherit"
-                        sx={{
-                            color: '#355147',
-                            display: 'block',
-                            fontWeight: 'bold',
-                            fontSize: '22px'
-                        }}
-                        gutterBottom
-                    >
-                        {subject.subjectName}
-                    </Link>
+                    <Tooltip title="View Associated Tasks">
+                        <Link
+                            href={`/subjects/${subject.subjectId.split('_')[0]}`}
+                            underline="hover"
+                            variant="h6"
+                            color="inherit"
+                            sx={{
+                                color: '#355147',
+                                display: 'block',
+                                fontWeight: 'bold',
+                                fontSize: '22px'
+                            }}
+                            gutterBottom
+                        >
+                            {subject.subjectName}
+                        </Link>
+                    </Tooltip>
 
 
                     <Typography
@@ -171,39 +173,60 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                     }}
                 >
                     {/* Edit Button on the far left */}
-                    <CustomIconButton
-                        aria-label="edit"
-                        onClick={() => handleEditClick(subject)}
-                    >
+                    <Tooltip title="Open Edit Window">
                         <EditIcon
-                            fontSize="medium"
+                            onClick={() => handleEditClick(subject)}
+                            sx={{
+                                color: '#9F6C5B',
+                                fontSize: 'xl',
+                                cursor: 'pointer',
+                                padding: '6px',          // Add padding to give space within the circle
+                                borderRadius: '50%',
+                                '&:hover': {
+                                    transform: 'scale(1.05)',
+                                    backgroundColor: '#9F6C5B',
+                                    color: '#fff',
+                                },
+                            }}
                         />
-                    </CustomIconButton>
+                    </Tooltip>
 
                     {/* Grouping Archive and Delete buttons on the right */}
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <Button
                             size="small"
                             onClick={handleArchiveSubject}
-                            variant="contained"
+                            variant="text"
                             sx={{
-                                backgroundColor: '#B6CDC8',
+                                backgroundColor: 'transparent',
                                 color: '#355147',
-                                '&:hover': { backgroundColor: '#a8bdb8' },
+                                '&:hover': {
+                                    backgroundColor: '#355147',
+                                    color: '#fff',
+                                },
                                 mr: 1 // Reduce the margin to make them closer
                             }}
                         >
                             Archive
                         </Button>
 
-                        <CustomIconButton
-                            aria-label="delete"
-                            onClick={() => handleDeleteClick(subject.subjectId)}
-                        >
+                        <Tooltip title="Delete Task">
                             <DeleteIcon
-                                fontSize="medium"
+                                onClick={() => handleDeleteClick(subject.subjectId)}
+                                sx={{
+                                    color: '#d1566e',
+                                    fontSize: 'xl',
+                                    cursor: 'pointer',
+                                    padding: '6px',          // Add padding to give space within the circle
+                                    borderRadius: '50%',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        backgroundColor: '#d1566e',
+                                        color: '#fff',
+                                    },
+                                }}
                             />
-                        </CustomIconButton>
+                        </Tooltip>
                     </div>
                 </CardActions>
             </Card>

@@ -24,16 +24,17 @@ const submitButtonStyle = {
     color: '#355147',
     '&:hover': {
         backgroundColor: '#a8bdb8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent',
-    color: '#355147',
+    color: '#ff5252',
     marginLeft: 1,
-    '&:hover': {
-        backgroundColor: '#a8bdb8',
-    },
+    '&:hover': { 
+        color: '#fff',
+        backgroundColor: '#ff5252' 
+    }
 };
 
 export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
