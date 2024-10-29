@@ -112,7 +112,7 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                 subjectDescription: '',
                 subjectColor: 'black',
             });
-            updatedTaskDetails.taskSubject = newSubject.subjectId;
+            taskDetails.taskSubject = newSubject.subjectId;
             setIsNewSubject(false);
             setNewSubjectName('');
         }
@@ -123,12 +123,12 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                 projectDescription: '',
                 projectSubjects: [],
             });
-            updatedTaskDetails.taskProject = newProject.projectId;
+            taskDetails.taskProject = newProject.projectId;
             setIsNewSubject(false);
             setNewSubjectName('');
         }
 
-        const newTaskData = await addTask(updatedTaskDetails);
+        const newTaskData = await addTask(taskDetails);
 
         setTimeout(() => onAddTask(newTaskData), 1);
 
