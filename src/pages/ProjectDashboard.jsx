@@ -1,23 +1,25 @@
-import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useEffect, useState } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
-import { getAllFromStore } from '/src/db.js'; // Import IndexedDB functions
+import { sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore } from '/src/db.js';
 import { AddProjectForm } from '/src/Components/ProjectView/AddProjectForm.jsx';
 import ProjectWidget from '/src/Components/ProjectView/ProjectWidget.jsx';
 import ProjectFilterBar from './ProjectFilterBar.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import { Grid, useTheme, useMediaQuery, CircularProgress } from '@mui/material';
+import { Grid, useTheme, useMediaQuery, CircularProgress, Paper, Typography } from '@mui/material';
+import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
 import '/src/Components/PageFormat.css';
 import '/src/Components/FilterBar.css';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
-    const [subjects, setsubjects] = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
-    const { user } = useUser();
     const [isLoading, setIsLoading] = useState(true);
+    const { user } = useUser();
     const navigate = useNavigate();
+
     const [filterCriteria, setFilterCriteria] = useState({
         searchProject: '',
         searchSubject: '',
@@ -35,14 +37,13 @@ const ProjectsDashboard = () => {
     };
 
     const loadFromIndexedDB = async () => {
-        console.log('Loading from IndexedDB');
         try {
             const activeProjects = (await getAllFromStore('projects')).filter(project => project.projectStatus === 'Active');
-            const activeSubjects = (await getAllFromStore('subjects')).filter(subject => subject.subjectStatus === 'Active');
+            const allSubjects = (await getAllFromStore('subjects'));
             const storedTasks = await getAllFromStore('tasks');
 
             const projectsWithDetails = activeProjects.map((project) => {
-                const projectTasks = storedTasks.filter(task => task.taskProject?.projectId === project.projectId);
+                const projectTasks = storedTasks.filter(task => task.taskProject === project.projectId);
                 const statusCounts = projectTasks.reduce((acc, task) => {
                     const taskStatus = task.taskStatus.replace(/\s+/g, '');
                     if (['NotStarted', 'InProgress', 'Completed'].includes(taskStatus)) {
@@ -55,23 +56,28 @@ const ProjectsDashboard = () => {
                     .filter(task => task.taskStatus !== 'Completed' && task.taskDueDate)
                     .sort((a, b) => a.taskDueDate.localeCompare(b.taskDueDate))[0];
 
+                const projectSubjects = project.projectSubjects.map((subj) => (
+                    allSubjects.find(subject => subject.subjectId === subj)
+                ));
+
                 return {
                     ...project,
                     statusCounts,
                     nextTaskName: nextTask?.taskName,
                     nextTaskDueDate: nextTask?.taskDueDate,
-                    nextTaskDueTime: nextTask?.taskDueTime
+                    nextTaskDueTime: nextTask?.taskDueTime,
+                    projectSubjects
                 };
             });
 
-            setsubjects(activeSubjects);
-            setProjects(projectsWithDetails);
+            const sortedSubjects = sortSubjects(allSubjects);
+            const sortedProjects = sortProjects(projectsWithDetails);
+
+            setSubjects(sortedSubjects);
+            setProjects(sortedProjects);
             setIsLoading(false);
-            console.log('Data loaded from IndexedDB');
-            return true;
         } catch (error) {
             console.error('Error loading from IndexedDB:', error);
-            return false;
         }
     };
 
@@ -79,9 +85,8 @@ const ProjectsDashboard = () => {
         setIsLoading(true);
         const isLoadedFromIndexedDB = await loadFromIndexedDB();
         if (!isLoadedFromIndexedDB) {
-            console.error('Failed to load data from IndexedDB');
+            console.log("No subjects data found in IndexedDB.");
         }
-        console.log('projects:', projects)
     };
 
     useEffect(() => {
@@ -106,7 +111,7 @@ const ProjectsDashboard = () => {
         }
     };
 
-    const getFilteredProjects = (projects, filterCriteria) => {
+    const getFilteredProjects = () => {
         return projects.filter((project) => {
             const matchesSearchProject = !filterCriteria.searchProject || project.projectName.toLowerCase().includes(filterCriteria.searchProject.toLowerCase());
             const matchesSearchSubject = !filterCriteria.searchSubject || project.projectSubjects.some(subject => subject.subjectName.toLowerCase().includes(filterCriteria.searchSubject.toLowerCase()));
@@ -123,12 +128,12 @@ const ProjectsDashboard = () => {
         });
     };
 
-    const clearFilters = () => setFilterCriteria({ searchProject: '', searchSubject: '', searchDescription: '', dueDate: '', dueDateComparison: '' });
+    const clearFilters = () => {
+        setFilterCriteria({ searchProject: '', searchSubject: '', searchDescription: '', dueDate: '', dueDateComparison: '' });
+    };
 
-    const handleProject = () => updateState();
-
+    const filteredProjects = getFilteredProjects();
     const itemsPerRow = getItemsPerRow();
-    const filteredProjects = getFilteredProjects(projects, filterCriteria);
 
     return (
         <div className="view-container">
@@ -141,24 +146,43 @@ const ProjectsDashboard = () => {
             />
             <Grid container spacing={3} className="projects-grid">
                 {isLoading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                    <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
                         <CircularProgress />
-                    </div>
+                    </Grid>
+                ) : filteredProjects.length > 0 ? (
+                    filteredProjects.map((project) => (
+                        <Grid item xs={12} sm={6} md={4} key={project.projectId}>
+                            <ProjectWidget
+                                project={project}
+                                subjects={subjects}
+                                refreshProjects={loadFromIndexedDB}
+                            />
+                        </Grid>
+                    ))
                 ) : (
-                    filteredProjects.length > 0 ? (
-                        filteredProjects.map((project) => (
-                            <Grid item xs={12} sm={6} md={4} key={project.projectId}>
-                                <ProjectWidget 
-                                    project={project}
-                                    subjects={subjects} 
-                                />
-                            </Grid>
-                        ))
-                    ) : (
-                        <div style={{ textAlign: 'center', width: '100%' }}>
-                            <p>No projects found.</p>
-                        </div>
-                    )
+                    <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2rem',
+                                backgroundColor: '#f5f5f5',
+                                margin: '2rem 0',
+                                width: '90%'
+                            }}
+                        >
+                            <EmojiNatureIcon sx={{ fontSize: 50, color: '#4caf50', marginBottom: '1rem' }} />
+                            <Typography variant="h6" color="textSecondary">
+                                No projects found!
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" textAlign="center">
+                                It looks like you haven't added any projects yet. Click the + button to start your first project!
+                            </Typography>
+                        </Paper>
+                    </Grid>
                 )}
             </Grid>
             <button className="fab" onClick={handleOpen}>
@@ -166,9 +190,11 @@ const ProjectsDashboard = () => {
             </button>
             {isOpen && (
                 <AddProjectForm
+                    subjects={subjects}
                     isOpen={isOpen}
                     onClose={handleClose}
-                    onAddProject={handleProject}
+                    onAddProject={loadFromIndexedDB}
+                    refreshProjects={loadFromIndexedDB}
                 />
             )}
         </div>

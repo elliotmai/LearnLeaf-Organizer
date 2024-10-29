@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
-import {sortSubjects} from '/src/LearnLeaf_Functions.jsx';
+import { sortSubjects } from '/src/LearnLeaf_Functions.jsx';
 import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import SubjectFilterBar from './SubjectFilterBar';
-import { Grid, useMediaQuery, useTheme } from '@mui/material';
+import { Grid, useMediaQuery, useTheme, Typography, Paper } from '@mui/material';
 import CircularProgress from '@mui/material/CircularProgress';
+import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects'; // Import a fun icon
 import { FixedSizeList as List } from 'react-window';
 import '/src/Components/PageFormat.css';
 import '/src/Components/FilterBar.css';
@@ -68,9 +69,11 @@ const SubjectsDashboard = () => {
                 setIsLoading(false);
                 return true;
             }
+            setIsLoading(false); // Update state when no subjects are found
             return false;
         } catch (error) {
             console.error("Error loading subjects from IndexedDB:", error);
+            setIsLoading(false);
             return false;
         }
     };
@@ -143,6 +146,30 @@ const SubjectsDashboard = () => {
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                         <CircularProgress />
                         <p>Loading subjects...</p>
+                    </Grid>
+                ) : filteredSubjects.length === 0 ? (
+                    <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2rem',
+                                backgroundColor: '#f5f5f5',
+                                margin: '2rem 0',
+                                width: '90%'
+                            }}
+                        >
+                            <EmojiObjectsIcon sx={{ fontSize: 50, color: '#ffc107', marginBottom: '1rem' }} />
+                            <Typography variant="h6" color="textSecondary">
+                                No subjects found!
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                                It looks like you haven't added any subjects yet. Click the + button to add your first subject!
+                            </Typography>
+                        </Paper>
                     </Grid>
                 ) : (
                     <List

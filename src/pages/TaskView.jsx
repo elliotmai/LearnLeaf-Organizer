@@ -48,9 +48,9 @@ const TaskList = () => {
                 setSubjects(sortedSubjects); // Excludes 'None' subject
                 setProjects(sortedProjects);
                 setIsLoading(false);
-                console.log('Data loaded from IndexedDB with filtered subjects');
                 return true;
             }
+            setIsLoading(false);
             return false;
         } catch (error) {
             console.error('Error loading data from IndexedDB:', error);
@@ -60,7 +60,11 @@ const TaskList = () => {
 
     const updateState = async () => {
         setIsLoading(true);
-        await loadFromIndexedDB();
+        const isLoadedFromIndexedDB = await loadFromIndexedDB();
+        if (!isLoadedFromIndexedDB) {
+            setTasks([]);
+            console.log("No subjects data found in IndexedDB.");
+        }
     };
 
     useEffect(() => {
@@ -78,9 +82,9 @@ const TaskList = () => {
     };
 
     const handleAddTask = async (newTask) => {
-        const sortedTasks = sortTasks([...tasks, newTask]);
-        setTasks(sortedTasks);
-        console.log("Task added, state and IndexedDB updated");
+        // const sortedTasks = sortTasks([...tasks, newTask]);
+        // setTasks(sortedTasks);
+        updateState();
     };
 
     const handleDeleteTask = async (taskId) => {
@@ -89,7 +93,6 @@ const TaskList = () => {
             try {
                 await deleteTask(taskId);
                 setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
-                console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -126,8 +129,6 @@ const TaskList = () => {
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
-
-        console.log("Task updated, state and IndexedDB updated");
     };
 
 

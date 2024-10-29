@@ -416,7 +416,7 @@ export async function deleteUser(userId) {
 export async function addTask(taskDetails) {
     console.log('adding: ', taskDetails);
 
-    const taskId = `${Date.now()}_${userId}`;
+    const taskId = `${Date.now()}`;
 
     const taskData = {
         taskSubject: doc(subjectCollection, taskDetails.taskSubject),
@@ -579,7 +579,7 @@ export function sortTasks(tasks) {
 // Subject Functions: addSubject, editSubject, deleteSubject, archiveSubject, reactivateSubject
 
 export async function addSubject({ subjectName, subjectDescription, subjectSemester, subjectColor }) {
-    const subjectId = `${Date.now()}_${userId}`;
+    const subjectId = `${Date.now()}`;
     const subjectData = { subjectName, subjectSemester, subjectDescription, subjectStatus: 'Active', subjectColor };
 
     try {
@@ -688,17 +688,42 @@ export function sortSubjects(subjects) {
 // Project Functions: addProject, editProject, deleteProject, archiveProject, reactivateProject
 
 export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
-    const projectId = `${Date.now()}_${userId}`;
-    const projectData = { projectName, projectDescription, projectSubjects, projectStatus: 'Active' };
+    console.log('Adding project with subjects:', projectSubjects);
 
-    if (projectDueDateInput) projectData.projectDueDate = Timestamp.fromDate(new Date(projectDueDateInput));
-    if (projectDueTimeInput) projectData.projectDueTime = Timestamp.fromDate(new Date(projectDueDateInput + "T" + projectDueTimeInput));
+    const projectId = `${Date.now()}`;
+    const projectData = { 
+        projectName, 
+        projectDescription, 
+        projectStatus: 'Active' 
+    };
+
+    // Check if projectSubjects is empty and set a default reference if it is
+    const subjectRefs = projectSubjects.map((subjId) => doc(subjectCollection, subjId)) 
+    projectData.projectSubjects = subjectRefs;
+
+    if (projectDueDateInput) {
+        projectData.projectDueDate = Timestamp.fromDate(new Date(projectDueDateInput));
+    }
+    if (projectDueTimeInput) {
+        projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDueDateInput}T${projectDueTimeInput}`));
+    }
+
+    // Create localProjectData with only subject IDs
+    const localProjectData = { 
+        ...projectData,
+        projectId: projectId,
+        projectSubjects: projectSubjects, // Just the IDs for local storage
+        projectDueDate: formatDate(projectData.projectDueDate),
+        projectDueTime: formatTime(projectData.projectDueTime)
+    };
 
     try {
+        // Save projectData to Firebase with references
         await setDoc(doc(projectCollection, projectId), projectData);
-        await saveToStore('projects', [{ ...projectData, projectId }]);
+        // Save localProjectData to IndexedDB with only IDs (passed as array)
+        await saveToStore('projects', [localProjectData]);
         console.log("Project added successfully");
-        return { ...projectData, projectId };
+        return localProjectData;
     } catch (error) {
         console.error("Error adding project:", error);
     }
@@ -766,36 +791,8 @@ export async function reactivateProject(projectId) {
 }
 
 export function sortProjects(projects) {
-    // Step 1: Fetch all tasks from the store
-    const allTasks = getAllFromStore('tasks');
-
-    // Step 2: Map each project to include its next due task details
-    const projectsWithNextTasks = projects.map(project => {
-        // Filter tasks related to this project
-        const projectTasks = allTasks.filter(task => task.taskProject?.projectId === project.projectId);
-
-        // Find the next task due for the project (smallest due date and time)
-        const nextTask = projectTasks
-            .filter(task => task.taskStatus !== 'Completed' && task.taskDueDate) // Ignore completed or no due date tasks
-            .sort((a, b) => {
-                // Sort tasks by due date, then by due time
-                const dateComparison = (a.taskDueDate || '9999-12-31').localeCompare(b.taskDueDate || '9999-12-31');
-                if (dateComparison !== 0) return dateComparison;
-
-                const timeA = a.taskDueTime || '23:59';
-                const timeB = b.taskDueTime || '23:59';
-                return timeA.localeCompare(timeB);
-            })[0]; // Get the first (earliest) task
-
-        return {
-            ...project,
-            nextTaskDueDate: nextTask?.taskDueDate || null,
-            nextTaskDueTime: nextTask?.taskDueTime || null
-        };
-    });
-
-    // Step 3: Sort projects based on the specified criteria
-    return projectsWithNextTasks.sort((a, b) => {
+    
+    return projects.sort((a, b) => {
         // Sort by nextTaskDueDate
         const dateComparison = (a.nextTaskDueDate || '9999-12-31').localeCompare(b.nextTaskDueDate || '9999-12-31');
         if (dateComparison !== 0) return dateComparison;

@@ -20,9 +20,6 @@ const SubjectTasks = () => {
     const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
-    
-    const subjectIdFull = user?.id ? `${subjectId}_${user.id}` : null;
-
     // Fetch data from IndexedDB
     const loadFromIndexedDB = async () => {
         try {
@@ -34,15 +31,15 @@ const SubjectTasks = () => {
             const activeTasks = allTasks.filter(task => task.taskStatus !== 'Completed');
 
             // Find the specified subject by ID
-            const foundSubject = allSubjects.find(subject => subject.subjectId === subjectIdFull);
+            const foundSubject = allSubjects.find(subject => subject.subjectId === subjectId);
             if (foundSubject) {
                 setPageSubject(foundSubject);
             } else {
-                console.error(`Subject with ID ${subjectIdFull} not found`);
+                console.error(`Subject with ID ${subjectId} not found`);
             }
 
             // Filter tasks specific to this subject
-            const filteredTasks = activeTasks.filter(task => task.taskSubject === subjectIdFull);
+            const filteredTasks = activeTasks.filter(task => task.taskSubject === subjectId);
 
             if (filteredTasks.length > 0) {
                 // Add subject and project info into tasks
@@ -135,7 +132,7 @@ const SubjectTasks = () => {
                     }
                     return task;
                 })
-                .filter(task => task.taskStatus !== 'Completed' && task.taskSubject === subjectIdFull); // Exclude completed tasks from the state
+                .filter(task => task.taskStatus !== 'Completed' && task.taskSubject === subjectId); // Exclude completed tasks from the state
 
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
