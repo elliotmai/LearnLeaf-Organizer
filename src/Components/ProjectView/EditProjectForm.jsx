@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '/src/UserState.jsx';
+import { editProject, addSubject } from '/src/LearnLeaf_Functions.jsx';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -29,60 +29,69 @@ const submitButtonStyle = {
     color: '#355147',
     '&:hover': {
         backgroundColor: '#a8bdb8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent',
-    color: '#355147',
+    color: '#ff5252',
     marginLeft: 1,
     '&:hover': {
-        backgroundColor: '#a8bdb8',
-    },
+        color: '#fff',
+        backgroundColor: '#ff5252'
+    }
 };
 
 export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) => {
-    const { user } = useUser();
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
-    const [formValues, setFormValues] = useState(project);
+    const [formValues, setFormValues] = useState({
+        ...project,
+        projectSubjects: project.projectSubjects || ['None'],
+        projectDueDateInput: project.projectDueDate || '',
+        projectDueTimeInput: project.projectDueTime || ''
+    });
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        if (name === "subject" && value === "newSubject") {
+    const handleInputChange = (index, value) => {
+        const updatedSubjects = [...formValues.projectSubjects];
+        updatedSubjects[index] = value || 'None';
+        setFormValues({ ...formValues, projectSubjects: updatedSubjects });
+
+        if (value === "newSubject") {
             setIsNewSubject(true);
-            setFormValues({ ...formValues, subject: '' });
-        } else if (name === "newSubjectName") {
-            setNewSubjectName(value);
-            setFormValues({ ...formValues, subject: value });
         } else {
             setIsNewSubject(false);
-            setFormValues({ ...formValues, [name]: value });
         }
+    };
+
+    const addSubjectDropdown = () => {
+        setFormValues({
+            ...formValues,
+            projectSubjects: [...formValues.projectSubjects, 'None'],
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (formValues.subject === "None") {
-            formValues.subject = '';
-        }
 
-        // Add new subject to IndexedDB if needed
+        // Remove "None" from the selected subjects
+        const filteredSubjects = formValues.projectSubjects.filter(subject => subject !== 'None');
+
+        // If a new subject is added, add it to the list
         if (isNewSubject && newSubjectName) {
             const newSubjectDetails = {
-                userId: user.id,
                 subjectName: newSubjectName,
-                semester: '',
-                subjectColor: 'black', // Default color
+                subjectSemester: '',
+                subjectColor: 'black',
+                subjectDescription: ''
             };
-            await saveToStore('subjects', [newSubjectDetails]); // Save the new subject in IndexedDB
-            formValues.subject = newSubjectName;
+            await addSubject(newSubjectDetails);
+            filteredSubjects.push(newSubjectName); // Add the new subject to project subjects
         }
 
-        // Save the updated project details to IndexedDB
-        await saveToStore('projects', [formValues]);
-        onSave(formValues); // Pass the updated project back to the parent component
+        await editProject({ ...formValues, projectSubjects: filteredSubjects });
         onClose();
+        await onSave(); // Refresh the project list
     };
 
     return (
@@ -96,25 +105,48 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         label="Project Name"
                         name="projectName"
                         value={formValues.projectName}
-                        onChange={handleInputChange}
+                        onChange={(e) => setFormValues({ ...formValues, projectName: e.target.value })}
                         required
                     />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="subject-select-label">Subject</InputLabel>
-                        <Select
-                            labelId="subject-select-label"
-                            id="subject-select"
-                            name="subject"
-                            value={isNewSubject ? "newSubject" : formValues.subject}
-                            onChange={handleInputChange}
-                        >
-                            <MenuItem value="None">None</MenuItem>
-                            {subjects.map(subject => (
-                                <MenuItem key={subject.subjectName} value={subject.subjectName}>{subject.subjectName}</MenuItem>
-                            ))}
-                            <MenuItem value="newSubject">Add New Subject...</MenuItem>
-                        </Select>
-                    </FormControl>
+
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        label="Description"
+                        name="projectDescription"
+                        value={formValues.projectDescription}
+                        onChange={(e) => setFormValues({ ...formValues, projectDescription: e.target.value })}
+                        multiline
+                        maxRows={4}
+                    />
+
+                    {/* Multiple Subject Dropdowns */}
+                    {formValues.projectSubjects.map((projectSubject, index) => (
+                        <FormControl fullWidth margin="normal" key={index}>
+                            <InputLabel id={`subject-select-label-${index}`}>Subject</InputLabel>
+                            <Select
+                                labelId={`subject-select-label-${index}`}
+                                id={`subject-select-${index}`}
+                                value={projectSubject.subjectId || projectSubject || 'None'}
+                                onChange={(e) => handleInputChange(index, e.target.value)}
+                            >
+                                <MenuItem value="None">Select Subject...</MenuItem>
+                                {subjects
+                                    .filter((subject) => 
+                                        (subject.subjectStatus === 'Active' ||
+                                        subject.subjectId === projectSubject.subjectId) &&
+                                        subject.subjectId !== "None"
+                                    )
+                                    .map((subject) => (
+                                    <MenuItem key={subject.subjectId} value={subject.subjectId}>
+                                        {subject.subjectName}
+                                    </MenuItem>
+                                ))}
+                                <MenuItem value="newSubject">Add New Subject...</MenuItem>
+                            </Select>
+                        </FormControl>
+                    ))}
+
                     {isNewSubject && (
                         <TextField
                             fullWidth
@@ -122,18 +154,31 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                             label="New Subject Name"
                             name="newSubjectName"
                             value={newSubjectName}
-                            onChange={handleInputChange}
+                            onChange={(e) => setNewSubjectName(e.target.value)}
                             required
                         />
                     )}
+
+                    <Button
+                        variant="text"
+                        onClick={addSubjectDropdown}
+                        style={{
+                            color: "#8E5B9F",
+                            fontWeight: "italics",
+                            backgroundColor: "transparent"
+                        }}
+                    >
+                        Add Another Subject
+                    </Button>
+
                     <TextField
                         fullWidth
                         margin="normal"
                         label="Due Date"
                         name="projectDueDateInput"
                         type="date"
-                        value={formValues.projectDueDateInput}
-                        onChange={handleInputChange}
+                        value={formValues.projectDueDate}
+                        onChange={(e) => setFormValues({ ...formValues, projectDueDate: e.target.value })}
                         InputLabelProps={{ shrink: true }}
                     />
                     <TextField
@@ -142,8 +187,8 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         label="Time Due"
                         name="projectDueTimeInput"
                         type="time"
-                        value={formValues.projectDueTimeInput}
-                        onChange={handleInputChange}
+                        value={formValues.projectDueTime}
+                        onChange={(e) => setFormValues({ ...formValues, projectDueTime: e.target.value })}
                         InputLabelProps={{ shrink: true }}
                     />
                     <div style={{ marginTop: 16 }}>

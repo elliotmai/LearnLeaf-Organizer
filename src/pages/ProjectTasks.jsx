@@ -2,7 +2,8 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { getAllFromStore, getFromStore, saveToStore, deleteFromStore } from '/src/db.js'; // Import IndexedDB functions
+import { getAllFromStore, saveToStore, deleteFromStore } from '/src/db.js';
+import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -17,66 +18,127 @@ const ProjectTasks = () => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const { user } = useUser();
     const { projectId } = useParams();
+    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const loadProjectAndTasks = async () => {
-            const allSubjects = await getFromStore('subjects');
-            const activeSubjects = allSubjects.filter((subject) =>
-                subject.subjectStatus === 'Active');
-            setSubjects(activeSubjects);
-
+    // Fetch data from IndexedDB
+    const loadFromIndexedDB = async () => {
+        try {
+            // Load and filter active subjects, projects, and tasks
+            const allSubjects = await getAllFromStore('subjects');
             const allProjects = await getAllFromStore('projects');
-            const activeProjects = allProjects.filter((project) =>
-                project.projectStatus === 'Active');
-            setProjects(activeProjects);
+            const allTasks = await getAllFromStore('tasks');
 
-            const storedProject = await getFromStore('projects', projectId);
-            if (storedProject) {
-                setPageProject(storedProject);
-                const projectTasks = await getAllFromStore('tasks');
-                const filteredTasks = projectTasks.filter((task) =>
-                    task.taskProject === storedProject.projectName && task.taskStatus !== 'Completed'
-                );
-                setTasks(filteredTasks);
+            const activeTasks = allTasks.filter(task => task.taskStatus !== 'Completed');
+
+            // Find the specified subject by ID
+            const foundProject = allProjects.find(project => project.projectId === projectId);
+            if (foundProject) {
+                setPageProject(foundProject);
             } else {
                 console.error(`Project with ID ${projectId} not found`);
-                setProject(null);
             }
-        };
 
-        if (user?.id && projectId) {
-            loadProjectAndTasks();
+            // Filter tasks specific to this subject
+            const filteredTasks = activeTasks.filter(task => task.taskProject === projectId);
+
+            if (filteredTasks.length > 0) {
+                // Add subject and project info into tasks
+                const tasksWithDetails = filteredTasks.map(task => {
+                    const taskSubject = allSubjects.find(subject => subject.subjectId === task.taskSubject);
+                    const taskProject = allProjects.find(project => project.projectId === task.taskProject);
+
+                    return {
+                        ...task,
+                        taskSubject, // Attach full subject details, including 'None'
+                        taskProject  // Attach full project details
+                    };
+                });
+
+                const sortedTasks = sortTasks(tasksWithDetails);
+                setTasks(sortedTasks);
+            }
+            setSubjects(allSubjects);
+            setProjects(allProjects);
+
+            setIsLoading(false);
+            console.log('Data loaded from IndexedDB');
+            return true;
+        } catch (error) {
+            console.error('Error loading data from IndexedDB:', error);
+            return false;
         }
-    }, [user?.id, projectId]);
-
-    const refreshTasks = async () => {
-        const projectTasks = await getAllFromStore('tasks');
-        const filteredTasks = projectTasks.filter((task) =>
-            task.taskProject === pageProject.projectName && task.taskStatus !== 'Completed'
-        );
-        setTasks(filteredTasks);
     };
 
-    const toggleFormVisibility = () => setIsAddTaskFormOpen(!isAddTaskFormOpen);
+    const updateState = async () => {
+        setIsLoading(true);
+        await loadFromIndexedDB();
+    };
 
-    const handleCloseAddTaskForm = () => setIsAddTaskFormOpen(false);
+    useEffect(() => {
+        if (user?.id) {
+            updateState();
+        }
+    }, [user?.id]);
+
+    const toggleFormVisibility = () => {
+        setIsAddTaskFormOpen(!isAddTaskFormOpen);
+    };
+
+    const handleCloseAddTaskForm = () => {
+        setIsAddTaskFormOpen(false);
+    };
 
     const handleAddTask = async (newTask) => {
-        await saveToStore('tasks', [newTask]);
-        await refreshTasks();
+        const sortedTasks = sortTasks([...tasks, newTask]);
+        setTasks(sortedTasks);
+        console.log("Task added, state and IndexedDB updated");
     };
 
     const handleDeleteTask = async (taskId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        const confirmation = window.confirm("Are you sure you want to permanently delete this task?");
         if (confirmation) {
-            await deleteFromStore('tasks', taskId);
-            await refreshTasks();
+            try {
+                await deleteTask(taskId);
+                setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
+                console.log("Task deleted, state and IndexedDB updated");
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
         }
     };
 
-    const updateTaskInState = async (updatedTask) => {
-        await saveToStore('tasks', [updatedTask]);
-        await refreshTasks();
+    const handleEditTask = async (updatedTask) => {
+
+        const allSubjects = (await getAllFromStore('subjects')) || [];
+        setSubjects(allSubjects);
+
+        const allProjects = (await getAllFromStore('projects')) || [];
+        setProjects(allProjects);
+
+        setTasks(prevTasks => {
+            // Update or remove the specific task based on its status
+            const updatedTasks = prevTasks
+                .map(task => {
+                    if (task.taskId === updatedTask.taskId) {
+                        // Attach taskSubject and taskProject details
+                        const taskSubject = allSubjects.find(subject => subject.subjectId === updatedTask.taskSubject);
+                        const taskProject = allProjects.find(project => project.projectId === updatedTask.taskProject);
+
+                        return {
+                            ...updatedTask,
+                            taskSubject, // Attach full subject details
+                            taskProject  // Attach full project details
+                        };
+                    }
+                    return task;
+                })
+                .filter(task => task.taskStatus !== 'Completed' && task.taskProject.projectId === projectId); // Exclude completed tasks from the state
+
+            // Sort the updated list of tasks before returning
+            return sortTasks(updatedTasks);
+        });
+
+        console.log("Task updated, state and IndexedDB updated");
     };
 
     return (
@@ -85,17 +147,18 @@ const ProjectTasks = () => {
             <button className="fab" onClick={toggleFormVisibility}>+</button>
             {isAddTaskFormOpen && (
                 <AddTaskForm
-                    subjects={subjects}
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
                     onAddTask={handleAddTask}
-                    initialProject={project?.projectName}
+                    subjects={subjects}
+                    projects={projects}
+                    initialProject={pageProject?.projectId}
                 />
             )}
 
             <div>
                 <h1 style={{ color: '#907474' }}>
-                    {project ? `Upcoming Tasks for ${pageProject.projectName}` : 'Loading project...'}
+                    {pageProject ? `Upcoming Tasks for ${pageProject.projectName}` : 'Loading project...'}
                 </h1>
 
                 {pageProject ? (
@@ -103,9 +166,9 @@ const ProjectTasks = () => {
                         tasks={tasks}
                         subjects={subjects}
                         projects={projects}
-                        refreshTasks={refreshTasks}
+                        refreshTasks={updateState}
                         onDelete={handleDeleteTask}
-                        onUpdateTask={updateTaskInState}
+                        onUpdateTask={handleEditTask}
                     />
                 ) : (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>

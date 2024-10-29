@@ -132,7 +132,7 @@ const SubjectTasks = () => {
                     }
                     return task;
                 })
-                .filter(task => task.taskStatus !== 'Completed' && task.taskSubject === subjectId); // Exclude completed tasks from the state
+                .filter(task => task.taskStatus !== 'Completed' && task.taskSubject.subjectId === subjectId); // Exclude completed tasks from the state
 
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);

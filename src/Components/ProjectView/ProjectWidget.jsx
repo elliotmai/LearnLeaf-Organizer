@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { archiveProject, deleteProject, formatDateDisplay, formatTimeDisplay } from '/src/LearnLeaf_Functions.jsx';
 import ProjectTasks from '/src/pages/ProjectTasks.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
-import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent } from '@mui/material';
+import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
-
-const CustomIconButton = styled(IconButton)({
-    color: '#9F6C5B'
-});
 
 const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     const [editedProject, setEditedProject] = useState({
@@ -36,7 +32,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     ];
 
     const handleArchiveProject = async () => {
-        const confirmation = window.confirm("Are you sure you want to archive this project?\nThis will mark all outstanding tasks as Completed.");
+        const confirmation = window.confirm("Archive this project?\nThis will not delete any associated tasks.");
         if (confirmation) {
             try {
                 await archiveProject(project.projectId);
@@ -53,7 +49,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     };
 
     const handleDeleteClick = async (projectId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this project? (This will not delete any associated tasks.)");
+        const confirmation = window.confirm("Delete this project?\nAssociated tasks won’t be grouped under this project anymore.");
         if (confirmation) {
             try {
                 await deleteProject(projectId);
@@ -89,24 +85,26 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                 }}
             >
                 <CardContent>
-                    <Link
-                        href={`/projects/${project.projectId}`} // Correct internal link for projects
-                        underline="hover"
-                        variant="h6"
-                        color="inherit"
-                        sx={{
-                            color: '#355147',
-                            display: 'block',
-                            fontWeight: 'bold',
-                            fontSize: '22px',
-                        }}
+                    <Tooltip title="View Associated Tasks">
+                        <Link
+                            href={`/projects/${project.projectId}`} // Correct internal link for projects
+                            underline="hover"
+                            variant="h6"
+                            color="inherit"
+                            sx={{
+                                color: '#355147',
+                                display: 'block',
+                                fontWeight: 'bold',
+                                fontSize: '22px',
+                            }}
 
-                    >
-                        {project.projectName}
-                    </Link>
+                        >
+                            {project.projectName}
+                        </Link>
+                    </Tooltip>
 
                     <Typography variant="body2" color="textSecondary" gutterBottom>
-                        {project.projectSubjects && project.projectSubjects.length > 0
+                        {project.projectSubjects && project.projectSubjects.length > 0 && project.projectSubjects[0].subjectId !== 'None'
                             ? `Subjects: ${project.projectSubjects.map(subject => subject.subjectName).join(', ')}`
                             : ''}
                     </Typography>
@@ -227,7 +225,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
+                                <RechartsTooltip />
 
                                 {/* Conditionally Render Legend only for Large Screens */}
                                 {isLargeScreen ? (
@@ -268,40 +266,60 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                     }}
                 >
                     {/* Edit Button on the far left */}
-                    <CustomIconButton
-                        aria-label="edit"
-
-                        onClick={() => handleEditClick(project)}
-                    >
+                    <Tooltip title="Open Edit Window">
                         <EditIcon
-                            fontSize="medium"
+                            onClick={() => handleEditClick(project)}
+                            sx={{
+                                color: '#9F6C5B',
+                                fontSize: 'xl',
+                                cursor: 'pointer',
+                                padding: '6px',          // Add padding to give space within the circle
+                                borderRadius: '50%',
+                                '&:hover': {
+                                    transform: 'scale(1.05)',
+                                    backgroundColor: '#9F6C5B',
+                                    color: '#fff',
+                                },
+                            }}
                         />
-                    </CustomIconButton>
+                    </Tooltip>
 
                     {/* Grouping Archive and Delete buttons on the right */}
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <Button
                             size="small"
                             onClick={handleArchiveProject}
-                            variant="contained"
+                            variant="text"
                             sx={{
-                                backgroundColor: '#B6CDC8',
+                                backgroundColor: 'transparent',
                                 color: '#355147',
-                                '&:hover': { backgroundColor: '#a8bdb8' },
+                                '&:hover': {
+                                    backgroundColor: '#355147',
+                                    color: '#fff',
+                                },
                                 mr: 1 // Reduce the margin to make them closer
                             }}
                         >
                             Archive
                         </Button>
 
-                        <CustomIconButton
-                            aria-label="delete"
-                            onClick={() => handleDeleteClick(project.projectId)}
-                        >
+                        <Tooltip title="Delete Task">
                             <DeleteIcon
-                                fontSize="medium"
+                                onClick={() => handleDeleteClick(project.projectId)}
+                                sx={{
+                                    color: '#d1566e',
+                                    fontSize: 'xl',
+                                    cursor: 'pointer',
+                                    padding: '6px',          // Add padding to give space within the circle
+                                    borderRadius: '50%',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        backgroundColor: '#d1566e',
+                                        color: '#fff',
+                                    },
+                                }}
                             />
-                        </CustomIconButton>
+                        </Tooltip>
                     </div>
                 </CardActions>
             </Card>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
-import { sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { sortSubjects, sortProjects, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
 import { getAllFromStore } from '/src/db.js';
 import { AddProjectForm } from '/src/Components/ProjectView/AddProjectForm.jsx';
 import ProjectWidget from '/src/Components/ProjectView/ProjectWidget.jsx';
@@ -76,8 +76,10 @@ const ProjectsDashboard = () => {
             setSubjects(sortedSubjects);
             setProjects(sortedProjects);
             setIsLoading(false);
+            return true;
         } catch (error) {
             console.error('Error loading from IndexedDB:', error);
+            return false;
         }
     };
 
@@ -85,7 +87,7 @@ const ProjectsDashboard = () => {
         setIsLoading(true);
         const isLoadedFromIndexedDB = await loadFromIndexedDB();
         if (!isLoadedFromIndexedDB) {
-            console.log("No subjects data found in IndexedDB.");
+            console.log("No projects data found in IndexedDB.");
         }
     };
 

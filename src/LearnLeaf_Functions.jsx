@@ -36,13 +36,12 @@ function setUserIdAndCollections(uid) {
         taskCollection = collection(firestore, 'users', userId, 'tasks');
         subjectCollection = collection(firestore, 'users', userId, 'subjects');
         projectCollection = collection(firestore, 'users', userId, 'projects');
-        console.log(`User is signed in: ${userId}`);
     } else {
         userId = null;
         taskCollection = null;
         subjectCollection = null;
         projectCollection = null;
-        console.log("No user is signed in.");
+        console.error("No user is signed in.");
     }
 }
 
@@ -52,7 +51,7 @@ const initUserFromLocalStorage = () => {
     if (user && user.id) {
         setUserIdAndCollections(user.id);
     } else {
-        console.log('No user found in localStorage.');
+        console.error('No user found in localStorage.');
         setUserIdAndCollections(null);
     }
 };
@@ -233,12 +232,10 @@ export async function fetchAllData() {
                 projectId: doc.id,
                 ...data,
                 projectDueDate: data.projectDueDate ? formatDate(data.projectDueDate) : null,
-                projectDueTime: data.projectDueTime ? formatDate(data.projectDueTime) : null,
+                projectDueTime: data.projectDueTime ? formatTime(data.projectDueTime) : null,
                 projectSubjects // Sets projectSubjects to be an array of subject ids
             };
         });
-
-        console.log(projects);
 
         // Fetch all subjects
         const subjectsSnapshot = await getDocs(subjectCollection);
@@ -264,14 +261,10 @@ export async function fetchAllData() {
 
         // const resolvedTasks = await resolveTaskReferences(tasks, subjects, resolvedProjects);
 
-        // console.log('tasks:', resolvedTasks, 'projects:', resolvedProjects, 'subjects:', subjects);
-
         // Save to IndexedDB
         await saveToStore('subjects', subjects);
         await saveToStore('projects', projects);
         await saveToStore('tasks', tasks);
-
-        console.log('Data saved to IndexedDB');
 
         return { tasks, projects, subjects };
     } catch (error) {
@@ -301,6 +294,15 @@ export function registerUser(email, password, name) {
 }
 
 export async function loginUser(email, password) {
+    setUserIdAndCollections(null);
+            await Promise.all([
+                localStorage.clear(),
+                clearStore(TASKS_STORE),
+                clearStore(SUBJECTS_STORE),
+                clearStore(PROJECTS_STORE)
+
+            ]);
+
     return signInWithEmailAndPassword(auth, email, password)
         .then(async (userCredential) => {
             const user = userCredential.user;
@@ -329,7 +331,6 @@ export async function loginUser(email, password) {
 
             // Fetch and store additional data (tasks, projects, subjects) in Indexedfirestore
             const data = await fetchAllData();
-            console.log('Tasks, projects, and subjects saved to Indexedfirestore');
 
             return { ...userData, ...data }; // Return combined user and data
         })
@@ -343,7 +344,6 @@ export function resetPassword(email) {
     const auth = getAuth();
     return sendPasswordResetEmail(auth, email)
         .then(() => {
-            console.log('Password reset email sent.');
         })
         .catch((error) => {
             const errorCode = error.code;
@@ -365,7 +365,6 @@ export async function logoutUser() {
                 clearStore(PROJECTS_STORE)
 
             ]);
-            console.log("You are logged out successfully!");
         })
         .catch((error) => {
             console.error("Sorry, there was an error logging out:", error);
@@ -378,7 +377,14 @@ export async function updateUserDetails(userId, userDetails) {
 
     try {
         await updateDoc(userDocRef, userDetails);
-        console.log("User updated successfully");
+        setUserIdAndCollections(null);
+            await Promise.all([
+                localStorage.clear(),
+                clearStore(TASKS_STORE),
+                clearStore(SUBJECTS_STORE),
+                clearStore(PROJECTS_STORE)
+
+            ]);
     } catch (error) {
         console.error("Error updating user:", error);
     }
@@ -408,13 +414,11 @@ export async function deleteUser(userId) {
         deleteFromStore('subjects', userId)
     ]);
 
-    console.log("User deleted successfully");
 }
 
 // Task functions: addTask, editTask, deleteTask
 
 export async function addTask(taskDetails) {
-    console.log('adding: ', taskDetails);
 
     const taskId = `${Date.now()}`;
 
@@ -453,8 +457,6 @@ export async function addTask(taskDetails) {
 
     const taskRef = doc(taskCollection, taskId);
 
-    console.log('due date: ', taskDetails.dueDateInput, 'due time:', taskDetails.dueTimeInput, 'start date:', taskDetails.startDateInput);
-
     // Update local IndexedDB task data with full subject and project details
     const localTaskData = {
         ...taskData,
@@ -471,7 +473,6 @@ export async function addTask(taskDetails) {
 
         // Save updated task data to IndexedDB
         await saveToStore('tasks', [localTaskData]);
-        console.log("Task added successfully");
     } catch (error) {
         console.error("Error adding task:", error);
     }
@@ -481,7 +482,6 @@ export async function addTask(taskDetails) {
 
 export async function editTask(taskDetails) {
     const taskId = taskDetails.taskId;
-    console.log('editing task: ', taskDetails);
 
     // Determine if taskSubject and taskProject are objects or strings, then create Firestore references
     const taskSubjectRef = typeof taskDetails.taskSubject === 'string'
@@ -536,11 +536,8 @@ export async function editTask(taskDetails) {
             taskProject: taskData.taskProject.id
         };
 
-        console.log("local task data:", localTaskData);
-
         // Save updated task data to IndexedDB
         await saveToStore('tasks', [localTaskData]);
-        console.log("Task updated successfully in both Firestore and IndexedDB");
         return localTaskData;
     } catch (error) {
         console.error("Error updating task:", error);
@@ -554,7 +551,6 @@ export async function deleteTask(taskId) {
     try {
         await deleteDoc(taskRef);
         await deleteFromStore('tasks', taskId);
-        console.log("Task deleted successfully");
     } catch (error) {
         console.error("Error deleting task:", error);
     }
@@ -585,7 +581,6 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
     try {
         await setDoc(doc(subjectCollection, subjectId), subjectData);
         await saveToStore('subjects', [{ ...subjectData, subjectId }]);
-        console.log("Subject added successfully");
         return { ...subjectData, subjectId };
     } catch (error) {
         console.error("Error adding subject:", error);
@@ -600,7 +595,6 @@ export async function editSubject(subjectDetails) {
     try {
         await updateDoc(doc(subjectCollection, subjectId), subjectData);
         await saveToStore('subjects', [{ ...subjectData, subjectId }]);
-        console.log("Subject updated successfully");
     } catch (error) {
         console.error("Error updating subject:", error);
     }
@@ -636,12 +630,9 @@ export async function deleteSubject(subjectId) {
             updatedTasks.push(updatedTaskData); // Prepare for IndexedDB
         }
 
-        console.log(updatedTasks);
-
         // Update tasks in IndexedDB
         await saveToStore('tasks', updatedTasks);
 
-        console.log("Subject deleted and tasks updated to 'None' successfully");
     } catch (error) {
         console.error("Error deleting subject or updating tasks:", error);
     }
@@ -657,7 +648,6 @@ export async function archiveSubject(subjectId) {
         const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject);
         await saveToStore('subjects', updatedSubjects);
 
-        console.log("Subject archived successfully");
     } catch (error) {
         console.error("Error archiving subject:", error);
     }
@@ -673,7 +663,6 @@ export async function reactivateSubject(subjectId) {
         const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Active' } : subject);
         await saveToStore('subjects', updatedSubjects);
 
-        console.log("Subject reactivated successfully");
     } catch (error) {
         console.error("Error reactivating subject:", error);
     }
@@ -688,28 +677,27 @@ export function sortSubjects(subjects) {
 // Project Functions: addProject, editProject, deleteProject, archiveProject, reactivateProject
 
 export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
-    console.log('Adding project with subjects:', projectSubjects);
 
     const projectId = `${Date.now()}`;
-    const projectData = { 
-        projectName, 
-        projectDescription, 
-        projectStatus: 'Active' 
+    const projectData = {
+        projectName,
+        projectDescription,
+        projectStatus: 'Active'
     };
 
     // Check if projectSubjects is empty and set a default reference if it is
-    const subjectRefs = projectSubjects.map((subjId) => doc(subjectCollection, subjId)) 
+    const subjectRefs = projectSubjects.map((subjId) => doc(subjectCollection, subjId))
     projectData.projectSubjects = subjectRefs;
 
     if (projectDueDateInput) {
-        projectData.projectDueDate = Timestamp.fromDate(new Date(projectDueDateInput));
+        projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDueDateInput}T23:59:59.999`));
     }
     if (projectDueTimeInput) {
         projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDueDateInput}T${projectDueTimeInput}`));
     }
 
     // Create localProjectData with only subject IDs
-    const localProjectData = { 
+    const localProjectData = {
         ...projectData,
         projectId: projectId,
         projectSubjects: projectSubjects, // Just the IDs for local storage
@@ -722,7 +710,6 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
         await setDoc(doc(projectCollection, projectId), projectData);
         // Save localProjectData to IndexedDB with only IDs (passed as array)
         await saveToStore('projects', [localProjectData]);
-        console.log("Project added successfully");
         return localProjectData;
     } catch (error) {
         console.error("Error adding project:", error);
@@ -730,21 +717,63 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
 }
 
 export async function editProject(projectDetails) {
-    const { projectId, projectName, projectDueDateInput, projectDueTimeInput, projectStatus, projectSubjects } = projectDetails;
+    console.log(projectDetails);
 
-    const projectData = { projectName, projectStatus, projectSubjects };
+    // Convert subject IDs to Firebase Document References
+    const subjectRefs = projectDetails.projectSubjects.map(subject => {
+        const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
+        return doc(subjectCollection, subjectId);
+    }).filter(ref => ref); // Filter out any undefined references
+    
+    const subjectIds = subjectRefs.map(subject => subject.id);
 
-    if (projectDueDateInput) projectData.projectDueDate = Timestamp.fromDate(new Date(projectDueDateInput));
-    if (projectDueTimeInput) projectData.projectDueTime = Timestamp.fromDate(new Date(projectDueDateInput + "T" + projectDueTimeInput));
+    // Prepare data for Firebase with subject references
+    const projectData = {
+        projectName: projectDetails.projectName,
+        projectStatus: projectDetails.projectStatus,
+        projectDescription: projectDetails.projectDescription,
+        projectSubjects: subjectRefs
+    };
+
+    // Prepare data for IndexedDB with only subject IDs
+    const localProjectData = {
+        projectId: projectDetails.projectId,
+        projectName: projectDetails.projectName,
+        projectStatus: projectDetails.projectStatus,
+        projectDescription: projectDetails.projectDescription,
+        projectSubjects: subjectIds,
+        projectDueDate: projectDetails.projectDueDate || '',
+        projectDueTime: projectDetails.projectDueTime || ''
+    };
+
+    // Conditionally add or remove due date and time from Firebase data
+    if (projectDetails.projectDueDate) {
+        projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T23:59:59.999`));
+        localProjectData.projectDueDate = projectDetails.projectDueDate;
+    } else {
+        projectData.projectDueDate = deleteField();
+    }
+
+    if (projectDetails.projectDueTime) {
+        projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T${projectDetails.projectDueTime}`));
+        localProjectData.projectDueTime = projectDetails.projectDueTime;
+    } else {
+        projectData.projectDueTime = deleteField();
+    }
 
     try {
-        await updateDoc(doc(projectCollection, projectId), projectData);
-        await saveToStore('projects', [{ ...projectData, projectId }]);
+        // Save project data with references to Firebase, deleting fields if necessary
+        await updateDoc(doc(projectCollection, projectDetails.projectId), projectData);
+
+        // Save project data with IDs only to IndexedDB
+        await saveToStore('projects', [localProjectData]);
         console.log("Project updated successfully");
+        return localProjectData;
     } catch (error) {
         console.error("Error updating project:", error);
     }
 }
+
 
 export async function deleteProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
@@ -752,7 +781,6 @@ export async function deleteProject(projectId) {
     try {
         await deleteDoc(projectRef);
         await deleteFromStore('projects', projectId);
-        console.log("Project deleted successfully");
     } catch (error) {
         console.error("Error deleting project:", error);
     }
@@ -768,7 +796,6 @@ export async function archiveProject(projectId) {
         const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project);
         await saveToStore('projects', updatedProjects);
 
-        console.log("Project archived successfully");
     } catch (error) {
         console.error("Error archiving project:", error);
     }
@@ -784,14 +811,13 @@ export async function reactivateProject(projectId) {
         const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Active' } : project);
         await saveToStore('projects', updatedProjects);
 
-        console.log("Project reactivated successfully");
     } catch (error) {
         console.error("Error reactivating project:", error);
     }
 }
 
 export function sortProjects(projects) {
-    
+
     return projects.sort((a, b) => {
         // Sort by nextTaskDueDate
         const dateComparison = (a.nextTaskDueDate || '9999-12-31').localeCompare(b.nextTaskDueDate || '9999-12-31');
