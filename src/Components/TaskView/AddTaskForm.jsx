@@ -39,9 +39,9 @@ const submitButtonStyle = {
 const cancelButtonStyle = {
     color: '#ff5252',
     marginLeft: 1,
-    '&:hover': { 
+    '&:hover': {
         color: '#fff',
-        backgroundColor: '#ff5252' 
+        backgroundColor: '#ff5252'
     }
 };
 
@@ -97,8 +97,6 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        console.log('task details:', taskDetails, '\nnew subject?', isNewSubject, '\nnew subject:', newSubjectName, '\nnew project?', isNewProject, '\nnew project:', newProjectName);
-
         if (taskDetails.dueTimeInput && !taskDetails.dueDateInput) {
             setErrors(prevErrors => ({
                 ...prevErrors,
@@ -107,38 +105,32 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
             return;
         }
 
-        let updatedTaskDetails = { ...taskDetails };
-
         if (isNewSubject && newSubjectName) {
-            const newSubjectDetails = {
+            const newSubject = await addSubject({
                 subjectName: newSubjectName,
-                subjectDescription: '',
                 subjectSemester: '',
-                subjectColor: 'black'
-            };
-            const addedSubject = await addSubject(newSubjectDetails);
-            updatedTaskDetails.taskSubject = addedSubject.subjectId;
-            const sortedSubjects = sortSubjects([...subjects, addedSubject])
-            subjects = sortedSubjects;
+                subjectDescription: '',
+                subjectColor: 'black',
+            });
+            updatedTaskDetails.taskSubject = newSubject.subjectId;
+            setIsNewSubject(false);
+            setNewSubjectName('');
         }
 
         if (isNewProject && newProjectName) {
-            const newProjectDetails = {
+            const newProject = await addProject({
                 projectName: newProjectName,
                 projectDescription: '',
-                projectSubjects: []
-            };
-            const addedProject = await addProject(newProjectDetails);
-            updatedTaskDetails.taskProject = addedProject.projectId;
-
-            const sortedProjects = sortProjects([...projects, addedProject])
-            projects = sortedProjects;
+                projectSubjects: [],
+            });
+            updatedTaskDetails.taskProject = newProject.projectId;
+            setIsNewSubject(false);
+            setNewSubjectName('');
         }
 
         const newTaskData = await addTask(updatedTaskDetails);
-        console.log('new task data: ', newTaskData);
 
-        onAddTask(newTaskData);
+        setTimeout(() => onAddTask(newTaskData), 1);
 
         onClose();
     };
@@ -162,8 +154,8 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                             {subjects
                                 .filter(subject => subject.subjectStatus === "Active")
                                 .map((subject) => (
-                                <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
-                            ))}
+                                    <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
+                                ))}
                             <MenuItem value="newSubject">Add New Subject...</MenuItem>
                         </Select>
                     </FormControl>
@@ -255,8 +247,8 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                             {projects
                                 .filter(project => project.projectStatus === "Active")
                                 .map((project) => (
-                                <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
-                            ))}
+                                    <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
+                                ))}
                             <MenuItem value="newProject">Add New Project...</MenuItem>
                         </Select>
                     </FormControl>
