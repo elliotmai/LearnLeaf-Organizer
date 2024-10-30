@@ -124,8 +124,8 @@ export function AddTaskForm({ isOpen, onClose, onAddTask, subjects, projects, in
                 projectSubjects: [],
             });
             taskDetails.taskProject = newProject.projectId;
-            setIsNewSubject(false);
-            setNewSubjectName('');
+            setIsNewProject(false);
+            setNewProjectName('');
         }
 
         const newTaskData = await addTask(taskDetails);
