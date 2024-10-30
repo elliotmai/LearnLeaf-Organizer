@@ -8,8 +8,6 @@ import { useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
-// import './TaskView.css';
-// import '/src/Components/PageFormat.css';
 
 const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     const [filterCriteria, setFilterCriteria] = useState({
@@ -35,7 +33,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
         if (isMediumScreen) return 2;
         if (isLargeScreen) return 3;
         if (isXLargeScreen) return 4;
-        return 3; // Default to 3 items per row
+        return 4; // Default to 3 items per row
     }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
 
     // Debounce search query handling
@@ -115,7 +113,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     };
 
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 550;
+    const rowHeight = 600;
     const filteredTasks = getFilteredTasks(tasks, filterCriteria);
     const totalRows = Math.ceil(filteredTasks.length / itemsPerRow);
 
@@ -130,7 +128,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
                         .map((_, i) => {
                             const taskIndex = startIndex + i;
                             return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={filteredTasks[taskIndex].taskId}>
+                                <Grid item xs={12} sm={12} md={6} lg={4} xl={3} xxl={1} key={filteredTasks[taskIndex].taskId}>
                                     <TaskWidget
                                         task={filteredTasks[taskIndex]}
                                         onDelete={onDelete}

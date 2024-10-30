@@ -1,15 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Dialog, DialogTitle, DialogContent } from '@mui/material';
+import {
+    Card,
+    CardContent,
+    CardActions,
+    Button,
+    Grid,
+    TextField,
+    Select,
+    MenuItem,
+    InputLabel,
+    FormControl,
+    Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    IconButton,
+    Tooltip,
+    Divider
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Tooltip from '@mui/material/Tooltip';
 import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask}) => {
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
     const [formValues, setFormValues] = useState({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
     const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
@@ -20,8 +36,24 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
+
+    useEffect(() => {
+        // Warn user about unsaved changes when navigating away
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [hasUnsavedChanges]);
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -56,6 +88,8 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
         if (!["taskSubject", "taskProject"].includes(name)) {
             setFormValues(prevDetails => ({ ...prevDetails, [name]: value }));
         }
+
+        setHasUnsavedChanges(true);
     };
 
     useEffect(() => {
@@ -73,9 +107,9 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 setErrors({ taskDueDate: 'Due date is required when due time is added.' });
                 return;
             }
-    
+
             let updatedTask = { ...formValues };
-    
+
             // Add new subject if necessary
             if (isNewSubject && newSubjectName) {
                 const newSubject = await addSubject({
@@ -89,7 +123,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 setIsNewSubject(false);
                 setNewSubjectName('');
             }
-    
+
             // Add new project if necessary
             if (isNewProject && newProjectName) {
                 const newProject = await addProject({
@@ -102,15 +136,21 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 setIsNewProject(false);
                 setNewProjectName('');
             }
-    
+
             // Call editTask with updated task
             const refreshedTask = await editTask(updatedTask);
             setTimeout(() => onUpdateTask(refreshedTask), 1);
             setOriginalValues(refreshedTask);
+            setHasUnsavedChanges(false);
         } catch (error) {
             console.error('Error updating task:', error);
         }
-    };    
+    };
+
+    const handleClearChanges = () => {
+        setFormValues({ ...originalValues });
+        setHasUnsavedChanges(false);
+    };
 
     const handleEditClick = () => {
         setEditedTask({ ...formValues });
@@ -128,152 +168,111 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 onClose={() => setEditModalOpen(false)}
                 onSave={onUpdateTask}
             />
-
-            <Card sx={{ minWidth: 275 }}>
+            <Card
+                sx={{
+                    minWidth: 275,
+                    borderRadius: '12px',
+                    boxShadow: 4,
+                    backgroundColor: '#f9f9f9',
+                    padding: '16px'
+                }}
+            >
                 <CardContent>
-                    <Typography variant="h6" sx={{ color: formValues.taskSubject?.subjectColor, fontWeight: 'bold' }}>
+                    {/* Task Name */}
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: formValues.taskSubject?.subjectColor || '#355147',
+                            fontWeight: 'bold',
+                            marginBottom: '8px',
+                        }}
+                    >
                         {formValues.taskName || 'Unnamed Task'}
                     </Typography>
-                    <Tooltip title="Click to view more">
+
+                    {/* Subject */}
+                    <Typography variant="body1" sx={{ color: '#355147', fontWeight: 'medium' }}>
+                        Subject:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#907474', marginBottom: '8px' }}>
+                        {formValues.taskSubject?.subjectName || 'No Subject'}
+                    </Typography>
+
+                    {/* Project */}
+                    <Typography variant="body1" sx={{ color: '#355147', fontWeight: 'medium' }}>
+                        Project:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#907474', marginBottom: '8px' }}>
+                        {formValues.taskProject?.projectName || 'No Project'}
+                    </Typography>
+
+                    {/* Description */}
+                    <Tooltip title="Click to view full description">
                         <Typography
                             variant="body2"
                             color="textSecondary"
                             onClick={() => setDescriptionOpen(true)}
-                            gutterBottom
                             sx={{
                                 whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
                                 fontStyle: 'italic',
-                                textAlign: 'center',
-                                padding: '8px',
+                                textAlign: 'left',
+                                padding: '8px 0',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 3,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
                                 cursor: 'pointer',
-                                textOverflow: 'ellipsis',
+                                color: '#5B8E9F',
                             }}
                         >
                             {formValues.taskDescription}
                         </Typography>
                     </Tooltip>
 
-                    {/* Dialog to show full description */}
-                    <Dialog
-                        open={isDescriptionOpen}
-                        onClose={() => setDescriptionOpen(false)}
-                        aria-labelledby="description-dialog-title"
-                    >
+                    {/* Full Description Dialog */}
+                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
                         <DialogTitle
                             sx={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                paddingRight: '16px'
+                                paddingRight: '16px',
                             }}
                         >
                             Full Description
-                            <IconButton
-                                aria-label="close"
-                                onClick={() => setDescriptionOpen(false)}
-                                sx={{
-                                    color: (theme) => theme.palette.grey[500],
-                                }}
-                            >
+                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
                                 <CloseIcon />
                             </IconButton>
                         </DialogTitle>
-                        <DialogContent>
+                        <DialogContent
+                            dividers
+                            sx={{
+                                maxHeight: '400px', // Set your desired max height
+                                overflowY: 'auto', // Enable vertical scrolling
+                            }}
+                        >
                             <Typography
                                 variant="body2"
                                 color="textSecondary"
                                 sx={{
                                     whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
                                     fontStyle: 'italic',
                                 }}
                             >
                                 {formValues.taskDescription}
                             </Typography>
                         </DialogContent>
+
                     </Dialog>
 
+                    <Divider sx={{ marginY: 2 }} />
+
+                    {/* Editable Fields */}
                     <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel>Subject</InputLabel>
-                                <Select
-                                    value={isNewSubject ? 'newSubject' : formValues.taskSubject?.subjectId || formValues.taskSubject}
-                                    name="taskSubject"
-                                    onChange={handleInputChange}
-                                    className={isFieldUnsaved('taskSubject') ? 'unsaved-bg' : ''}
-                                >
-                                    <MenuItem key="None" value="None">Select Subject...</MenuItem>
-                                    {subjects
-                                        .filter((subj) =>
-                                            (subj.subjectStatus === "Active" ||
-                                            subj.subjectId === (formValues.taskSubject?.subjectId || formValues.taskSubject)) &&
-                                            subj.subjectId !== "None"
-                                        )
-                                        .map((subj) => (
-                                            <MenuItem key={subj.subjectId} value={subj.subjectId}>
-                                                {subj.subjectName}
-                                            </MenuItem>
-                                        ))}
-
-                                    <MenuItem value="newSubject">Add New Subject...</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        {isNewSubject && (
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="New Subject Name"
-                                    name="newSubjectName"
-                                    value={newSubjectName}
-                                    onChange={(e) => setNewSubjectName(e.target.value)}
-                                />
-                            </Grid>
-                        )}
-
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel>Project</InputLabel>
-                                <Select
-                                    value={isNewProject ? 'newProject' : formValues.taskProject?.projectId || formValues.taskProject}
-                                    name="taskProject"
-                                    onChange={handleInputChange}
-                                    className={isFieldUnsaved('taskProject') ? 'unsaved-bg' : ''}
-                                >
-                                    <MenuItem key="None" value="None">Select Project...</MenuItem>
-                                    {projects
-                                        .filter((
-                                            (proj) => proj.projectStatus === "Active" ||
-                                            proj.projectId === (formValues.taskProject?.projectId || formValues.taskProject) &&
-                                            proj.projectId !== "None")
-                                        )
-                                        .map((proj) => (
-                                            <MenuItem key={proj.projectId} value={proj.projectId}>
-                                                {proj.projectName}
-                                            </MenuItem>
-                                        ))}
-                                    <MenuItem value="newProject">Add New Project...</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        {isNewProject && (
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="New Project Name"
-                                    name="newProjectName"
-                                    value={newProjectName}
-                                    onChange={(e) => setNewProjectName(e.target.value)}
-                                />
-                            </Grid>
-                        )}
-
                         <Grid item xs={6}>
                             <FormControl fullWidth>
                                 <InputLabel>Priority</InputLabel>
@@ -281,7 +280,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     value={formValues.taskPriority || 'Medium'}
                                     name="taskPriority"
                                     onChange={handleInputChange}
-                                    className={isFieldUnsaved('taskPriority') ? 'unsaved-bg' : ''}
+                                    sx={{
+                                        backgroundColor: isFieldUnsaved('taskPriority') ? '#FFF4E5' : '#fff',
+                                        borderRadius: 1
+                                    }}
                                 >
                                     <MenuItem value="High">High</MenuItem>
                                     <MenuItem value="Medium">Medium</MenuItem>
@@ -297,7 +299,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     value={formValues.taskStatus || 'Not Started'}
                                     name="taskStatus"
                                     onChange={handleInputChange}
-                                    className={isFieldUnsaved('taskStatus') ? 'unsaved-bg' : ''}
+                                    sx={{
+                                        backgroundColor: isFieldUnsaved('taskStatus') ? '#FFF4E5' : '#fff',
+                                        borderRadius: 1
+                                    }}
                                 >
                                     <MenuItem value="Not Started">Not Started</MenuItem>
                                     <MenuItem value="In Progress">In Progress</MenuItem>
@@ -315,7 +320,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                 onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
-                                className={isFieldUnsaved('taskStartDate') ? 'unsaved-bg' : ''}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskStartDate') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
 
@@ -330,7 +338,10 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                 helperText={errors.taskDueDate}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
-                                className={isFieldUnsaved('taskDueDate') ? 'unsaved-bg' : ''}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskDueDate') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
 
@@ -343,73 +354,65 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                 onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
-                                className={isFieldUnsaved('taskDueTime') ? 'unsaved-bg' : ''}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskDueTime') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
                     </Grid>
                 </CardContent>
 
-                <CardActions
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingRight: 2,
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>
+                    <Button
+                        size="small"
+                        onClick={handleSave}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: '#B6CDC8',
+                            color: '#355147',
+                            '&:hover': { backgroundColor: '#A8BDB8', transform: 'scale(1.05)' },
+                        }}
+                    >
+                        Save
+                    </Button>
+                    {hasUnsavedChanges && (
                         <Button
                             size="small"
-                            onClick={handleSave}
-                            variant="contained"
-                            sx={{
-                                backgroundColor: '#B6CDC8',
-                                color: '#355147',
-                                '&:hover': {
-                                    backgroundColor: '#a8bdb8',
-                                    transform: 'scale(1.03)',
-                                },
-                                mr: 3,
-                                ml: 1,
-                            }}
+                            onClick={handleClearChanges}
+                            variant="outlined"
+                            sx={{ color: '#F3161E', borderColor: '#F3161E', '&:hover': { backgroundColor: '#F3161E', color: '#fff' } }}
                         >
-                            Save
+                            Clear Changes
                         </Button>
-                        <Tooltip title="Open Edit Window">
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Tooltip title="Edit Task">
                             <EditIcon
                                 onClick={handleEditClick}
                                 sx={{
                                     color: '#9F6C5B',
-                                    fontSize: 'xl',
                                     cursor: 'pointer',
-                                    padding: '6px',          // Add padding to give space within the circle
+                                    padding: '6px',
                                     borderRadius: '50%',
-                                    '&:hover': {
-                                        transform: 'scale(1.05)',
-                                        backgroundColor: '#9F6C5B',
-                                        color: '#fff',
-                                    },
+                                    '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
+                                }}
+                            />
+                        </Tooltip>
+                        <Tooltip title="Delete Task">
+                            <DeleteIcon
+                                onClick={() => onDelete(task.taskId)}
+                                sx={{
+                                    color: '#F3161E',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    borderRadius: '50%',
+                                    marginLeft: 1,
+                                    '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
                                 }}
                             />
                         </Tooltip>
                     </div>
-                    <Tooltip title="Delete Task">
-                        <DeleteIcon
-                            onClick={() => onDelete(task.taskId)}
-                            sx={{
-                                color: '#d1566e',
-                                fontSize: 'xl',
-                                cursor: 'pointer',
-                                padding: '6px',          // Add padding to give space within the circle
-                                borderRadius: '50%',
-                                '&:hover': {
-                                    transform: 'scale(1.05)',
-                                    backgroundColor: '#d1566e',
-                                    color: '#fff',
-                                },
-                            }}
-                        />
-                    </Tooltip>
                 </CardActions>
             </Card>
         </div>
