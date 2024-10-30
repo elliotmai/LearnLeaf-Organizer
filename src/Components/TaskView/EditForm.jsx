@@ -1,49 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import {
+    Modal,
+    Box,
+    TextField,
+    Button,
+    FormControl,
+    Select,
+    MenuItem,
+    InputLabel,
+    Typography,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+
 import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
-import { getAllFromStore } from '/src/db.js';
-import { useUser } from '/src/UserState.jsx';
-import './TaskView.css';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import InputLabel from '@mui/material/InputLabel';
 
 const boxStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
-    height: '90vh',
+    width: '90%',
+    maxWidth: 500,
     maxHeight: '90vh',
     overflowY: 'auto',
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2,
-    pb: 3,
+    borderRadius: '12px',
     px: 4,
+    pt: 3,
+    pb: 3,
 };
 
-const submitButtonStyle = {
-    backgroundColor: '#B6CDC8',
-    color: '#355147',
-    '&:hover': {
-        backgroundColor: '#a8bdb8',
-        transform: 'scale(1.03)',
-    },
-};
-
-const cancelButtonStyle = {
-    color: '#ff5252',
-    marginLeft: 1,
-    '&:hover': { 
-        color: '#fff',
-        backgroundColor: '#ff5252' 
-    }
+const buttonStyle = {
+    mt: 2,
+    width: '48%',
 };
 
 export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave }) => {
@@ -65,6 +56,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
     const [isNewProject, setIsNewProject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [newProjectName, setNewProjectName] = useState('');
+    const [step, setStep] = useState(1);
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
@@ -150,167 +142,224 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
         onClose();
     };
 
+    const handleNext = () => {
+        setStep(2);
+    };
+
+    const handleBack = () => {
+        setStep(1);
+    };
+
     return (
         <Modal open={isOpen} onClose={onClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
             <Box sx={boxStyle}>
-                <h2 id="modal-modal-title" style={{ color: "#8E5B9F" }}>Edit Task</h2>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+                        Edit Task
+                    </Typography>
+                    <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
                 <form noValidate autoComplete="on">
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="subject-label">Subject</InputLabel>
-                        <Select
-                            labelId="subject-label"
-                            id="subject"
-                            name="taskSubject"
-                            value={isNewSubject ? 'newSubject' : formValues.taskSubject || 'None'}
-                            onChange={handleInputChange}
-                            required
-                        >
-                            <MenuItem value="None">Select Subject...</MenuItem>
-                            {subjects
-                                .filter((subject) => 
-                                    (subject.subjectStatus === 'Active' ||
-                                    subject.subjectId === formValues.taskSubject) &&
-                                    subject.subjectId !== "None"
-                                )
-                                .map(subject => (
-                                <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
-                            ))}
-                            <MenuItem value="newSubject">Add New Subject...</MenuItem>
-                        </Select>
-                    </FormControl>
-                    {isNewSubject && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            label="New Subject Name"
-                            name="newSubjectName"
-                            value={newSubjectName}
-                            onChange={(e) => setNewSubjectName(e.target.value)}
-                            required
-                        />
+                    {step === 1 && (
+                        <>
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Task Name"
+                                name="taskName"
+                                value={formValues.taskName}
+                                onChange={handleInputChange}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Description"
+                                name="taskDescription"
+                                value={formValues.taskDescription}
+                                onChange={handleInputChange}
+                                multiline
+                                maxRows={4}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="subject-label">Subject</InputLabel>
+                                <Select
+                                    labelId="subject-label"
+                                    name="taskSubject"
+                                    value={formValues.taskSubject}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="None">Select Subject...</MenuItem>
+                                    {subjects
+                                        .filter(subject => subject.subjectStatus === "Active")
+                                        .map((subject) => (
+                                            <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
+                                        ))}
+                                    <MenuItem value="newSubject">Add New Subject...</MenuItem>
+                                </Select>
+                            </FormControl>
+                            {isNewSubject && (
+                                <TextField
+                                    fullWidth
+                                    margin="normal"
+                                    label="New Subject Name"
+                                    name="newSubjectName"
+                                    value={newSubjectName}
+                                    onChange={(e) => setNewSubjectName(e.target.value)}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                    required
+                                />
+                            )}
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="project-label">Project</InputLabel>
+                                <Select
+                                    labelId="project-label"
+                                    name="taskProject"
+                                    value={formValues.taskProject}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="None">Select Project...</MenuItem>
+                                    {projects
+                                        .filter(project => project.projectStatus === "Active")
+                                        .map((project) => (
+                                            <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
+                                        ))}
+                                    <MenuItem value="newProject">Add New Project...</MenuItem>
+                                </Select>
+                            </FormControl>
+                            {isNewProject && (
+                                <TextField
+                                    fullWidth
+                                    margin="normal"
+                                    label="New Project Name"
+                                    name="newProjectName"
+                                    value={newProjectName}
+                                    onChange={(e) => setNewProjectName(e.target.value)}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                    required
+                                />
+                            )}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                <Button
+                                    onClick={handleNext}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#B6CDC8',
+                                        color: '#355147',
+                                        '&:hover': {
+                                            backgroundColor: '#B6CDC8',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Next
+                                </Button>
+                            </Box>
+                        </>
                     )}
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Name"
-                        name="taskName"
-                        value={formValues.taskName || ''}
-                        onChange={handleInputChange}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Description"
-                        name="taskDescription"
-                        value={formValues.taskDescription || ''}
-                        onChange={handleInputChange}
-                        multiline
-                        maxRows={4}
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="priority-label">Priority</InputLabel>
-                        <Select
-                            labelId="priority-label"
-                            id="priority"
-                            value={formValues.taskPriority || 'Medium'}
-                            label="Priority"
-                            name="taskPriority"
-                            onChange={handleInputChange}
-                        >
-                            <MenuItem value="High">High</MenuItem>
-                            <MenuItem value="Medium">Medium</MenuItem>
-                            <MenuItem value="Low">Low</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="status-label">Status</InputLabel>
-                        <Select
-                            labelId="status-label"
-                            id="status"
-                            value={formValues.taskStatus || 'Not Started'}
-                            label="Status"
-                            name="taskStatus"
-                            onChange={handleInputChange}
-                        >
-                            <MenuItem value="Not Started">Not Started</MenuItem>
-                            <MenuItem value="In Progress">In Progress</MenuItem>
-                            <MenuItem value="Completed">Completed</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Start Date"
-                        name="taskStartDate"
-                        type="date"
-                        value={formValues.taskStartDate || ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Due Date"
-                        name="taskDueDate"
-                        type="date"
-                        value={formValues.taskDueDate || ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                        error={!!errors.taskDueDate}
-                        helperText={errors.taskDueDate}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Time Due"
-                        name="taskDueTime"
-                        type="time"
-                        value={formValues.taskDueTime || ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="project-label">Project</InputLabel>
-                        <Select
-                            labelId="project-label"
-                            id="project"
-                            name="taskProject"
-                            value={isNewProject ? 'newProject' : formValues.taskProject || 'None'}
-                            onChange={handleInputChange}
-                            required
-                        >
-                            <MenuItem value="None">Select Project...</MenuItem>
-                            {projects
-                                .filter((project) => 
-                                    (project.projectStatus === 'Active' ||
-                                    project.projectId === formValues.taskProject) &&
-                                    project.projectId !== 'None'
-                                )
-                                .map(project => (
-                                <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
-                            ))}
-                            <MenuItem value="newProject">Add New Project...</MenuItem>
-                        </Select>
-                    </FormControl>
-                    {isNewProject && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            label="New Project Name"
-                            name="newProjectName"
-                            value={newProjectName}
-                            onChange={(e) => setNewProjectName(e.target.value)}
-                            required
-                        />
+
+                    {step === 2 && (
+                        <>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="priority-label">Priority</InputLabel>
+                                <Select
+                                    labelId="priority-label"
+                                    name="taskPriority"
+                                    value={formValues.taskPriority}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="High">High</MenuItem>
+                                    <MenuItem value="Medium">Medium</MenuItem>
+                                    <MenuItem value="Low">Low</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="status-label">Status</InputLabel>
+                                <Select
+                                    labelId="status-label"
+                                    name="taskStatus"
+                                    value={formValues.taskStatus}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="Not Started">Not Started</MenuItem>
+                                    <MenuItem value="In Progress">In Progress</MenuItem>
+                                    <MenuItem value="Completed">Completed</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Start Date"
+                                name="taskStartDate"
+                                type="date"
+                                value={formValues.taskStartDate}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Due Date"
+                                name="taskDueDate"
+                                type="date"
+                                value={formValues.taskDueDate}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Time Due"
+                                name="taskDueTime"
+                                type="time"
+                                value={formValues.taskDueTime}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Button
+                                    onClick={handleBack}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#B6CDC8',
+                                        color: '#355147',
+                                        '&:hover': {
+                                            backgroundColor: '#B6CDC8',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Back
+                                </Button>
+                                <Button
+                                    onClick={handleSave}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#8E5B9F', color: '#FFF'
+                                        ,
+                                        '&:hover': {
+                                            backgroundColor: '#8E5B9F',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Save
+                                </Button>
+                            </Box>
+                        </>
                     )}
-                    <div style={{ marginTop: 16 }}>
-                        <Button sx={submitButtonStyle} onClick={handleSave}>
-                            Save
-                        </Button>
-                        <Button sx={cancelButtonStyle} onClick={onClose}>
-                            Cancel
-                        </Button>
-                    </div>
                 </form>
             </Box>
         </Modal>

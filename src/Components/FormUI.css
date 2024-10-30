@@ -170,7 +170,3 @@ button {
         border-color: #5B8E9F; /* Highlight color when input is focused */
         outline: none; /* Removing the default outline to use only the border color change */
     }
-
-.add-form label {
-    background-color: white;
-}

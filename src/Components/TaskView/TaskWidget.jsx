@@ -386,19 +386,20 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                             Clear Changes
                         </Button>
                     )}
+                    <Tooltip title="Edit Task">
+                        <EditIcon
+                            onClick={handleEditClick}
+                            sx={{
+                                color: '#9F6C5B',
+                                cursor: 'pointer',
+                                padding: '6px',
+                                borderRadius: '50%',
+                                '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
+                            }}
+                        />
+                    </Tooltip>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <Tooltip title="Edit Task">
-                            <EditIcon
-                                onClick={handleEditClick}
-                                sx={{
-                                    color: '#9F6C5B',
-                                    cursor: 'pointer',
-                                    padding: '6px',
-                                    borderRadius: '50%',
-                                    '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
-                                }}
-                            />
-                        </Tooltip>
+
                         <Tooltip title="Delete Task">
                             <DeleteIcon
                                 onClick={() => onDelete(task.taskId)}
