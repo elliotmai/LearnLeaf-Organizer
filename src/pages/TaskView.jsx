@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { deleteTask, sortTasks} from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
-import '/src/Components/FormUI.css';
-import '/src/Components/TaskView/TaskView.css';
-import '/src/Components/PageFormat.css';
+import Button from '@mui/material/Button';
+import { IconButton } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { getAllFromStore } from '/src/db.js';
 
 const TaskList = () => {
@@ -133,9 +133,8 @@ const TaskList = () => {
 
 
     return (
-        <div className="view-container">
+        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <button className="fab" onClick={toggleFormVisibility}>+</button>
             {isAddTaskFormOpen && (
                 <AddTaskForm
                     isOpen={isAddTaskFormOpen}
@@ -145,8 +144,33 @@ const TaskList = () => {
                     projects={projects}
                 />
             )}
-            <h1 style={{ color: '#907474' }}>{user?.name}'s Upcoming Tasks</h1>
-            <div className="task-list">
+
+            <Grid container direction="column" alignItems="center" spacing={0} paddingBottom={'15px'}>
+                <Grid item>
+                    <h1 style={{ color: '#907474', textAlign: 'center' }}>
+                        {user?.name}'s Upcoming Tasks
+                    </h1>
+                </Grid>
+                <Grid item>
+                    <Button
+                        onClick={toggleFormVisibility}
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        sx={{
+                            color: '#355147',
+                            borderColor: '#355147',
+                            '&:hover': {
+                                backgroundColor: '#355147',
+                                color: '#fff',
+                            },
+                        }}
+                    >
+                        Add New Task
+                    </Button>
+                </Grid>
+            </Grid>
+
+            <div className="task-list" style={{ flexGrow: 1, overflow: 'hidden' }}>
                 {isLoading ? (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                         <CircularProgress />

@@ -1,6 +1,7 @@
 import React from 'react';
 import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import { useMediaQuery, useTheme } from '@mui/material';
+import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '/src/LearnLeaf_Functions.jsx'; // Add any necessary imports for logoutUser
 import '/src/Components/PageFormat.css';
@@ -24,7 +25,7 @@ const TopBar = () => {
 
     // Define the logo style based on screen size
     const logoStyle = {
-        width: isSmallScreen ? '95%' : isMediumScreen ? '70%' : '55%',
+        width: isSmallScreen ? '95%' : isMediumScreen ? '70%' : '50%',
     };
 
     return (
@@ -41,7 +42,25 @@ const TopBar = () => {
                     {!isSmallScreen && <a href="/archives">Archives</a>}
                     <a href="/profile">User Profile</a>
                 </nav>
-                <button className="logout-button" onClick={handleLogout}>Logout</button>
+                <Button
+                    variant="text"
+                    onClick={handleLogout}
+                    sx={{
+                        paddingLeft: '3%',
+                        color: '#9F6C5B',
+                        textDecoration: 'none', // No underline by default
+                        fontSize: '1em',
+                        fontWeight: 'bold',
+                        fontFamily: 'Helvetica, Arial, sans-serif',
+                        textTransform: 'none', // Preserves capitalization as typed
+                        '&:hover': {
+                            textDecoration: 'underline',
+                            backgroundColor: 'transparent', // Keeps background transparent on hover
+                        },
+                    }}
+                >
+                    Logout
+                </Button>
             </div>
         </div>
     );

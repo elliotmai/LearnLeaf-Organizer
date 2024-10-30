@@ -1,8 +1,8 @@
 #root {
   width: 100%;
   height: 100%;
-  margin-bottom: 10px;
-  padding: 0px 0px 10px 0px;
+  /* margin-bottom: 10px; */
+  /* padding: 0px 0px 10px 0px; */
   text-align: center;
   font-family: Arial, sans-serif;
   display: flex;
@@ -16,11 +16,12 @@
     justify-content: center;
     align-content: center;
     width: fill;
+    height: fill;
 }
 
 .app-container {
   width: -webkit-fill-available;
-  padding: 0% 2%;
+  /* padding: 0% 2%; */
 }
 
 .logo:hover {

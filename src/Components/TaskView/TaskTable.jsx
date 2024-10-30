@@ -8,8 +8,8 @@ import { useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
-import './TaskView.css';
-import '/src/Components/PageFormat.css';
+// import './TaskView.css';
+// import '/src/Components/PageFormat.css';
 
 const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     const [filterCriteria, setFilterCriteria] = useState({
@@ -147,7 +147,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     });
 
     return (
-        <div className="task-table">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <TaskFilterBar
                 filterCriteria={filterCriteria}
                 setFilterCriteria={setFilterCriteria}
@@ -155,41 +155,43 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
                 onSearchChange={handleSearchChange}
                 onFilterChange={handleFilterChange}
             />
-            {tasks.length > 0 ? (
-                <List
-                    height={600}
-                    itemCount={totalRows}
-                    itemSize={rowHeight}
-                    width="100%"
-                >
-                    {({ index, style }) => (
-                        <Row index={index} style={style} />
-                    )}
-                </List>
-            ) : (
-                <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
-                    <Paper
-                        elevation={3}
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '2rem',
-                            backgroundColor: '#f5f5f5',
-                            width: '90%',
-                        }}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+                {tasks.length > 0 ? (
+                    <List
+                        height={600}
+                        itemCount={totalRows}
+                        itemSize={rowHeight}
+                        width="100%"
                     >
-                        <AssignmentTurnedInIcon sx={{ fontSize: 50, color: '#64b5f6', marginBottom: '1rem' }} />
-                        <Typography variant="h6" color="textSecondary">
-                            No tasks found!
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" textAlign="center">
-                            You have no upcoming tasks. Add a new task to stay organized!
-                        </Typography>
-                    </Paper>
-                </Grid>
-            )}
+                        {({ index, style }) => (
+                            <Row index={index} style={style} />
+                        )}
+                    </List>
+                ) : (
+                    <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2rem',
+                                backgroundColor: '#f5f5f5',
+                                width: '90%',
+                            }}
+                        >
+                            <AssignmentTurnedInIcon sx={{ fontSize: 50, color: '#64b5f6', marginBottom: '1rem' }} />
+                            <Typography variant="h6" color="textSecondary">
+                                No tasks found!
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" textAlign="center">
+                                You have no upcoming tasks. Add a new task to stay organized!
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                )}
+            </div>
         </div>
     );
 };

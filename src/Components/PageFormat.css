@@ -1,103 +1,60 @@
 .top-bar {
     display: flex;
     flex-direction: column;
-    height: 5%;
+    height: 15%;
     width: 100%;
     align-items: center;
-    /* Align items vertically in the center */
     justify-content: center;
     background-color: #B6CDC8;
-    /* padding: 0px 5px 10px 5px; */
-    margin: 0px 0px 20px 0px;
     border-radius: 8px;
-}
-
-.top-bar img:hover {
-    transform: scale(1.01);
+    padding: 0; /* Ensures no padding issues affecting centering */
 }
 
 .top-navigation {
     display: flex;
     flex-direction: row;
     align-items: center;
-}
-
-.logout-button {
-    color: #9F6C5B;
-    text-decoration: none;
-    font-style: italic;
-    font-size: 1em;
-    font-weight: 300;
-}
-
-.logout-button :hover {
-    text-decoration: underline;
-}
-
-.logo {
-    will-change: filter;
-    transition: filter 300ms;
+    justify-content: center; /* Centers navigation content horizontally */
+    width: 100%;
+    max-width: 800px; /* Optional max width to prevent excessive stretching on large screens */
 }
 
 .name-links {
     display: flex;
-    position: center;
     flex-direction: column;
     align-items: center;
-    /* Center items vertically */
-    width: 65%;
-    height: fit-content;
-
+    justify-content: center; /* Centers vertically within the .top-bar */
+    width: 100%; /* Full width for consistent centering */
 }
 
 .app-name {
     color: #355147;
-    /* Adjust color as needed */
     font-weight: bold;
     font-size: 24px;
+    text-align: center; /* Centers app name */
 }
 
 .links {
+    display: flex;
     justify-content: center;
     align-content: center;
-    margin-top: 0%;
+    margin-top: 0;
+    width: 100%; /* Ensures links are centered across the width */
 }
 
 .nav-links {
     display: flex;
     gap: 20px;
-    /* Space between links */
+    justify-content: center; /* Centers navigation links */
 }
 
 .nav-links a {
     color: #9F6C5B;
     text-decoration: none;
-    font-style: italic;
-    font-size: 1em;
     font-weight: 300;
+    font-size: 1em;
 }
 
 .nav-links a:hover {
     text-decoration: underline;
-}
-
-.fab {
-    position: fixed;
-    z-index: 1;
-    bottom: 20px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #5B8E9F;
-    color: white;
-    border: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
-    cursor: pointer;
-    font-size: 24px;
-}
-
-.fab:hover {
-    background-color: #0056b3;
-    /* Darker blue */
 }
