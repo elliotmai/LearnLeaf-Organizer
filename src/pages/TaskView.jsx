@@ -7,7 +7,7 @@ import TopBar from '/src/pages/TopBar.jsx';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
-import { IconButton } from '@mui/material';
+import { IconButton, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { getAllFromStore } from '/src/db.js';
 
@@ -135,57 +135,30 @@ const TaskList = () => {
     return (
         <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            {isAddTaskFormOpen && (
-                <AddTaskForm
-                    isOpen={isAddTaskFormOpen}
-                    onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}
-                    subjects={subjects}
-                    projects={projects}
-                />
-            )}
 
-            <Grid container direction="column" alignItems="center" spacing={0} paddingBottom={'15px'}>
-                <Grid item>
-                    <h1 style={{ color: '#907474', textAlign: 'center' }}>
-                        {user?.name}'s Upcoming Tasks
-                    </h1>
-                </Grid>
-                <Grid item>
-                    <Button
-                        onClick={toggleFormVisibility}
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        sx={{
-                            color: '#355147',
-                            borderColor: '#355147',
-                            '&:hover': {
-                                backgroundColor: '#355147',
-                                color: '#fff',
-                            },
-                        }}
-                    >
-                        Add New Task
-                    </Button>
-                </Grid>
+            <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
+                <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {user?.name}'s Upcoming Tasks
+                </Typography>
+
+                <div className="task-list" style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                    {isLoading ? (
+                        <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
+                            <CircularProgress />
+                            <p>Loading tasks...</p>
+                        </Grid>
+                    ) : (
+                        <TasksTable
+                            tasks={tasks}
+                            subjects={subjects}
+                            projects={projects}
+                            onDelete={handleDeleteTask}
+                            onUpdateTask={handleEditTask}
+                            updateState={updateState}
+                        />
+                    )}
+                </div>
             </Grid>
-
-            <div className="task-list" style={{ flexGrow: 1, overflow: 'hidden' }}>
-                {isLoading ? (
-                    <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
-                        <CircularProgress />
-                        <p>Loading tasks...</p>
-                    </Grid>
-                ) : (
-                    <TasksTable
-                        tasks={tasks}
-                        subjects={subjects}
-                        projects={projects}
-                        onDelete={handleDeleteTask}
-                        onUpdateTask={handleEditTask}
-                    />
-                )}
-            </div>
         </div>
     );
 };

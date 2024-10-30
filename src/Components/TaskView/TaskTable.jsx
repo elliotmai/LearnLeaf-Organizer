@@ -4,12 +4,15 @@ import debounce from 'lodash.debounce';
 import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import Grid from '@mui/material/Grid';
-import { useTheme, useMediaQuery, Paper, Typography } from '@mui/material';
+import { useTheme, useMediaQuery, Paper, Typography, Button, Box } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
+import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 
-const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateState }) => {
+    const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState({
         searchQuery: '',
         taskPriority: '',
@@ -24,17 +27,15 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-    const isLargeScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-    const isXLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
+    const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
     // Adjust the number of items per row based on screen size
     const getItemsPerRow = useCallback(() => {
         if (isSmallScreen) return 1;
         if (isMediumScreen) return 2;
-        if (isLargeScreen) return 3;
-        if (isXLargeScreen) return 4;
-        return 4; // Default to 3 items per row
-    }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
+        if (isLargeScreen) return 4;
+        return 3; // Default to 3 items per row
+    }, [isSmallScreen, isMediumScreen, isLargeScreen]);
 
     // Debounce search query handling
     const handleSearchChange = useCallback(
@@ -112,6 +113,20 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
         setFilterCriteria(prev => ({ ...prev, [name]: value }));
     };
 
+    const toggleFormVisibility = () => {
+        setIsAddTaskFormOpen(!isAddTaskFormOpen);
+    };
+
+    const handleCloseAddTaskForm = () => {
+        setIsAddTaskFormOpen(false);
+    };
+
+    const handleAddTask = async (newTask) => {
+        // const sortedTasks = sortTasks([...tasks, newTask]);
+        // setTasks(sortedTasks);
+        updateState();
+    };
+
     const itemsPerRow = getItemsPerRow();
     const rowHeight = 600;
     const filteredTasks = getFilteredTasks(tasks, filterCriteria);
@@ -128,7 +143,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
                         .map((_, i) => {
                             const taskIndex = startIndex + i;
                             return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={12} md={6} lg={4} xl={3} xxl={1} key={filteredTasks[taskIndex].taskId}>
+                                <Grid item xs={12} sm={12} md={6} lg={4} xl={3} key={filteredTasks[taskIndex].taskId}>
                                     <TaskWidget
                                         task={filteredTasks[taskIndex]}
                                         onDelete={onDelete}
@@ -146,21 +161,63 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            <TaskFilterBar
-                filterCriteria={filterCriteria}
-                setFilterCriteria={setFilterCriteria}
-                clearFilters={clearFilters}
-                onSearchChange={handleSearchChange}
-                onFilterChange={handleFilterChange}
-            />
+            {isAddTaskFormOpen && (
+                <AddTaskForm
+                    isOpen={isAddTaskFormOpen}
+                    onClose={handleCloseAddTaskForm}
+                    onAddTask={handleAddTask}
+                    subjects={subjects}
+                    projects={projects}
+                />
+            )}
+
+            <Grid
+                container
+                alignItems="center"
+                justifyContent="center"
+                spacing={1}
+                paddingBottom="10px"
+                paddingTop="10px"
+                width="90%"
+                position="relative"
+                sx={{
+                    borderTop: "1px solid #d9d9d9",
+                    borderBottom: "1px solid #d9d9d9",
+                    margin: "auto",
+                    flexDirection: "column",
+                }}
+            >
+
+                <Box display="flex" justifyContent="center">
+                    <TaskFilterBar
+                        filterCriteria={filterCriteria}
+                        setFilterCriteria={setFilterCriteria}
+                        clearFilters={clearFilters}
+                        onSearchChange={handleSearchChange}
+                        onFilterChange={handleFilterChange}
+                    />
+                </Box>
+                <Button
+                    onClick={toggleFormVisibility}
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    sx={{
+                        color: '#355147',
+                        borderColor: '#355147',
+                        marginTop: 2,
+                        '&:hover': {
+                            backgroundColor: '#355147',
+                            color: '#fff',
+                        },
+                    }}
+                >
+                    Add New Task
+                </Button>
+            </Grid>
+
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {tasks.length > 0 ? (
-                    <List
-                        height={600}
-                        itemCount={totalRows}
-                        itemSize={rowHeight}
-                        width="100%"
-                    >
+                    <List height={850} itemCount={totalRows} itemSize={rowHeight} width="100%">
                         {({ index, style }) => (
                             <Row index={index} style={style} />
                         )}
@@ -180,9 +237,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask }) => {
                             }}
                         >
                             <AssignmentTurnedInIcon sx={{ fontSize: 50, color: '#64b5f6', marginBottom: '1rem' }} />
-                            <Typography variant="h6" color="textSecondary">
-                                No tasks found!
-                            </Typography>
+                            <Typography variant="h6" color="textSecondary">No tasks found!</Typography>
                             <Typography variant="body2" color="textSecondary" textAlign="center">
                                 You have no upcoming tasks. Add a new task to stay organized!
                             </Typography>

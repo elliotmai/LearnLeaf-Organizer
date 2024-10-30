@@ -1,18 +1,23 @@
-import React from 'react';
+// TopBar.jsx
+import React, { useState } from 'react';
 import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
-import { useMediaQuery, useTheme } from '@mui/material';
-import Button from '@mui/material/Button';
+import { useMediaQuery, useTheme, Menu, MenuItem, IconButton, Box, Typography, Grid } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser } from '/src/LearnLeaf_Functions.jsx'; // Add any necessary imports for logoutUser
+import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
 import '/src/Components/PageFormat.css';
 import '/src/App.css';
 
 const TopBar = () => {
     const theme = useTheme();
-    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Detect if screen size is small
-    const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); // Detect if screen size is medium
-    const isLargeScreen = useMediaQuery(theme.breakpoints.up('md')); // Detect if screen size is large
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
+
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+    const handleMenuClose = () => setAnchorEl(null);
 
     const handleLogout = async () => {
         try {
@@ -20,49 +25,67 @@ const TopBar = () => {
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
+        } finally {
+            handleMenuClose();
         }
     };
 
-    // Define the logo style based on screen size
     const logoStyle = {
-        width: isSmallScreen ? '95%' : isMediumScreen ? '70%' : '50%',
+        width: isSmallScreen ? '40%' : '50%',
+        display: 'block',
+        margin: 'auto',
     };
 
     return (
-        <div className="top-bar">
-            <a href="/tasks">
-                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
-            </a>
-            <div className="top-navigation">
-                <nav className="nav-links">
-                    <a href="/tasks">Tasks</a>
-                    {!isSmallScreen && <a href="/calendar">Calendar</a>}
-                    <a href="/subjects">Subjects</a>
-                    <a href="/projects">Projects</a>
-                    {!isSmallScreen && <a href="/archives">Archives</a>}
-                    <a href="/profile">User Profile</a>
-                </nav>
-                <Button
-                    variant="text"
-                    onClick={handleLogout}
+        <Box sx={{ width: '100%', backgroundColor: '#B6CDC8', paddingY: '8px', textAlign: 'center' }}>
+            <Grid 
+                container 
+                alignItems="center" 
+                justifyContent="center" 
+                sx={{ position: 'relative' }} >
+                {/* Menu Icon positioned absolutely to the left */}
+                <IconButton
+                    color="inherit"
+                    aria-label="menu"
+                    onClick={handleMenuOpen}
                     sx={{
-                        paddingLeft: '3%',
                         color: '#9F6C5B',
-                        textDecoration: 'none', // No underline by default
-                        fontSize: '1em',
-                        fontWeight: 'bold',
-                        fontFamily: 'Helvetica, Arial, sans-serif',
-                        textTransform: 'none', // Preserves capitalization as typed
-                        '&:hover': {
-                            textDecoration: 'underline',
-                            backgroundColor: 'transparent', // Keeps background transparent on hover
-                        },
+                        position: 'absolute',
+                        left: '5%',
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)', borderRadius: '50%' },
                     }}
                 >
-                    Logout
-                </Button>
-            </div>
-        </div>
+                    <MenuIcon sx={{ fontSize: 40 }} />
+                </IconButton>
+
+                {/* Centered Logo */}
+                <Grid item>
+                    <a href="/tasks">
+                        <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
+                    </a>
+                </Grid>
+            </Grid>
+
+            {/* Dropdown Menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                slotProps={{
+                    paper: { sx: { width: 200, padding: 1, ml: 2 } },
+                }}
+            >
+                <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>Tasks</MenuItem>
+                {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
+                <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
+                <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
+                {!isSmallScreen && <MenuItem onClick={() => { navigate('/archives'); handleMenuClose(); }}>Archives</MenuItem>}
+                <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>User Profile</MenuItem>
+                <MenuItem onClick={handleLogout} sx={{ color: '#F3161E', fontWeight: 'bold' }}>Logout</MenuItem>
+            </Menu>
+        </Box>
     );
 };
 

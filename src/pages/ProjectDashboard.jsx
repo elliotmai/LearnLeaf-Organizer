@@ -94,6 +94,7 @@ const ProjectsDashboard = () => {
     useEffect(() => {
         if (user?.id) {
             updateState();
+            console.log(projects);
         }
     }, [user?.id]);
 

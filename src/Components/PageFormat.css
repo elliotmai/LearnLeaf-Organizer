@@ -1,60 +1,49 @@
-.top-bar {
-    display: flex;
-    flex-direction: column;
-    height: 15%;
+/* TopBar container styling */
+.top-bar-container {
     width: 100%;
-    align-items: center;
-    justify-content: center;
     background-color: #B6CDC8;
-    border-radius: 8px;
-    padding: 0; /* Ensures no padding issues affecting centering */
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-align: center;
 }
 
-.top-navigation {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center; /* Centers navigation content horizontally */
-    width: 100%;
-    max-width: 800px; /* Optional max width to prevent excessive stretching on large screens */
+/* Grid container styling within TopBar */
+.top-bar-grid {
+    position: relative;
 }
 
-.name-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center; /* Centers vertically within the .top-bar */
-    width: 100%; /* Full width for consistent centering */
-}
-
-.app-name {
-    color: #355147;
-    font-weight: bold;
-    font-size: 24px;
-    text-align: center; /* Centers app name */
-}
-
-.links {
-    display: flex;
-    justify-content: center;
-    align-content: center;
-    margin-top: 0;
-    width: 100%; /* Ensures links are centered across the width */
-}
-
-.nav-links {
-    display: flex;
-    gap: 20px;
-    justify-content: center; /* Centers navigation links */
-}
-
-.nav-links a {
+/* Menu icon button */
+.menu-icon-button {
     color: #9F6C5B;
-    text-decoration: none;
-    font-weight: 300;
-    font-size: 1em;
+    position: absolute;
+    left: 5%;
 }
 
-.nav-links a:hover {
-    text-decoration: underline;
+.menu-icon-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+}
+
+/* Icon font size */
+.menu-icon {
+    font-size: 40px;
+}
+
+/* Centered logo style */
+.top-bar-logo {
+    display: block;
+    margin: auto;
+}
+
+/* Menu item for logout with red color */
+.logout-menu-item {
+    color: #F3161E;
+    font-weight: bold;
+}
+
+/* Menu paper styling (can also be applied via sx prop if desired) */
+.menu-paper {
+    width: 200px;
+    padding: 8px;
+    margin-left: 16px;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Accordion, AccordionSummary, AccordionDetails, Typography, Grid, TextField, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import '/src/Components/FilterBar.css';
+// import '/src/Components/FilterBar.css';
 
 const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
     // State to control the expansion of the filter section

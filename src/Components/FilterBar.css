@@ -1,60 +1,12 @@
-.filter-bar {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    gap: 2%;
-    justify-content: center;
-    align-content: center;
-    border-top: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
-    padding: 1% 1% 0% 1%;
+.filter-bar button {
+    background-color: #B6CDC8;
+    color: #355147;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-    .filter-bar select {
-        /* width: fit-content; */
-        padding: 8px;
-        border-radius: 4px;
-    }
-
-    .filter-bar input[type="text"] {
-        /* width: fit-content; */
-        padding: 8px;
-        border-radius: 4px;
-    }
-    
-    .filter-bar input[type="date"] {
-        /* padding: 8px; */
-        height: 60%;
-        border-radius: 4px;
-    }
-
-    .filter-bar button {
-        background-color: #B6CDC8;
-        color: #355147;
-        font-size: 15px;
-        font-weight: bold;
-        cursor: pointer;
-        margin: 25px 0px 30px 0px;
-    }
-
-    .filter-bar button:hover {
-        background-color: #B6CDC8;
-        transform: scale(1.01);
-    }
-
-.filter-item {
-    display: flex;
-    flex-direction: column;
-}
-
-    .filter-item label {
-        font-size: 14px;
-        font-weight: bold;
-        color: #355147;
-    }
-
-.filter-summary {
-    padding: 10px 10px;
-    background-color: #e8e8e8;
-    text-align: center;
+.filter-bar button:hover {
+    background-color: #B6CDC8;
+    transform: scale(1.01);
 }
