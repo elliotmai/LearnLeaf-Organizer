@@ -122,9 +122,7 @@ export function formatDate(input) {
     return `${year}-${month}-${day}`; // Return the formatted date string
 }
 
-export function formatDateDisplay(input) {
-    const { user } = useUser();
-    const dateFormat = user.dateFormat;
+export function formatDateDisplay(input, dateFormat) {
 
     let date = input instanceof Date ? input : input.toDate ? input.toDate() : new Date(input);
     let month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -139,9 +137,7 @@ export function formatDateDisplay(input) {
     }
 }
 
-export function formatTimeDisplay(input) {
-    const { user } = useUser();
-    const timeFormat = user.timeFormat;
+export function formatTimeDisplay(input, timeFormat) {
 
     if (!input || typeof input !== 'string') return 'N/A'; // Handle null, undefined, or non-string input
 
