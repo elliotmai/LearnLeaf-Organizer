@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { loginUser } from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { Link } from 'react-router-dom';
+import { useMediaQuery, useTheme } from '@mui/material';
 import '/src/Components/Login_Register_Reset.css';
+import '/src/Components/PageFormat.css';
 
 
 function LoginForm() {
@@ -30,10 +32,18 @@ function LoginForm() {
         setPassword('');
     };
 
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg'));
+    const logoStyle = {
+        width: isSmallScreen ? '50%' : '30%',
+        display: 'block',
+        margin: 'auto',
+    };
+
     return (
         <div className="login-form-container">
             <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo"/>
+                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle}/>
             </div>
             <h1 style={{ color: '#907474' }}>Streamlining success, one task at a time!</h1>
             <form className="form-group" onSubmit={handleSubmit}>
