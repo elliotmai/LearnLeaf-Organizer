@@ -3,7 +3,7 @@ import {
     Accordion, AccordionSummary, AccordionDetails,
     Typography, List, ListItem, ListItemText,
     Card, CardContent, Grid, Divider, Button,
-    Tooltip
+    Tooltip, CircularProgress, Box
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -13,7 +13,10 @@ import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TopBar from '/src/pages/TopBar.jsx';
 import { getAllFromStore } from '/src/db.js';
-import { sortSubjects, sortProjects, sortTasks, editTask, reactivateSubject, reactivateProject, deleteTask, deleteSubject, deleteProject, formatDateDisplay } from '/src/LearnLeaf_Functions.jsx';
+import {
+    sortSubjects, sortProjects, sortTasks, editTask, reactivateSubject, reactivateProject,
+    deleteTask, deleteSubject, deleteProject, formatDateDisplay
+} from '/src/LearnLeaf_Functions.jsx';
 import { useUser } from '/src/UserState.jsx';
 
 const ArchivePage = () => {
@@ -62,7 +65,6 @@ const ArchivePage = () => {
 
     const handleChangeStatus = async (task) => {
         const updatedTask = { ...task, taskStatus: 'In Progress' };
-        console.log(updatedTask);
         await editTask(updatedTask);
         setCompletedTasks(prevTasks => prevTasks.filter(t => t.taskId !== task.taskId));
     };
@@ -78,109 +80,121 @@ const ArchivePage = () => {
     };
 
     const handleDeleteTask = async (taskId) => {
-        await deleteTask(taskId);
-        setCompletedTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
+        const confirmation = window.confirm("Are you sure you want to permanently delete this task?");
+        if (confirmation) {
+            try {
+                await deleteTask(taskId);
+                setCompletedTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
     };
 
     const handleDeleteSubject = async (subjectId) => {
-        await deleteSubject(subjectId);
-        setArchivedSubjects(prevSubjects => prevSubjects.filter(subject => subject.subjectId !== subjectId));
+        const confirmation = window.confirm("Delete this subject?\nAssociated tasks won’t be grouped under this subject anymore.");
+        if (confirmation) {
+            try {
+                await deleteSubject(subjectId);
+                setArchivedSubjects(prevSubjects => prevSubjects.filter(subject => subject.subjectId !== subjectId));
+            } catch (error) {
+                console.error("Error deleting subject:", error);
+            }
+        }
     };
 
     const handleDeleteProject = async (projectId) => {
-        await deleteProject(projectId);
-        setArchivedProjects(prevProjects => prevProjects.filter(project => project.projectId !== projectId));
+        const confirmation = window.confirm("Delete this project?\nAssociated tasks won’t be grouped under this project anymore.");
+        if (confirmation) {
+            try {
+                await deleteProject(projectId);
+                setArchivedProjects(prevProjects => prevProjects.filter(project => project.projectId !== projectId));
+            } catch (error) {
+                console.error("Error deleting project:", error);
+            }
+        }
     };
 
     return (
-        <div>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%' }}>
             <TopBar />
+            <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                {user?.name}'s Archive
+            </Typography>
+            <Divider sx={{ my: 2, width: '90%' }} />
+
             {isLoading ? (
-                <Typography variant="h6" color="textSecondary" align="center">
-                    Loading archived data...
-                </Typography>
+                <Grid container justifyContent="center" alignItems="center" sx={{ minHeight: '150px' }}>
+                    <CircularProgress />
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>Loading archived data...</Typography>
+                </Grid>
             ) : (
-                <>
+                <Box sx={{ width: '90%', maxWidth: '1200px' }}>
+
                     {/* Completed Tasks Section */}
                     <Accordion>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                            <Typography variant="h6">
-                                <CheckCircleOutlineIcon sx={{ marginRight: '8px', color: '#64b5f6' }} />
+                            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#64b5f6' }}>
+                                <CheckCircleOutlineIcon sx={{ mr: 1 }} />
                                 Completed Tasks
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                             <List>
-                                {completedTasks.length > 0 ? (
-                                    completedTasks.map(task => (
-                                        <ListItem key={task.taskId} divider>
-                                            <ListItemText
-                                                primary={<Typography variant="subtitle1">{task.taskName}</Typography>}
-                                                secondary={
-                                                    <>
-                                                        <Typography
-                                                            variant="body2"
-                                                            color="textSecondary"
-                                                            sx={{
-                                                                whiteSpace: 'pre-wrap',
-                                                                wordBreak: 'break-word',
-                                                                overflowWrap: 'break-word'
-                                                            }}
+                                {completedTasks.length > 0 ? completedTasks.map(task => (
+                                    <ListItem key={task.taskId} divider>
+                                        <ListItemText
+                                            primary={<Typography variant="subtitle1">{task.taskName}</Typography>}
+                                            secondary={
+                                                <>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        {task.taskDescription || 'No description provided.'}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Subject: {task.taskSubject?.subjectName || 'None'}
+                                                        <br />
+                                                        Project: {task.taskProject?.projectName || 'None'}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                                                        Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', mt: 1 }}>
+                                                        <Button
+                                                            variant="outlined"
+                                                            color="secondary"
+                                                            onClick={() => handleChangeStatus(task)}
+                                                            startIcon={<RemoveDoneIcon />}
+                                                            sx={{ mr: 1 }}
                                                         >
-                                                            {task.taskDescription || 'No description provided.'}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="textSecondary">
-                                                            Subject: {task.taskSubject?.subjectName || 'None'}
-                                                            <br />
-                                                            Project: {task.taskProject?.projectName || 'None'}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                                                            Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
-                                                        </Typography>
-                                                        <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
+                                                            Reactivate
+                                                        </Button>
+                                                        <Tooltip title="Delete Task">
                                                             <Button
-                                                                variant="outlined"
-                                                                color="secondary"
-                                                                onClick={() => handleChangeStatus(task)}
-                                                                startIcon={<RemoveDoneIcon />}
-                                                                sx={{ marginRight: '0.5rem' }}
+                                                                color="error"
+                                                                onClick={() => handleDeleteTask(task.taskId)}
+                                                                sx={{
+                                                                    color: '#d1566e',
+                                                                    minWidth: '40px', // Consistent width
+                                                                    width: '40px',
+                                                                    height: '40px',
+                                                                    p: '6px',
+                                                                    borderRadius: '50%',
+                                                                    '&:hover': {
+                                                                        transform: 'scale(1.05)',
+                                                                        backgroundColor: '#d1566e',
+                                                                        color: '#fff',
+                                                                    },
+                                                                }}
                                                             >
-                                                                Reactivate
+                                                                <DeleteIcon />
                                                             </Button>
-                                                            <Tooltip title="Delete Task">
-                                                                <Button
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteTask(task.taskId)}
-                                                                    sx={{
-                                                                        color: '#d1566e',
-                                                                        fontSize: 'xl',
-                                                                        cursor: 'pointer',
-                                                                        minWidth: '40px', // Consistent width
-                                                                        width: '40px',    // Ensures circle shape
-                                                                        height: '40px',   // Ensures circle shape
-                                                                        padding: '6px',   // Inner spacing
-                                                                        borderRadius: '50%',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center', // Centers the icon
-                                                                        '&:hover': {
-                                                                            transform: 'scale(1.05)',
-                                                                            backgroundColor: '#d1566e',
-                                                                            color: '#fff',
-                                                                        },
-                                                                    }}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </Button>
-                                                            </Tooltip>
-                                                        </div>
-
-                                                    </>
-                                                }
-                                            />
-                                        </ListItem>
-                                    ))
-                                ) : (
+                                                        </Tooltip>
+                                                    </Box>
+                                                </>
+                                            }
+                                        />
+                                    </ListItem>
+                                )) : (
                                     <Typography variant="body2" color="textSecondary">No completed tasks found.</Typography>
                                 )}
                             </List>
@@ -192,74 +206,61 @@ const ArchivePage = () => {
                     {/* Archived Subjects Section */}
                     <Accordion>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                            <Typography variant="h6">
-                                <ArchiveIcon sx={{ marginRight: '8px', color: '#ffa726' }} />
+                            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#ffa726' }}>
+                                <ArchiveIcon sx={{ mr: 1 }} />
                                 Archived Subjects
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                             <Grid container spacing={2}>
-                                {archivedSubjects.length > 0 ? (
-                                    archivedSubjects.map(subject => (
-                                        <Grid item xs={12} sm={6} md={4} key={subject.subjectId}>
-                                            <Card variant="outlined">
-                                                <CardContent>
-                                                    <Typography variant="h6">{subject.subjectName}</Typography>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Semester: {subject.subjectSemester || 'N/A'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary" paddingBottom={'5px'}>
-                                                        {subject.subjectDescription || 'No description provided.'}
-                                                    </Typography>
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-right' }}>
-                                                            <Button
-                                                                variant="outlined"
-                                                                color="secondary"
-                                                                onClick={() => handleReactivateSubject(subject.subjectId)}
-                                                                // sx={{ marginLeft: '1rem' }}
-                                                                startIcon={<UnarchiveIcon />}
-                                                            >
-                                                                Reactivate
-                                                            </Button>
-                                                        </div>
-
-                                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                                            <Tooltip title="Delete Subject">
-                                                                <Button
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteSubject(subject.subjectId)}
-                                                                    sx={{
-                                                                        color: '#d1566e',
-                                                                        fontSize: 'xl',
-                                                                        cursor: 'pointer',
-                                                                        minWidth: '40px',   // Ensures circle shape
-                                                                        width: '40px',      // Consistent width for circle
-                                                                        height: '40px',     // Ensures circle shape
-                                                                        padding: '6px',     // Inner spacing
-                                                                        borderRadius: '50%', // Circle shape
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center', // Centers the icon
-                                                                        '&:hover': {
-                                                                            transform: 'scale(1.05)',
-                                                                            backgroundColor: '#d1566e',
-                                                                            color: '#fff',
-                                                                        },
-                                                                    }}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </Button>
-                                                            </Tooltip>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))
-                                ) : (
+                                {archivedSubjects.length > 0 ? archivedSubjects.map(subject => (
+                                    <Grid item xs={12} sm={6} md={4} key={subject.subjectId}>
+                                        <Card variant="outlined">
+                                            <CardContent>
+                                                <Typography variant="h6">{subject.subjectName}</Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    Semester: {subject.subjectSemester || 'N/A'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" paddingBottom="5px">
+                                                    {subject.subjectDescription || 'No description provided.'}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        color="secondary"
+                                                        onClick={() => handleReactivateSubject(subject.subjectId)}
+                                                        startIcon={<UnarchiveIcon />}
+                                                    >
+                                                        Reactivate
+                                                    </Button>
+                                                    <Tooltip title="Delete Subject">
+                                                        <Button
+                                                            color="error"
+                                                            onClick={() => handleDeleteSubject(subject.subjectId)}
+                                                            sx={{
+                                                                color: '#d1566e',
+                                                                minWidth: '40px',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                p: '6px',
+                                                                borderRadius: '50%',
+                                                                '&:hover': {
+                                                                    transform: 'scale(1.05)',
+                                                                    backgroundColor: '#d1566e',
+                                                                    color: '#fff',
+                                                                },
+                                                            }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </Button>
+                                                    </Tooltip>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                )) : (
                                     <Grid item xs={12} display="flex" justifyContent="center" alignItems="center">
-                                        <Typography variant="body2" color="textSecondary" textAlign="center" gutterBottom>
+                                        <Typography variant="body2" color="textSecondary" textAlign="center">
                                             No archived subjects found.
                                         </Typography>
                                     </Grid>
@@ -273,77 +274,64 @@ const ArchivePage = () => {
                     {/* Archived Projects Section */}
                     <Accordion>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                            <Typography variant="h6">
-                                <ArchiveIcon sx={{ marginRight: '8px', color: '#ff7043' }} />
+                            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#ff7043' }}>
+                                <ArchiveIcon sx={{ mr: 1 }} />
                                 Archived Projects
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                             <Grid container spacing={2}>
-                                {archivedProjects.length > 0 ? (
-                                    archivedProjects.map(project => (
-                                        <Grid item xs={12} sm={6} md={4} key={project.projectId}>
-                                            <Card variant="outlined">
-                                                <CardContent>
-                                                    <Typography variant="h6">{project.projectName}</Typography>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Subjects: {project.projectSubjects?.map(s => s.subjectName).join(', ') || 'None'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        {project.projectDescription || 'No description provided.'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary" paddingBottom={'5px'}>
-                                                        Due Date: {project.projectDueDate ? formatDateDisplay(project.projectDueDate, user.dateFormat) : 'No Due Date'}
-                                                    </Typography>
-
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-right' }}>
-                                                            <Button
-                                                                variant="outlined"
-                                                                color="secondary"
-                                                                onClick={() => handleReactivateProject(project.projectId)}
-                                                                sx={{ marginTop: '0.5rem', marginRight: '0.5rem' }}
-                                                                startIcon={<UnarchiveIcon />}
-                                                            >
-                                                                Reactivate
-                                                            </Button>
-                                                        </div>
-                                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                                            <Tooltip title="Delete Project">
-                                                                <Button
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteProject(project.projectId)}
-                                                                    sx={{
-                                                                        color: '#d1566e',
-                                                                        fontSize: 'xl',
-                                                                        cursor: 'pointer',
-                                                                        minWidth: '40px',   // Ensures circle shape
-                                                                        width: '40px',      // Consistent width for circle
-                                                                        height: '40px',     // Ensures circle shape
-                                                                        padding: '6px',     // Inner spacing
-                                                                        borderRadius: '50%', // Circle shape
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center', // Centers the icon
-                                                                        '&:hover': {
-                                                                            transform: 'scale(1.05)',
-                                                                            backgroundColor: '#d1566e',
-                                                                            color: '#fff',
-                                                                        },
-                                                                    }}
-                                                                >
-                                                                    <DeleteIcon />
-                                                                </Button>
-                                                            </Tooltip>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))
-                                ) : (
+                                {archivedProjects.length > 0 ? archivedProjects.map(project => (
+                                    <Grid item xs={12} sm={6} md={4} key={project.projectId}>
+                                        <Card variant="outlined">
+                                            <CardContent>
+                                                <Typography variant="h6">{project.projectName}</Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    Subjects: {project.projectSubjects?.map(s => s.subjectName).join(', ') || 'None'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    {project.projectDescription || 'No description provided.'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" paddingBottom="5px">
+                                                    Due Date: {project.projectDueDate ? formatDateDisplay(project.projectDueDate, user.dateFormat) : 'No Due Date'}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        color="secondary"
+                                                        onClick={() => handleReactivateProject(project.projectId)}
+                                                        startIcon={<UnarchiveIcon />}
+                                                    >
+                                                        Reactivate
+                                                    </Button>
+                                                    <Tooltip title="Delete Project">
+                                                        <Button
+                                                            color="error"
+                                                            onClick={() => handleDeleteProject(project.projectId)}
+                                                            sx={{
+                                                                color: '#d1566e',
+                                                                minWidth: '40px',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                p: '6px',
+                                                                borderRadius: '50%',
+                                                                '&:hover': {
+                                                                    transform: 'scale(1.05)',
+                                                                    backgroundColor: '#d1566e',
+                                                                    color: '#fff',
+                                                                },
+                                                            }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </Button>
+                                                    </Tooltip>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                )) : (
                                     <Grid item xs={12} display="flex" justifyContent="center" alignItems="center">
-                                        <Typography variant="body2" color="textSecondary" textAlign="center" gutterBottom>
+                                        <Typography variant="body2" color="textSecondary" textAlign="center">
                                             No archived projects found.
                                         </Typography>
                                     </Grid>
@@ -351,10 +339,9 @@ const ArchivePage = () => {
                             </Grid>
                         </AccordionDetails>
                     </Accordion>
-                </>
-            )
-            }
-        </div >
+                </Box>
+            )}
+        </Box>
     );
 };
 
