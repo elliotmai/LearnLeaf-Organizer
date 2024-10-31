@@ -9,8 +9,8 @@ import ProjectFilterBar from './ProjectFilterBar.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import { Grid, useTheme, useMediaQuery, CircularProgress, Paper, Typography } from '@mui/material';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
-import '/src/Components/PageFormat.css';
-import '/src/Components/FilterBar.css';
+// import '/src/Components/PageFormat.css';
+// import '/src/Components/FilterBar.css';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -39,6 +39,7 @@ const ProjectsDashboard = () => {
     const loadFromIndexedDB = async () => {
         try {
             const activeProjects = (await getAllFromStore('projects')).filter(project => project.projectStatus === 'Active');
+            console.log("active projects:", activeProjects);
             const allSubjects = (await getAllFromStore('subjects'));
             const storedTasks = await getAllFromStore('tasks');
 
@@ -69,9 +70,13 @@ const ProjectsDashboard = () => {
                     projectSubjects
                 };
             });
+            
+            console.log("projects with details:", projectsWithDetails);
 
             const sortedSubjects = sortSubjects(allSubjects);
             const sortedProjects = sortProjects(projectsWithDetails);
+
+            console.log("sorted projects:", sortedProjects);
 
             setSubjects(sortedSubjects);
             setProjects(sortedProjects);
@@ -139,7 +144,7 @@ const ProjectsDashboard = () => {
     const itemsPerRow = getItemsPerRow();
 
     return (
-        <div className="view-container">
+        <div className="view-container"  width="80%" alignContent="center">
             <TopBar />
             <h1 style={{ color: '#907474' }}>{user?.name}'s Current Projects</h1>
             <ProjectFilterBar

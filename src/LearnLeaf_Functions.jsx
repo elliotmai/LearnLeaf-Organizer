@@ -291,13 +291,13 @@ export function registerUser(email, password, name) {
 
 export async function loginUser(email, password) {
     setUserIdAndCollections(null);
-            await Promise.all([
-                localStorage.clear(),
-                clearStore(TASKS_STORE),
-                clearStore(SUBJECTS_STORE),
-                clearStore(PROJECTS_STORE)
+    await Promise.all([
+        localStorage.clear(),
+        clearStore(TASKS_STORE),
+        clearStore(SUBJECTS_STORE),
+        clearStore(PROJECTS_STORE)
 
-            ]);
+    ]);
 
     return signInWithEmailAndPassword(auth, email, password)
         .then(async (userCredential) => {
@@ -374,13 +374,13 @@ export async function updateUserDetails(userId, userDetails) {
     try {
         await updateDoc(userDocRef, userDetails);
         setUserIdAndCollections(null);
-            await Promise.all([
-                localStorage.clear(),
-                clearStore(TASKS_STORE),
-                clearStore(SUBJECTS_STORE),
-                clearStore(PROJECTS_STORE)
+        await Promise.all([
+            localStorage.clear(),
+            clearStore(TASKS_STORE),
+            clearStore(SUBJECTS_STORE),
+            clearStore(PROJECTS_STORE)
 
-            ]);
+        ]);
     } catch (error) {
         console.error("Error updating user:", error);
     }
@@ -598,39 +598,44 @@ export async function editSubject(subjectDetails) {
 
 export async function deleteSubject(subjectId) {
     const subjectRef = doc(subjectCollection, subjectId);
-    const noneRef = doc(subjectCollection, 'None');
 
     try {
         // Delete the subject from Firebase and IndexedDB
         await deleteDoc(subjectRef);
         await deleteFromStore('subjects', subjectId);
 
-        // Query tasks that are linked to this subject
-        const tasksQuery = query(taskCollection, where('taskSubject', '==', subjectRef));
-        const tasksSnapshot = await getDocs(tasksQuery);
+        // Fetch all tasks and update those with the deleted subject
+        // Fetch all tasks
+        const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskSubject === subjectId);
 
-        // Update each task to set taskSubject to 'None'
-        const updatedTasks = [];
-        for (const taskDoc of tasksSnapshot.docs) {
-            const taskRef = taskDoc.ref;
-            const taskData = taskDoc.data();
-
-            const updatedTaskData = {
-                ...taskData,
-                taskId: taskRef.id,
-                taskSubject: 'None',
-                taskProject: taskData.taskProject?.id || 'None'  // Safely access taskProject ID
-            };
-
-            await updateDoc(taskRef, { taskSubject: noneRef }); // Update in Firebase
-            updatedTasks.push(updatedTaskData); // Prepare for IndexedDB
+        // Update each task that references this subject
+        for (const task of allTasks) {
+                // Change taskSubject to 'None'
+                task.taskSubject = 'None';
+                await editTask(task); // Call editTask with updated task
         }
 
-        // Update tasks in IndexedDB
-        await saveToStore('tasks', updatedTasks);
+        // Fetch all projects and update those containing the deleted subject
+        const allProjects = await getAllFromStore('projects');
+
+        const updatedProjects = [];
+        for (const project of allProjects) {
+            if (project.projectSubjects.includes(subjectId)) {
+                const updatedProject = { ...project };
+                
+                // If project has more than one subject, remove the specific subjectId
+                if (project.projectSubjects.length > 1) {
+                    updatedProject.projectSubjects = project.projectSubjects.filter(subj => subj !== subjectId);
+                } else {
+                    updatedProject.projectSubjects = ['None']; // Set to 'None' if it was the only subject
+                }
+
+                await editProject(updatedProject); // Call editProject to update in Firebase and IndexedDB
+            }
+        }
 
     } catch (error) {
-        console.error("Error deleting subject or updating tasks:", error);
+        console.error("Error deleting subject or updating tasks and projects:", error);
     }
 }
 
@@ -682,7 +687,12 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
     };
 
     // Check if projectSubjects is empty and set a default reference if it is
-    const subjectRefs = projectSubjects.map((subjId) => doc(subjectCollection, subjId))
+    const noneSubjectRef = doc('noneSubject', 'None');  // Reference to 'None' subject
+
+    const subjectRefs = projectSubjects.length > 0
+        ? projectSubjects.map((subjId) => doc(subjectCollection, subjId))
+        : [noneSubjectRef];  // If empty, set to 'None' subject reference
+
     projectData.projectSubjects = subjectRefs;
 
     if (projectDueDateInput) {
@@ -715,12 +725,16 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
 export async function editProject(projectDetails) {
     console.log(projectDetails);
 
+    const noneSubjectRef = doc('noneSubject', 'None');  // Reference to 'None' subject
+
     // Convert subject IDs to Firebase Document References
-    const subjectRefs = projectDetails.projectSubjects.map(subject => {
-        const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
-        return doc(subjectCollection, subjectId);
-    }).filter(ref => ref); // Filter out any undefined references
-    
+    const subjectRefs = projectDetails.projectSubjects.length > 0
+        ? projectDetails.projectSubjects.map(subject => {
+            const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
+            return doc(subjectCollection, subjectId);
+        }).filter(ref => ref) // Filter out any undefined references
+        : [noneSubjectRef]; // Default to 'None' reference if empty
+
     const subjectIds = subjectRefs.map(subject => subject.id);
 
     // Prepare data for Firebase with subject references
@@ -775,6 +789,17 @@ export async function deleteProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
 
     try {
+        // Fetch all tasks
+        const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
+
+        // Update each task that references this project
+        for (const task of allTasks) {
+            // Change taskProject to 'None'
+            task.taskProject = 'None';
+            await editTask(task); // Call editTask with updated task
+        }
+
+        // Delete the project from Firestore and IndexedDB
         await deleteDoc(projectRef);
         await deleteFromStore('projects', projectId);
     } catch (error) {
