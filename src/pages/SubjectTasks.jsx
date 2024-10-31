@@ -59,7 +59,6 @@ const SubjectTasks = () => {
             setProjects(allProjects);
 
             setIsLoading(false);
-            console.log('Data loaded from IndexedDB');
             return true;
         } catch (error) {
             console.error('Error loading data from IndexedDB:', error);
@@ -86,10 +85,8 @@ const SubjectTasks = () => {
         setIsAddTaskFormOpen(false);
     };
 
-    const handleAddTask = async (newTask) => {
-        const sortedTasks = sortTasks([...tasks, newTask]);
-        setTasks(sortedTasks);
-        console.log("Task added, state and IndexedDB updated");
+    const handleAddTask = async () => {
+        updateState();
     };
 
     const handleDeleteTask = async (taskId) => {
@@ -98,7 +95,6 @@ const SubjectTasks = () => {
             try {
                 await deleteTask(taskId);
                 setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
-                console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -136,7 +132,6 @@ const SubjectTasks = () => {
             return sortTasks(updatedTasks);
         });
 
-        console.log("Task updated, state and IndexedDB updated");
     };
 
     return (
@@ -153,7 +148,7 @@ const SubjectTasks = () => {
                             tasks={tasks}
                             subjects={subjects}
                             projects={projects}
-                            refreshTasks={updateState}
+                            onAddTask={handleAddTask}
                             onDelete={handleDeleteTask}
                             onUpdateTask={handleEditTask}
                             initialSubject={pageSubject.subjectId}

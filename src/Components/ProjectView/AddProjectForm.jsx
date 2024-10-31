@@ -156,6 +156,7 @@ export function AddProjectForm({ subjects, isOpen, onClose, refreshProjects }) {
                                 >
                                     <MenuItem value="None">Select Subject...</MenuItem>
                                     {subjects
+                                        .sort((a, b) => a.subjectName.localeCompare(b.subjectName))
                                         .filter(subject => subject.subjectId !== 'None' && subject.subjectStatus === 'Active')
                                         .map((subject) => (
                                             <MenuItem key={subject.subjectId} value={subject.subjectId}>

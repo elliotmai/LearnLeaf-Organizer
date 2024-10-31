@@ -6,6 +6,8 @@ import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import { getAllFromStore } from '/src/db.js';
+import { Button, Grid } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '/src/Components/PageFormat.css';
 
@@ -23,13 +25,13 @@ const CalendarView = () => {
             const formattedDate = format(localDate, 'yyyy-MM-dd');
             setCurrentDate(formattedDate); // Updates current date in the local time zone
         }, 1000);
-    
+
         return () => clearInterval(intervalId);
     }, []);
 
     // Helper function to format a task for the calendar
     const formatTask = (task) => {
-        
+
         return {
             allDay: true,
             start: new Date(task.taskDueDate + 'T00:00:00'),
@@ -39,7 +41,7 @@ const CalendarView = () => {
                 ...task,
             },
             style: {
-                backgroundColor: task.taskStatus === 'Completed' ? 'grey' : (task.taskSubject?.subjectColor || '#3174ad')
+                backgroundColor: task.taskStatus === 'Completed' ? '#dedede' : (task.taskSubject?.subjectColor || '#3174ad')
             }
         };
     };
@@ -89,7 +91,6 @@ const CalendarView = () => {
     const handleAddTask = async (newTask) => {
         const formattedTask = formatTask(newTask);
         setEvents([...events, formattedTask]);
-        console.log("Task added, state and IndexedDB updated");
     };
 
     const handleDeleteTask = async (taskId) => {
@@ -98,7 +99,6 @@ const CalendarView = () => {
             try {
                 await deleteTask(taskId);
                 setEvents(prevEvents => prevEvents.filter(event => event.task.taskId !== taskId));
-                console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -110,13 +110,29 @@ const CalendarView = () => {
         setEvents(prevEvents => prevEvents.map(event =>
             event.task.taskId === updatedTask.taskId ? formattedUpdatedTask : event
         ));
-        console.log("Task updated, state and IndexedDB updated");
     };
 
     return (
-        <div className="view-container">
+        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <button className="fab" onClick={toggleFormVisibility}>+</button>
+            <Grid container direction="column" alignItems="center" justifyItems="center" width="100%">
+                <Button
+                    onClick={toggleFormVisibility}
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    sx={{
+                        color: '#355147',
+                        borderColor: '#355147',
+                        marginTop: 2,
+                        '&:hover': {
+                            backgroundColor: '#355147',
+                            color: '#fff',
+                        },
+                    }}
+                >
+                    Add New Task
+                </Button>
+            </Grid>
             <CalendarUI
                 events={events}
                 refreshTasks={loadFromIndexedDB}

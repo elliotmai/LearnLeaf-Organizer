@@ -77,7 +77,7 @@ const CalendarUI = ({ events, refreshTasks, subjects, projects }) => {
     };
 
     return (
-        <div style={{ height: 700, paddingTop: '20px' }}>
+        <div style={{ height: 700, width: '95%', paddingTop: '20px', alignSelf: 'center' }}>
             <Calendar
                 localizer={localizer}
                 events={events}

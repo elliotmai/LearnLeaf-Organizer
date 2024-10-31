@@ -11,7 +11,7 @@ import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 
-const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateState, initialSubject, initialProject }) => {
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTask, initialSubject, initialProject }) => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [listHeight, setListHeight] = useState(window.innerHeight - 200); // Default initial height
 
@@ -185,7 +185,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
                 <AddTaskForm
                     isOpen={isAddTaskFormOpen}
                     onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}
+                    onAddTask={onAddTask}
                     subjects={subjects}
                     projects={projects}
                     initialSubject={initialSubject}

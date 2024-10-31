@@ -143,56 +143,52 @@ const ArchivePage = () => {
                             <List>
                                 {completedTasks.length > 0 ? completedTasks.map(task => (
                                     <ListItem key={task.taskId} divider>
-                                        <ListItemText
-                                            primary={<Typography variant="subtitle1">{task.taskName}</Typography>}
-                                            secondary={
-                                                <>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        {task.taskDescription || 'No description provided.'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Subject: {task.taskSubject?.subjectName || 'None'}
-                                                        <br />
-                                                        Project: {task.taskProject?.projectName || 'None'}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                                                        Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', mt: 1 }}>
-                                                        <Button
-                                                            variant="outlined"
-                                                            color="secondary"
-                                                            onClick={() => handleChangeStatus(task)}
-                                                            startIcon={<RemoveDoneIcon />}
-                                                            sx={{ mr: 1 }}
-                                                        >
-                                                            Reactivate
-                                                        </Button>
-                                                        <Tooltip title="Delete Task">
-                                                            <Button
-                                                                color="error"
-                                                                onClick={() => handleDeleteTask(task.taskId)}
-                                                                sx={{
-                                                                    color: '#d1566e',
-                                                                    minWidth: '40px', // Consistent width
-                                                                    width: '40px',
-                                                                    height: '40px',
-                                                                    p: '6px',
-                                                                    borderRadius: '50%',
-                                                                    '&:hover': {
-                                                                        transform: 'scale(1.05)',
-                                                                        backgroundColor: '#d1566e',
-                                                                        color: '#fff',
-                                                                    },
-                                                                }}
-                                                            >
-                                                                <DeleteIcon />
-                                                            </Button>
-                                                        </Tooltip>
-                                                    </Box>
-                                                </>
-                                            }
-                                        />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                            <Typography variant="subtitle1">{task.taskName}</Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                {task.taskDescription || 'No description provided.'}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Subject: {task.taskSubject?.subjectName || 'None'}
+                                                <br />
+                                                Project: {task.taskProject?.projectName || 'None'}
+                                            </Typography>
+                                            <Typography variant="body2" color="textSecondary">
+                                                Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', mt: 1 }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    onClick={() => handleChangeStatus(task)}
+                                                    startIcon={<RemoveDoneIcon />}
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    Reactivate
+                                                </Button>
+                                                <Tooltip title="Delete Task">
+                                                    <Button
+                                                        color="error"
+                                                        onClick={() => handleDeleteTask(task.taskId)}
+                                                        sx={{
+                                                            color: '#d1566e',
+                                                            minWidth: '40px',
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            p: '6px',
+                                                            borderRadius: '50%',
+                                                            '&:hover': {
+                                                                transform: 'scale(1.05)',
+                                                                backgroundColor: '#d1566e',
+                                                                color: '#fff',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </Button>
+                                                </Tooltip>
+                                            </Box>
+                                        </Box>
                                     </ListItem>
                                 )) : (
                                     <Typography variant="body2" color="textSecondary">No completed tasks found.</Typography>

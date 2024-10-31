@@ -87,10 +87,8 @@ const ProjectTasks = () => {
         setIsAddTaskFormOpen(false);
     };
 
-    const handleAddTask = async (newTask) => {
-        const sortedTasks = sortTasks([...tasks, newTask]);
-        setTasks(sortedTasks);
-        console.log("Task added, state and IndexedDB updated");
+    const handleAddTask = async () => {
+        updateState();
     };
 
     const handleDeleteTask = async (taskId) => {
@@ -136,8 +134,6 @@ const ProjectTasks = () => {
             // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
-
-        console.log("Task updated, state and IndexedDB updated");
     };
 
     return (
@@ -154,7 +150,7 @@ const ProjectTasks = () => {
                         tasks={tasks}
                         subjects={subjects}
                         projects={projects}
-                        refreshTasks={updateState}
+                        onAddTask={handleAddTask}
                         onDelete={handleDeleteTask}
                         onUpdateTask={handleEditTask}
                         initialProject={pageProject.projectId}

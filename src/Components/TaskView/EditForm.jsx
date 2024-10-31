@@ -135,7 +135,6 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
             updatedTaskDetails.taskProject = addedProject.projectId;
         }
 
-        console.log(updatedTaskDetails);
         const newTaskData = await editTask(updatedTaskDetails);
 
         onSave(newTaskData);
@@ -196,6 +195,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                                 >
                                     <MenuItem value="None">Select Subject...</MenuItem>
                                     {subjects
+                                        .sort((a, b) => a.subjectName.localeCompare(b.subjectName))
                                         .filter(subject => subject.subjectStatus === "Active")
                                         .map((subject) => (
                                             <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
@@ -226,6 +226,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
                                 >
                                     <MenuItem value="None">Select Project...</MenuItem>
                                     {projects
+                                        .sort((a, b) => a.projectName.localeCompare(b.projectName))
                                         .filter(project => project.projectStatus === "Active")
                                         .map((project) => (
                                             <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>

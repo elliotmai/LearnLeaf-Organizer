@@ -81,7 +81,7 @@ const TaskList = () => {
         setIsAddTaskFormOpen(false);
     };
 
-    const handleAddTask = async (newTask) => {
+    const handleAddTask = async () => {
         // const sortedTasks = sortTasks([...tasks, newTask]);
         // setTasks(sortedTasks);
         updateState();
@@ -154,7 +154,7 @@ const TaskList = () => {
                             projects={projects}
                             onDelete={handleDeleteTask}
                             onUpdateTask={handleEditTask}
-                            updateState={updateState}
+                            onAddTask={handleAddTask}
                         />
                     )}
                 </div>
