@@ -31,7 +31,7 @@ const TopBar = () => {
     };
 
     const logoStyle = {
-        width: isSmallScreen ? '40%' : '50%',
+        width: isSmallScreen ? '40%' : '40%',
         display: 'block',
         margin: 'auto',
     };
