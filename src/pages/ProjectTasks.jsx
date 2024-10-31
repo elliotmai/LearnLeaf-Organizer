@@ -144,17 +144,6 @@ const ProjectTasks = () => {
     return (
         <div className="view-container">
             <TopBar />
-            <button className="fab" onClick={toggleFormVisibility}>+</button>
-            {isAddTaskFormOpen && (
-                <AddTaskForm
-                    isOpen={isAddTaskFormOpen}
-                    onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}
-                    subjects={subjects}
-                    projects={projects}
-                    initialProject={pageProject?.projectId}
-                />
-            )}
 
             <div>
                 <h1 style={{ color: '#907474' }}>
@@ -169,6 +158,7 @@ const ProjectTasks = () => {
                         refreshTasks={updateState}
                         onDelete={handleDeleteTask}
                         onUpdateTask={handleEditTask}
+                        initialProject={pageProject.projectId}
                     />
                 ) : (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>

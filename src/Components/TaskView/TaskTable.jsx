@@ -11,8 +11,20 @@ import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 
-const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateState }) => {
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateState, initialSubject, initialProject }) => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
+    const [listHeight, setListHeight] = useState(window.innerHeight - 350); // Default initial height
+
+    useEffect(() => {
+        // Update list height on window resize
+        const updateListHeight = () => {
+            setListHeight(window.innerHeight - 260); // Adjust as needed for header/footer heights
+        };
+
+        window.addEventListener('resize', updateListHeight);
+        return () => window.removeEventListener('resize', updateListHeight);
+    }, []);
+
     const [filterCriteria, setFilterCriteria] = useState({
         searchQuery: '',
         taskPriority: '',
@@ -136,28 +148,36 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
     const Row = React.memo(({ index, style }) => {
         const startIndex = index * itemsPerRow;
         return (
-            <div style={style}>
-                <Grid container spacing={2} className="task-widgets">
-                    {Array(itemsPerRow)
-                        .fill(null)
-                        .map((_, i) => {
-                            const taskIndex = startIndex + i;
-                            return taskIndex < filteredTasks.length ? (
-                                <Grid item xs={12} sm={12} md={6} lg={4} xl={3} key={filteredTasks[taskIndex].taskId}>
-                                    <TaskWidget
-                                        task={filteredTasks[taskIndex]}
-                                        onDelete={onDelete}
-                                        subjects={subjects}
-                                        projects={projects}
-                                        onUpdateTask={onUpdateTask}
-                                    />
-                                </Grid>
-                            ) : null;
-                        })}
+            <div style={{ ...style, paddingBottom: '10px' }}> {/* Add padding to the row */}
+                <Grid container spacing={2} className="task-widgets" style={{ padding: '10px 0' }}>
+                    {Array(itemsPerRow).fill(null).map((_, i) => {
+                        const taskIndex = startIndex + i;
+                        return taskIndex < filteredTasks.length ? (
+                            <Grid
+                                item
+                                xs={12}
+                                sm={6}
+                                md={4}
+                                lg={3}
+                                xl={3}
+                                key={filteredTasks[taskIndex].taskId}
+                                style={{ marginBottom: '10px', minHeight: rowHeight }} // Ensure consistent row height
+                            >
+                                <TaskWidget
+                                    task={filteredTasks[taskIndex]}
+                                    onDelete={onDelete}
+                                    subjects={subjects}
+                                    projects={projects}
+                                    onUpdateTask={onUpdateTask}
+                                />
+                            </Grid>
+                        ) : null;
+                    })}
                 </Grid>
             </div>
         );
     });
+
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -168,6 +188,8 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
                     onAddTask={handleAddTask}
                     subjects={subjects}
                     projects={projects}
+                    initialSubject={initialSubject}
+                    initialProject={initialProject}
                 />
             )}
 
@@ -188,7 +210,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
                 }}
             >
 
-                <Box display="flex" justifyContent="center">
+                <Box display="flex" justifyContent="center" marginBottom="0.5%">
                     <TaskFilterBar
                         filterCriteria={filterCriteria}
                         setFilterCriteria={setFilterCriteria}
@@ -204,7 +226,6 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
                     sx={{
                         color: '#355147',
                         borderColor: '#355147',
-                        marginTop: 2,
                         '&:hover': {
                             backgroundColor: '#355147',
                             color: '#fff',
@@ -215,35 +236,37 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateS
                 </Button>
             </Grid>
 
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-                {tasks.length > 0 ? (
-                    <List height={850} itemCount={totalRows} itemSize={rowHeight} width="100%">
-                        {({ index, style }) => (
-                            <Row index={index} style={style} />
-                        )}
-                    </List>
-                ) : (
-                    <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
-                        <Paper
-                            elevation={3}
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '2rem',
-                                backgroundColor: '#f5f5f5',
-                                width: '90%',
-                            }}
-                        >
-                            <AssignmentTurnedInIcon sx={{ fontSize: 50, color: '#64b5f6', marginBottom: '1rem' }} />
-                            <Typography variant="h6" color="textSecondary">No tasks found!</Typography>
-                            <Typography variant="body2" color="textSecondary" textAlign="center">
-                                You have no upcoming tasks. Add a new task to stay organized!
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                )}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                <Box sx={{ margin: '20px' }}> {/* Adjust margin as needed */}
+                    {tasks.length > 0 ? (
+                        <List height={listHeight} itemCount={totalRows} itemSize={rowHeight} width="100%">
+                            {({ index, style }) => (
+                                <Row index={index} style={style} />
+                            )}
+                        </List>
+                    ) : (
+                        <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '2rem',
+                                    backgroundColor: '#f5f5f5',
+                                    width: '90%',
+                                }}
+                            >
+                                <AssignmentTurnedInIcon sx={{ fontSize: 50, color: '#64b5f6', marginBottom: '1rem' }} />
+                                <Typography variant="h6" color="textSecondary">No tasks found!</Typography>
+                                <Typography variant="body2" color="textSecondary" textAlign="center">
+                                    You have no upcoming tasks. Add a new task to stay organized!
+                                </Typography>
+                            </Paper>
+                        </Grid>
+                    )}
+                </Box>
             </div>
         </div>
     );

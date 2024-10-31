@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { editProject, addSubject } from '/src/LearnLeaf_Functions.jsx';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import InputLabel from '@mui/material/InputLabel';
-import { getAllFromStore, saveToStore } from '/src/db.js'; // Use IndexedDB functions
+import {
+    Modal,
+    Box,
+    TextField,
+    Button,
+    FormControl,
+    Select,
+    MenuItem,
+    InputLabel,
+    Typography,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 // Styles
 const boxStyle = {
@@ -16,19 +20,21 @@ const boxStyle = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: '90%',
+    maxWidth: 500,
     bgcolor: 'background.paper',
     boxShadow: 24,
     pt: 2,
     pb: 3,
     px: 4,
+    borderRadius: '12px',
 };
 
 const submitButtonStyle = {
     backgroundColor: '#B6CDC8',
     color: '#355147',
     '&:hover': {
-        backgroundColor: '#a8bdb8',
+        backgroundColor: '#A8BDB8',
         transform: 'scale(1.03)',
     },
 };
@@ -38,8 +44,8 @@ const cancelButtonStyle = {
     marginLeft: 1,
     '&:hover': {
         color: '#fff',
-        backgroundColor: '#ff5252'
-    }
+        backgroundColor: '#ff5252',
+    },
 };
 
 export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) => {
@@ -97,7 +103,15 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
     return (
         <Modal open={isOpen} onClose={onClose}>
             <Box sx={boxStyle}>
-                <h2 style={{ color: "#8E5B9F" }}>Edit Project</h2>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+                        Edit Project
+                    </Typography>
+                    <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
                 <form noValidate autoComplete="off" onSubmit={handleSubmit}>
                     <TextField
                         fullWidth
@@ -107,6 +121,7 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         value={formValues.projectName}
                         onChange={(e) => setFormValues({ ...formValues, projectName: e.target.value })}
                         required
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
 
                     <TextField
@@ -118,9 +133,9 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         onChange={(e) => setFormValues({ ...formValues, projectDescription: e.target.value })}
                         multiline
                         maxRows={4}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
 
-                    {/* Multiple Subject Dropdowns */}
                     {formValues.projectSubjects.map((projectSubject, index) => (
                         <FormControl fullWidth margin="normal" key={index}>
                             <InputLabel id={`subject-select-label-${index}`}>Subject</InputLabel>
@@ -129,19 +144,19 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                                 id={`subject-select-${index}`}
                                 value={projectSubject.subjectId || projectSubject || 'None'}
                                 onChange={(e) => handleInputChange(index, e.target.value)}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                             >
                                 <MenuItem value="None">Select Subject...</MenuItem>
                                 {subjects
-                                    .filter((subject) => 
-                                        (subject.subjectStatus === 'Active' ||
-                                        subject.subjectId === projectSubject.subjectId) &&
-                                        subject.subjectId !== "None"
+                                    .filter((subject) =>
+                                        (subject.subjectStatus === 'Active' || subject.subjectId === projectSubject.subjectId) &&
+                                        subject.subjectId !== 'None'
                                     )
                                     .map((subject) => (
-                                    <MenuItem key={subject.subjectId} value={subject.subjectId}>
-                                        {subject.subjectName}
-                                    </MenuItem>
-                                ))}
+                                        <MenuItem key={subject.subjectId} value={subject.subjectId}>
+                                            {subject.subjectName}
+                                        </MenuItem>
+                                    ))}
                                 <MenuItem value="newSubject">Add New Subject...</MenuItem>
                             </Select>
                         </FormControl>
@@ -156,6 +171,7 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                             value={newSubjectName}
                             onChange={(e) => setNewSubjectName(e.target.value)}
                             required
+                            sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                         />
                     )}
 
@@ -163,9 +179,9 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         variant="text"
                         onClick={addSubjectDropdown}
                         style={{
-                            color: "#8E5B9F",
-                            fontWeight: "italics",
-                            backgroundColor: "transparent"
+                            color: '#8E5B9F',
+                            fontWeight: 'bold',
+                            backgroundColor: 'transparent'
                         }}
                     >
                         Add Another Subject
@@ -180,7 +196,9 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         value={formValues.projectDueDate}
                         onChange={(e) => setFormValues({ ...formValues, projectDueDate: e.target.value })}
                         InputLabelProps={{ shrink: true }}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
+
                     <TextField
                         fullWidth
                         margin="normal"
@@ -190,15 +208,17 @@ export const EditProjectForm = ({ project, subjects, isOpen, onClose, onSave }) 
                         value={formValues.projectDueTime}
                         onChange={(e) => setFormValues({ ...formValues, projectDueTime: e.target.value })}
                         InputLabelProps={{ shrink: true }}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
-                    <div style={{ marginTop: 16 }}>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                         <Button sx={submitButtonStyle} type="submit">
-                            Submit
+                            Save Changes
                         </Button>
                         <Button sx={cancelButtonStyle} onClick={onClose}>
                             Cancel
                         </Button>
-                    </div>
+                    </Box>
                 </form>
             </Box>
         </Modal>

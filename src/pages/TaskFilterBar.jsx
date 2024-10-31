@@ -18,7 +18,6 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                 onChange={handleAccordionChange}
                 sx={{
                     borderRadius: 2, // Rounded corners
-                    mb: 2, // Padding/margin below the accordion
                     boxShadow: 2, // Box shadow for a little elevation
                 }}
             >

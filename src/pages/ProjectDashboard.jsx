@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useUser } from '/src/UserState.jsx';
+import React, { useEffect, useState, useCallback } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import { useNavigate } from 'react-router-dom';
-import { sortSubjects, sortProjects, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
+import { sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import debounce from 'lodash.debounce';
+import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
 import { AddProjectForm } from '/src/Components/ProjectView/AddProjectForm.jsx';
 import ProjectWidget from '/src/Components/ProjectView/ProjectWidget.jsx';
 import ProjectFilterBar from './ProjectFilterBar.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import { Grid, useTheme, useMediaQuery, CircularProgress, Paper, Typography } from '@mui/material';
+import { Grid, CircularProgress, Paper, Typography, Box, Button, useTheme, useMediaQuery } from '@mui/material';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
-// import '/src/Components/PageFormat.css';
-// import '/src/Components/FilterBar.css';
+import AddIcon from '@mui/icons-material/Add';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -70,7 +71,7 @@ const ProjectsDashboard = () => {
                     projectSubjects
                 };
             });
-            
+
             console.log("projects with details:", projectsWithDetails);
 
             const sortedSubjects = sortSubjects(allSubjects);
@@ -140,62 +141,116 @@ const ProjectsDashboard = () => {
         setFilterCriteria({ searchProject: '', searchSubject: '', searchDescription: '', dueDate: '', dueDateComparison: '' });
     };
 
-    const filteredProjects = getFilteredProjects();
     const itemsPerRow = getItemsPerRow();
+    const rowHeight = 600;
+    const filteredProjects = getFilteredProjects();
+    const totalRows = Math.ceil(filteredProjects.length / itemsPerRow);
+
+    const Row = React.memo(({ index, style }) => {
+        const startIndex = index * itemsPerRow;
+        return (
+            <div style={style}>
+                <Grid container spacing={2}>
+                    {Array(itemsPerRow).fill(null).map((_, i) => {
+                        const projectIndex = startIndex + i;
+                        return projectIndex < filteredProjects.length ? (
+                            <Grid item xs={12} sm={6} md={4} key={filteredProjects[projectIndex].projectId}>
+                                <ProjectWidget
+                                    project={filteredProjects[projectIndex]}
+                                    subjects={subjects}
+                                    refreshProjects={loadFromIndexedDB}
+                                />
+                            </Grid>
+                        ) : null;
+                    })}
+                </Grid>
+            </div>
+        );
+    });
 
     return (
-        <div className="view-container"  width="80%" alignContent="center">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <TopBar />
-            <h1 style={{ color: '#907474' }}>{user?.name}'s Current Projects</h1>
-            <ProjectFilterBar
-                filterCriteria={filterCriteria}
-                setFilterCriteria={setFilterCriteria}
-                clearFilters={clearFilters}
-            />
-            <Grid container spacing={3} className="projects-grid">
-                {isLoading ? (
-                    <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
-                        <CircularProgress />
-                    </Grid>
-                ) : filteredProjects.length > 0 ? (
-                    filteredProjects.map((project) => (
-                        <Grid item xs={12} sm={6} md={4} key={project.projectId}>
-                            <ProjectWidget
-                                project={project}
-                                subjects={subjects}
-                                refreshProjects={loadFromIndexedDB}
-                            />
-                        </Grid>
-                    ))
-                ) : (
-                    <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
-                        <Paper
-                            elevation={3}
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '2rem',
-                                backgroundColor: '#f5f5f5',
-                                margin: '2rem 0',
-                                width: '90%'
-                            }}
-                        >
-                            <EmojiNatureIcon sx={{ fontSize: 50, color: '#4caf50', marginBottom: '1rem' }} />
-                            <Typography variant="h6" color="textSecondary">
-                                No projects found!
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary" textAlign="center">
-                                It looks like you haven't added any projects yet. Click the + button to start your first project!
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                )}
+            <Grid container direction="column" alignItems="center" justifyItems="center" width="100%" margin="auto">
+                <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {user?.name}'s Current Projects
+                </Typography>
+                <Grid
+                    container
+                    alignItems="center"
+                    justifyContent="center"
+                    spacing={1}
+                    paddingBottom="10px"
+                    paddingTop="10px"
+                    width="90%"
+                    position="relative"
+                    sx={{
+                        borderTop: "1px solid #d9d9d9",
+                        borderBottom: "1px solid #d9d9d9",
+                        margin: "auto",
+                        flexDirection: "column",
+                    }}
+                >
+
+                    <Box display="flex" justifyContent="center">
+                        <ProjectFilterBar
+                            filterCriteria={filterCriteria}
+                            setFilterCriteria={setFilterCriteria}
+                            clearFilters={clearFilters}
+                        />
+                    </Box>
+                    <Button
+                        onClick={handleOpen}
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        sx={{
+                            color: '#355147',
+                            borderColor: '#355147',
+                            marginTop: 2,
+                            '&:hover': {
+                                backgroundColor: '#355147',
+                                color: '#fff',
+                            },
+                        }}
+                    >
+                        Add New Project
+                    </Button>
+                </Grid>
             </Grid>
-            <button className="fab" onClick={handleOpen}>
-                +
-            </button>
+            <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1%'}}>
+                    {isLoading ? (
+                        <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
+                            <CircularProgress />
+                        </Grid>
+                    ) : filteredProjects.length > 0 ? (
+                        <List height={550} itemCount={totalRows} itemSize={rowHeight} width="100%">
+                            {({ index, style }) => <Row index={index} style={style} />}
+                        </List>
+                    ) : (
+                        <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '2rem',
+                                    backgroundColor: '#f5f5f5',
+                                    width: '90%',
+                                }}
+                            >
+                                <EmojiNatureIcon sx={{ fontSize: 50, color: '#4caf50', marginBottom: '1rem' }} />
+                                <Typography variant="h6" color="textSecondary">No projects found!</Typography>
+                                <Typography variant="body2" color="textSecondary" textAlign="center">
+                                    It looks like you haven't added any projects yet. Click the + button to start your first project!
+                                </Typography>
+                            </Paper>
+                        </Grid>
+                    )}
+                </div>
+            </Grid>
             {isOpen && (
                 <AddProjectForm
                     subjects={subjects}

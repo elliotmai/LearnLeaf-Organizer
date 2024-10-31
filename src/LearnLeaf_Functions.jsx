@@ -686,12 +686,7 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
         projectStatus: 'Active'
     };
 
-    // Check if projectSubjects is empty and set a default reference if it is
-    const noneSubjectRef = doc('noneSubject', 'None');  // Reference to 'None' subject
-
-    const subjectRefs = projectSubjects.length > 0
-        ? projectSubjects.map((subjId) => doc(subjectCollection, subjId))
-        : [noneSubjectRef];  // If empty, set to 'None' subject reference
+    const subjectRefs = projectSubjects.map((subjId) => doc(subjectCollection, subjId));
 
     projectData.projectSubjects = subjectRefs;
 
@@ -725,15 +720,12 @@ export async function addProject({ projectDueDateInput, projectDueTimeInput, pro
 export async function editProject(projectDetails) {
     console.log(projectDetails);
 
-    const noneSubjectRef = doc('noneSubject', 'None');  // Reference to 'None' subject
 
     // Convert subject IDs to Firebase Document References
-    const subjectRefs = projectDetails.projectSubjects.length > 0
-        ? projectDetails.projectSubjects.map(subject => {
+    const subjectRefs = projectDetails.projectSubjects.map(subject => {
             const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
             return doc(subjectCollection, subjectId);
-        }).filter(ref => ref) // Filter out any undefined references
-        : [noneSubjectRef]; // Default to 'None' reference if empty
+        }).filter(ref => ref);
 
     const subjectIds = subjectRefs.map(subject => subject.id);
 

@@ -60,11 +60,6 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
         }
     };
 
-    const handleProjectClick = () => {
-        ProjectTasks(project);
-        navigate(`/projects/${project.projectId}`);
-    };
-
     return (
         <>
             <EditProjectForm
@@ -79,29 +74,31 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
             />
             <Card
                 sx={{
-                    border: '3px solid', // Add border style to make it visible
-                    borderRadius: '8px',
-                    borderColor: 'black', // Use dynamic color value
+                    borderRadius: '16px',
+                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+                    padding: '16px',
+                    backgroundColor: '#f9f9f9',
+                    transition: 'transform 0.2s ease-in-out',
                 }}
             >
                 <CardContent>
                     <Tooltip title="View Associated Tasks">
                         <Link
-                            href={`/projects/${project.projectId}`} // Correct internal link for projects
-                            underline="hover"
+                            href={`/projects/${project.projectId}`}
                             variant="h6"
-                            color="inherit"
                             sx={{
-                                color: '#355147',
-                                display: 'block',
+                                textDecoration: 'none',
                                 fontWeight: 'bold',
-                                fontSize: '22px',
+                                color: '#355147',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                '&:hover': { color: '#5B8E9F' },
                             }}
-
                         >
                             {project.projectName}
                         </Link>
                     </Tooltip>
+
 
                     <Typography variant="body2" color="textSecondary" gutterBottom>
                         {project.projectSubjects && project.projectSubjects.length > 0 && project.projectSubjects[0].subjectId !== 'None'
@@ -109,138 +106,87 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                             : ''}
                     </Typography>
 
-                    <Typography
-                        variant="body2"
-                        color="textSecondary"
-                        onClick={() => setDescriptionOpen(true)}
-                        sx={{
-                            whiteSpace: 'pre-wrap',
-                            fontStyle: 'italic',
-                            textAlign: 'center',
-                            padding: '8px',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            textOverflow: 'ellipsis',
-                        }}
-                    >
-                        {project.projectDescription}
-                    </Typography>
-
-                    {/* Dialog to show full description */}
-                    <Dialog
-                        open={isDescriptionOpen}
-                        onClose={() => setDescriptionOpen(false)}
-                        aria-labelledby="description-dialog-title"
-                    >
+                    {project.projectDescription && (
+                        <Tooltip title="Click to view full description">
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                onClick={() => setDescriptionOpen(true)}
+                                sx={{
+                                    fontStyle: 'italic',
+                                    color: '#5B8E9F',
+                                    whiteSpace: 'pre-wrap',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    cursor: 'pointer',
+                                    padding: '8px 0',
+                                    textAlign: 'center',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#f1f3f4',
+                                }}
+                            >
+                                {project.projectDescription}
+                            </Typography>
+                        </Tooltip>
+                    )}
+                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
                         <DialogTitle
                             sx={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                paddingRight: '16px'
+                                paddingRight: '16px',
                             }}
                         >
                             Full Description
-                            <IconButton
-                                aria-label="close"
-                                onClick={() => setDescriptionOpen(false)}
-                                sx={{
-                                    color: (theme) => theme.palette.grey[500],
-                                }}
-                            >
+                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
                                 <CloseIcon />
                             </IconButton>
                         </DialogTitle>
-                        <DialogContent>
+                        <DialogContent
+                            dividers
+                            sx={{
+                                maxHeight: '400px', // Set your desired max height
+                                overflowY: 'auto', // Enable vertical scrolling
+                            }}
+                        >
                             <Typography
                                 variant="body2"
                                 color="textSecondary"
                                 sx={{
                                     whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
                                     fontStyle: 'italic',
                                 }}
                             >
                                 {project.projectDescription}
                             </Typography>
                         </DialogContent>
+
                     </Dialog>
 
                     {project.nextTaskName ? (
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: '#9F6C5B',
-                                fontWeight: 'bold',
-                                paddingBottom: '1rem'
-                            }}
-                        > {/* Custom color for next task */}
+                        <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}>
                             Next Task: {project.nextTaskName} <br />
-                            {project.nextTaskDueDate ? (
-                                <>
-                                    Due: {formatDateDisplay(project.nextTaskDueDate)} {project.nextTaskDueTime && ` at ${formatTimeDisplay(project.nextTaskDueTime)}`}
-                                </>
-                            ) : (
-                                'No Due Date Set'
-                            )}
+                            {project.nextTaskDueDate ? `Due: ${formatDateDisplay(project.nextTaskDueDate)} ${project.nextTaskDueTime ? `at ${formatTimeDisplay(project.nextTaskDueTime)}` : ''}` : 'No Due Date Set'}
                         </Typography>
                     ) : (
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: '#9F6C5B',
-                                fontWeight: 'bold'
-                            }}
-                        > {/* Custom color for no tasks */}
-                            No Upcoming Tasks
-                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}>No Upcoming Tasks</Typography>
                     )}
 
-                    {/* PieChart with Conditional Centering */}
                     {data.some((entry) => entry.value > 0) && (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: isLargeScreen ? 'flex-start' : 'center', // Center chart on small screens
-                                alignItems: 'center',
-                                mt: 2,
-                                mb: 2,
-                            }}
-                        >
-                            <PieChart
-                                width={isLargeScreen ? 400 : 300}
-                                height={isLargeScreen ? 150 : 200}
-                            >
-                                <Pie
-                                    data={data}
-                                    cx="50%" // Center the chart on small screens
-                                    cy="50%"
-                                    outerRadius={70}
-                                    innerRadius={40}
-                                    dataKey="value"
-                                >
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, mb: 2 }}>
+                            <PieChart width={300} height={200}>
+                                <Pie data={data} cx="50%" cy="50%" outerRadius={70} innerRadius={40} dataKey="value">
                                     {data.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                                     ))}
                                 </Pie>
                                 <RechartsTooltip />
-
-                                {/* Conditionally Render Legend only for Large Screens */}
-                                {isLargeScreen ? (
-                                    <Legend
-                                        layout="vertical"
-                                        verticalAlign="middle"
-                                        align="right"
-                                    />
-                                ) : (
-                                    <Legend
-                                        layout="horizontal"
-                                        verticalAlign="bottom"
-                                        align="center"
-                                    />
-                                )}
+                                <Legend layout="horizontal" verticalAlign="bottom" align="center" />
                             </PieChart>
                         </Box>
                     )}
@@ -250,7 +196,8 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                         sx={{
                             color: '#9F6C5B',
                             fontWeight: 'bold',
-                            paddingTop: '1rem'
+                            paddingTop: '1rem',
+                            textAlign: 'center',
                         }}
                     >
                         {project.projectDueDate
@@ -258,69 +205,50 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                             : 'No Due Date Set'}
                     </Typography>
                 </CardContent>
-                <CardActions
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                    }}
-                >
-                    {/* Edit Button on the far left */}
-                    <Tooltip title="Open Edit Window">
-                        <EditIcon
+                <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>
+                    <Tooltip title="Edit Project">
+                        <IconButton
                             onClick={() => handleEditClick(project)}
                             sx={{
                                 color: '#9F6C5B',
-                                fontSize: 'xl',
-                                cursor: 'pointer',
-                                padding: '6px',          // Add padding to give space within the circle
-                                borderRadius: '50%',
                                 '&:hover': {
-                                    transform: 'scale(1.05)',
                                     backgroundColor: '#9F6C5B',
                                     color: '#fff',
                                 },
                             }}
-                        />
+                        >
+                            <EditIcon />
+                        </IconButton>
                     </Tooltip>
-
-                    {/* Grouping Archive and Delete buttons on the right */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Box>
                         <Button
                             size="small"
                             onClick={handleArchiveProject}
-                            variant="text"
                             sx={{
-                                backgroundColor: 'transparent',
                                 color: '#355147',
                                 '&:hover': {
                                     backgroundColor: '#355147',
                                     color: '#fff',
                                 },
-                                mr: 1 // Reduce the margin to make them closer
                             }}
                         >
                             Archive
                         </Button>
-
-                        <Tooltip title="Delete Task">
-                            <DeleteIcon
+                        <Tooltip title="Delete Project">
+                            <IconButton
                                 onClick={() => handleDeleteClick(project.projectId)}
                                 sx={{
-                                    color: '#d1566e',
-                                    fontSize: 'xl',
-                                    cursor: 'pointer',
-                                    padding: '6px',          // Add padding to give space within the circle
-                                    borderRadius: '50%',
+                                    color: '#F3161E',
                                     '&:hover': {
-                                        transform: 'scale(1.05)',
-                                        backgroundColor: '#d1566e',
+                                        backgroundColor: '#F3161E',
                                         color: '#fff',
                                     },
                                 }}
-                            />
+                            >
+                                <DeleteIcon />
+                            </IconButton>
                         </Tooltip>
-                    </div>
+                    </Box>
                 </CardActions>
             </Card>
         </>
