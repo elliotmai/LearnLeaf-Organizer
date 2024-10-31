@@ -237,7 +237,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
             </Grid>
 
             <div style={{ flex: 1, overflow: 'hidden' }}>
-                <Box sx={{ margin: '20px' }}> {/* Adjust margin as needed */}
+                <Box sx={{ marginLeft: '20px', marginRight: '20px' }}> {/* Adjust margin as needed */}
                     {tasks.length > 0 ? (
                         <List height={listHeight} itemCount={totalRows} itemSize={rowHeight} width="100%">
                             {({ index, style }) => (

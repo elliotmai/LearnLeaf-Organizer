@@ -207,29 +207,31 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                     </Typography>
 
                     {/* Description */}
-                    <Tooltip title="Click to view full description">
-                        <Typography
-                            variant="body2"
-                            color="textSecondary"
-                            onClick={() => setDescriptionOpen(true)}
-                            sx={{
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                fontStyle: 'italic',
-                                textAlign: 'left',
-                                padding: '8px 0',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                                color: '#5B8E9F',
-                            }}
-                        >
-                            {formValues.taskDescription}
-                        </Typography>
-                    </Tooltip>
+                    {task.taskDescription &&
+                        <Tooltip title="Click to view full description">
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                onClick={() => setDescriptionOpen(true)}
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
+                                    fontStyle: 'italic',
+                                    textAlign: 'left',
+                                    padding: '8px 0',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                    color: '#5B8E9F',
+                                }}
+                            >
+                                {formValues.taskDescription}
+                            </Typography>
+                        </Tooltip>
+                    }
 
                     {/* Full Description Dialog */}
                     <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
