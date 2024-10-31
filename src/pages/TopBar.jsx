@@ -1,7 +1,7 @@
 // TopBar.jsx
 import React, { useState } from 'react';
 import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
-import { useMediaQuery, useTheme, Menu, MenuItem, IconButton, Box, Typography, Grid } from '@mui/material';
+import { useMediaQuery, useTheme, Menu, MenuItem, IconButton, Box, Typography, Grid, Popover } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
@@ -38,25 +38,51 @@ const TopBar = () => {
 
     return (
         <Box sx={{ width: '100%', backgroundColor: '#B6CDC8', paddingY: '8px', textAlign: 'center' }}>
-            <Grid 
-                container 
-                alignItems="center" 
-                justifyContent="center" 
-                sx={{ position: 'relative' }} >
-                {/* Menu Icon positioned absolutely to the left */}
-                <IconButton
-                    color="inherit"
-                    aria-label="menu"
-                    onClick={handleMenuOpen}
+            <Grid container alignItems="center" justifyContent="center" sx={{ position: 'relative' }}>
+                <Box
                     sx={{
-                        color: '#9F6C5B',
+                        display: 'flex',
+                        alignItems: 'center',
                         position: 'absolute',
                         left: '5%',
-                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)', borderRadius: '50%' },
                     }}
+                    onMouseEnter={handleMenuOpen}
+                    onMouseLeave={handleMenuClose}
                 >
-                    <MenuIcon sx={{ fontSize: 40 }} />
-                </IconButton>
+                    {/* Menu Icon */}
+                    <IconButton
+                        color="inherit"
+                        aria-label="menu"
+                        sx={{
+                            color: '#9F6C5B',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)', borderRadius: '50%' },
+                        }}
+                    >
+                        <MenuIcon sx={{ fontSize: 40 }} />
+                    </IconButton>
+
+                    {/* Popover Menu */}
+                    <Popover
+                        open={Boolean(anchorEl)}
+                        anchorEl={anchorEl}
+                        onClose={handleMenuClose}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    >
+                        <Box
+                            onMouseLeave={handleMenuClose}
+                            sx={{ width: 200, padding: 1, ml: 2 }}
+                        >
+                            <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>Tasks</MenuItem>
+                            {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
+                            <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
+                            <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
+                            {!isSmallScreen && <MenuItem onClick={() => { navigate('/archives'); handleMenuClose(); }}>Archives</MenuItem>}
+                            <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>User Profile</MenuItem>
+                            <MenuItem onClick={handleLogout} sx={{ color: '#F3161E', fontWeight: 'bold' }}>Logout</MenuItem>
+                        </Box>
+                    </Popover>
+                </Box>
 
                 {/* Centered Logo */}
                 <Grid item>
@@ -65,26 +91,6 @@ const TopBar = () => {
                     </a>
                 </Grid>
             </Grid>
-
-            {/* Dropdown Menu */}
-            <Menu
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleMenuClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                slotProps={{
-                    paper: { sx: { width: 200, padding: 1, ml: 2 } },
-                }}
-            >
-                <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>Tasks</MenuItem>
-                {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
-                <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
-                <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
-                {!isSmallScreen && <MenuItem onClick={() => { navigate('/archives'); handleMenuClose(); }}>Archives</MenuItem>}
-                <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>User Profile</MenuItem>
-                <MenuItem onClick={handleLogout} sx={{ color: '#F3161E', fontWeight: 'bold' }}>Logout</MenuItem>
-            </Menu>
         </Box>
     );
 };
