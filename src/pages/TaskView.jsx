@@ -138,10 +138,10 @@ const TaskList = () => {
 
             <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
-                    {user?.name}'s Upcoming Tasks
+                    {user?.name}'s Outstanding Tasks
                 </Typography>
 
-                <div className="task-list" style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                <div style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
                     {isLoading ? (
                         <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                             <CircularProgress />

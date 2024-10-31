@@ -7,8 +7,7 @@ import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import CircularProgress from '@mui/material/CircularProgress';
-import Grid from '@mui/material/Grid';
+import {CircularProgress, Grid, Typography} from '@mui/material';
 
 const ProjectTasks = () => {
     const [pageProject, setPageProject] = useState(null);
@@ -146,9 +145,9 @@ const ProjectTasks = () => {
             <TopBar />
 
             <div>
-                <h1 style={{ color: '#907474' }}>
-                    {pageProject ? `Upcoming Tasks for ${pageProject.projectName}` : 'Loading project...'}
-                </h1>
+            <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {pageProject ? `Outstanding Tasks for ${pageProject.projectName}` : 'Loading project...'}
+                </Typography>
 
                 {pageProject ? (
                     <TasksTable

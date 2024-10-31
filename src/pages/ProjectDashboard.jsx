@@ -163,7 +163,7 @@ const ProjectsDashboard = () => {
     });
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
             <Grid container direction="column" alignItems="center" justifyItems="center" width="100%" margin="auto">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>

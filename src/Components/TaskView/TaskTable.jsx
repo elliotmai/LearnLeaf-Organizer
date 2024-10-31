@@ -13,12 +13,12 @@ import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 
 const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, updateState, initialSubject, initialProject }) => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
-    const [listHeight, setListHeight] = useState(window.innerHeight - 350); // Default initial height
+    const [listHeight, setListHeight] = useState(window.innerHeight - 200); // Default initial height
 
     useEffect(() => {
         // Update list height on window resize
         const updateListHeight = () => {
-            setListHeight(window.innerHeight - 260); // Adjust as needed for header/footer heights
+            setListHeight(window.innerHeight - 200); // Adjust as needed for header/footer heights
         };
 
         window.addEventListener('resize', updateListHeight);

@@ -4,10 +4,8 @@ import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
 import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
-import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import CircularProgress from '@mui/material/CircularProgress';
-import Grid from '@mui/material/Grid';
+import { CircularProgress, Grid, Typography } from '@mui/material';
 import '/src/Components/FormUI.css';
 
 const SubjectTasks = () => {
@@ -19,7 +17,7 @@ const SubjectTasks = () => {
     const [subjects, setSubjects] = useState([]);
     const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Fetch data from IndexedDB
     const loadFromIndexedDB = async () => {
         try {
@@ -59,7 +57,7 @@ const SubjectTasks = () => {
             }
             setSubjects(allSubjects);
             setProjects(allProjects);
-            
+
             setIsLoading(false);
             console.log('Data loaded from IndexedDB');
             return true;
@@ -145,29 +143,30 @@ const SubjectTasks = () => {
         <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
 
-            <div>
-                <h1 style={{ color: '#907474' }}>
-                    {pageSubject ? `Upcoming Tasks for ${pageSubject.subjectName}` : 'Loading...'}
-                </h1>
-
-                {pageSubject ? (
-                    <TasksTable
-                        tasks={tasks}
-                        subjects={subjects}
-                        projects={projects}
-                        refreshTasks={updateState}
-                        onDelete={handleDeleteTask}
-                        onUpdateTask={handleEditTask}
-                        initialSubject={pageSubject.subjectId}
-                    />
-                ) : (
-                    <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
-                        <CircularProgress />
-                        <p>Loading tasks...</p>
-                    </Grid>
-                )}
-            </div>
-        </div>
+            <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
+                <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {pageSubject ? `Outstanding Tasks for ${pageSubject.subjectName}` : 'Loading...'}
+                </Typography>
+                <div style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                    {pageSubject ? (
+                        <TasksTable
+                            tasks={tasks}
+                            subjects={subjects}
+                            projects={projects}
+                            refreshTasks={updateState}
+                            onDelete={handleDeleteTask}
+                            onUpdateTask={handleEditTask}
+                            initialSubject={pageSubject.subjectId}
+                        />
+                    ) : (
+                        <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
+                            <CircularProgress />
+                            <p>Loading tasks...</p>
+                        </Grid>
+                    )}
+                </div>
+            </Grid >
+        </div >
     );
 };
 

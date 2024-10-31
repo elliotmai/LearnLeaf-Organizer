@@ -114,7 +114,7 @@ const SubjectsDashboard = () => {
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+        <Box sx={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
             <Grid container direction="column" alignItems="center" justifyContent="center" width="90%" margin="auto">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
