@@ -5,8 +5,9 @@ import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
+import TaskFilterBar from '/src/pages/TaskFilterBar.jsx';
 import { getAllFromStore } from '/src/db.js';
-import { Button, Grid } from '@mui/material';
+import { Button, Grid, Box } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '/src/Components/PageFormat.css';
@@ -18,6 +19,18 @@ const CalendarView = () => {
     const [projects, setProjects] = useState([]);
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [currentDate, setCurrentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+    const [filterCriteria, setFilterCriteria] = useState({
+        searchQuery: '',
+        taskPriority: '',
+        taskStatus: '',
+        taskStartDate: '',
+        taskStartDateComparison: '',
+        taskDueDate: '',
+        taskDueDateComparison: '',
+        taskSubject: '',
+        taskProject: ''
+    });
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -60,11 +73,9 @@ const CalendarView = () => {
                 taskProject: allProjects.find(project => project.projectId === task.taskProject)
             }));
 
-            console.log('sortedTasks:', sortedTasks);
+            const filteredTasks = getFilteredTasks(sortedTasks, filterCriteria);
 
-            const formattedEvents = sortedTasks.filter(task => task.taskDueDate).map(formatTask);
-
-            console.log('formatted events:', formattedEvents);
+            const formattedEvents = filteredTasks.filter(task => task.taskDueDate).map(formatTask);
 
             setEvents(formattedEvents);
             setSubjects(allSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName)));
@@ -78,7 +89,45 @@ const CalendarView = () => {
         if (user?.id) {
             loadFromIndexedDB();
         }
-    }, [user?.id]);
+    }, [user?.id, filterCriteria]);
+
+    const getFilteredTasks = (tasks, filterCriteria) => {
+        return tasks.filter((task) => {
+            const matchesSearchQuery = filterCriteria.searchQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
+            const matchesSubject = filterCriteria.taskSubject === '' || task.taskSubject.subjectName.toLowerCase().includes(filterCriteria.taskSubject.toLowerCase());
+            const matchesProject = filterCriteria.taskProject === '' || task.taskProject.projectName.toLowerCase().includes(filterCriteria.taskProject.toLowerCase());
+            const matchesPriority = !filterCriteria.taskPriority || task.taskPriority === filterCriteria.taskPriority;
+            const matchesStatus = !filterCriteria.taskStatus || task.taskStatus === filterCriteria.taskStatus;
+
+            let matchesStartDate = true;
+            if (filterCriteria.taskStartDateComparison === "none") {
+                matchesStartDate = !task.taskStartDate;
+            } else if (filterCriteria.taskStartDate) {
+                matchesStartDate = filterByDate(task.taskStartDate, filterCriteria.taskStartDate, filterCriteria.taskStartDateComparison);
+            }
+
+            let matchesDueDate = true;
+            if (filterCriteria.taskDueDateComparison === "none") {
+                matchesDueDate = !task.taskDueDate;
+            } else if (filterCriteria.taskDueDate) {
+                matchesDueDate = filterByDate(task.taskDueDate, filterCriteria.taskDueDate, filterCriteria.taskDueDateComparison);
+            }
+
+            return matchesSearchQuery && matchesSubject && matchesProject && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
+        });
+    };
+
+    const clearFilters = () => {
+        setFilterCriteria({
+            searchQuery: '',
+            priority: '',
+            status: '',
+            startDate: '',
+            startDateComparison: '',
+            dueDate: '',
+            dueDateComparison: '',
+        });
+    };
 
     const toggleFormVisibility = () => {
         setIsAddTaskFormOpen(!isAddTaskFormOpen);
@@ -115,7 +164,30 @@ const CalendarView = () => {
     return (
         <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <Grid container direction="column" alignItems="center" justifyItems="center" width="100%">
+            <Grid
+                container
+                alignItems="center"
+                justifyContent="center"
+                spacing={1}
+                paddingBottom="10px"
+                paddingTop="10px"
+                width="90%"
+                position="relative"
+                sx={{
+                    borderTop: "1px solid #d9d9d9",
+                    borderBottom: "1px solid #d9d9d9",
+                    margin: "auto",
+                    flexDirection: "column",
+                }}
+            >
+
+                <Box display="flex" justifyContent="center" marginBottom="0.5%">
+                    <TaskFilterBar
+                        filterCriteria={filterCriteria}
+                        setFilterCriteria={setFilterCriteria}
+                        clearFilters={clearFilters}
+                    />
+                </Box>
                 <Button
                     onClick={toggleFormVisibility}
                     variant="outlined"
@@ -123,7 +195,6 @@ const CalendarView = () => {
                     sx={{
                         color: '#355147',
                         borderColor: '#355147',
-                        marginTop: 2,
                         '&:hover': {
                             backgroundColor: '#355147',
                             color: '#fff',
