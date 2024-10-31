@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
+import { sortSubjects } from '/src/LearnLeaf_Functions.jsx';
 import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -58,7 +59,7 @@ const SubjectsDashboard = () => {
             const allSubjects = await getAllFromStore('subjects');
             const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
             if (activeSubjects.length > 0) {
-                setSubjects(activeSubjects);
+                setSubjects(sortSubjects(activeSubjects));
                 setIsLoading(false);
                 return true;
             }
