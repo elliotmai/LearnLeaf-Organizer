@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
-import { deleteTask, sortTasks} from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
@@ -142,26 +142,12 @@ const SubjectTasks = () => {
     };
 
     return (
-        <div className="view-container">
+        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <button className="fab" onClick={toggleFormVisibility}>
-                +
-            </button>
-
-            {isAddTaskFormOpen && (
-                <AddTaskForm
-                    isOpen={isAddTaskFormOpen}
-                    onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}
-                    subjects={subjects}
-                    projects={projects}
-                    initialSubject={pageSubject?.subjectId}
-                />
-            )}
 
             <div>
                 <h1 style={{ color: '#907474' }}>
-                    Upcoming Tasks for {pageSubject?.subjectName || "Loading..."}
+                    {pageSubject ? `Upcoming Tasks for ${pageSubject.subjectName}` : 'Loading...'}
                 </h1>
 
                 {pageSubject ? (
@@ -172,6 +158,7 @@ const SubjectTasks = () => {
                         refreshTasks={updateState}
                         onDelete={handleDeleteTask}
                         onUpdateTask={handleEditTask}
+                        initialSubject={pageSubject.subjectId}
                     />
                 ) : (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>

@@ -1,20 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { archiveSubject, deleteSubject } from '/src/LearnLeaf_Functions.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { EditSubjectForm } from './EditSubjectForm.jsx';
-import './SubjectDashboard.css';
-// import '/src/Components/TaskView/TaskView.css';
-
-const CustomIconButton = styled(IconButton)({
-    color: '#9F6C5B'
-});
+import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 
 const SubjectWidget = ({ subject, refreshSubjects }) => {
     const [editedSubject, setEditedSubject] = useState({ ...subject });
@@ -72,162 +65,111 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
             />
             <Card
                 sx={{
-                    border: '3px solid', // Add border style to make it visible
-                    borderRadius: '8px',
-                    borderColor: subject.subjectColor // Use dynamic color value
+                    borderRadius: '16px',
+                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+                    padding: '16px',
+                    backgroundColor: '#f9f9f9',
+                    border: `3px solid ${subject.subjectColor || '#355147'}`,
                 }}
             >
                 <CardContent>
                     <Tooltip title="View Associated Tasks">
                         <Link
-                            href={`/subjects/${subject.subjectId.split('_')[0]}`}
+                            href={`/subjects/${subject.subjectId}`}
                             underline="hover"
                             variant="h6"
-                            color="inherit"
                             sx={{
-                                color: '#355147',
-                                display: 'block',
                                 fontWeight: 'bold',
-                                fontSize: '22px'
+                                color: '#355147',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                '&:hover': { color: '#5B8E9F' },
                             }}
-                            gutterBottom
                         >
                             {subject.subjectName}
                         </Link>
                     </Tooltip>
 
-
-                    <Typography
-                        variant="body1"
-                        color="textPrimary"
-                    >
+                    <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mt: 1, fontWeight: 'bold', color: '#9F6C5B' }}>
                         {subject.subjectSemester}
                     </Typography>
 
-                    {/* Description Typography with ellipsis and click event to expand */}
-                    <Typography
-                        variant="body2"
-                        color="textSecondary"
-                        onClick={() => setDescriptionOpen(true)}
-                        sx={{
-                            whiteSpace: 'pre-wrap',
-                            fontStyle: 'italic',
-                            textAlign: 'left',
-                            padding: '8px',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            textOverflow: 'ellipsis',
-                        }}
-                    >
-                        {subject.subjectDescription}
-                    </Typography>
-
-                    {/* Dialog to show full description */}
-                    <Dialog
-                        open={isDescriptionOpen}
-                        onClose={() => setDescriptionOpen(false)}
-                        aria-labelledby="description-dialog-title"
-                    >
-                        <DialogTitle
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                paddingRight: '16px'
-                            }}
-                        >
-                            Full Description
-                            <IconButton
-                                aria-label="close"
-                                onClick={() => setDescriptionOpen(false)}
-                                sx={{
-                                    color: (theme) => theme.palette.grey[500],
-                                }}
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </DialogTitle>
-                        <DialogContent>
+                    {subject.subjectDescription && (
+                        <Tooltip title="Click to view full description">
                             <Typography
                                 variant="body2"
                                 color="textSecondary"
+                                onClick={() => setDescriptionOpen(true)}
                                 sx={{
-                                    whiteSpace: 'pre-wrap',
                                     fontStyle: 'italic',
+                                    color: '#5B8E9F',
+                                    whiteSpace: 'pre-wrap',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    cursor: 'pointer',
+                                    padding: '8px 0',
+                                    textAlign: 'center',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#f1f3f4',
                                 }}
                             >
+                                {subject.subjectDescription}
+                            </Typography>
+                        </Tooltip>
+                    )}
+
+                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
+                        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '16px' }}>
+                            Full Description
+                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
+                                <CloseIcon />
+                            </IconButton>
+                        </DialogTitle>
+                        <DialogContent dividers sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
                                 {subject.subjectDescription}
                             </Typography>
                         </DialogContent>
                     </Dialog>
                 </CardContent>
 
-                <CardActions
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                    }}
-                >
-                    {/* Edit Button on the far left */}
-                    <Tooltip title="Open Edit Window">
-                        <EditIcon
+                <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>
+                    <Tooltip title="Edit Subject">
+                        <IconButton
                             onClick={() => handleEditClick(subject)}
                             sx={{
                                 color: '#9F6C5B',
-                                fontSize: 'xl',
-                                cursor: 'pointer',
-                                padding: '6px',          // Add padding to give space within the circle
-                                borderRadius: '50%',
-                                '&:hover': {
-                                    transform: 'scale(1.05)',
-                                    backgroundColor: '#9F6C5B',
-                                    color: '#fff',
-                                },
+                                '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
                             }}
-                        />
+                        >
+                            <EditIcon />
+                        </IconButton>
                     </Tooltip>
-
-                    {/* Grouping Archive and Delete buttons on the right */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Box>
                         <Button
                             size="small"
                             onClick={handleArchiveSubject}
-                            variant="text"
                             sx={{
-                                backgroundColor: 'transparent',
                                 color: '#355147',
-                                '&:hover': {
-                                    backgroundColor: '#355147',
-                                    color: '#fff',
-                                },
-                                mr: 1 // Reduce the margin to make them closer
+                                '&:hover': { backgroundColor: '#355147', color: '#fff' },
                             }}
                         >
                             Archive
                         </Button>
-
-                        <Tooltip title="Delete Task">
-                            <DeleteIcon
+                        <Tooltip title="Delete Subject">
+                            <IconButton
                                 onClick={() => handleDeleteClick(subject.subjectId)}
                                 sx={{
-                                    color: '#d1566e',
-                                    fontSize: 'xl',
-                                    cursor: 'pointer',
-                                    padding: '6px',          // Add padding to give space within the circle
-                                    borderRadius: '50%',
-                                    '&:hover': {
-                                        transform: 'scale(1.05)',
-                                        backgroundColor: '#d1566e',
-                                        color: '#fff',
-                                    },
+                                    color: '#F3161E',
+                                    '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
                                 }}
-                            />
+                            >
+                                <DeleteIcon />
+                            </IconButton>
                         </Tooltip>
-                    </div>
+                    </Box>
                 </CardActions>
             </Card>
         </>

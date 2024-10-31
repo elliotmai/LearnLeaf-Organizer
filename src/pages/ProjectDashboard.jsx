@@ -40,7 +40,6 @@ const ProjectsDashboard = () => {
     const loadFromIndexedDB = async () => {
         try {
             const activeProjects = (await getAllFromStore('projects')).filter(project => project.projectStatus === 'Active');
-            console.log("active projects:", activeProjects);
             const allSubjects = (await getAllFromStore('subjects'));
             const storedTasks = await getAllFromStore('tasks');
 
@@ -72,12 +71,8 @@ const ProjectsDashboard = () => {
                 };
             });
 
-            console.log("projects with details:", projectsWithDetails);
-
             const sortedSubjects = sortSubjects(allSubjects);
             const sortedProjects = sortProjects(projectsWithDetails);
-
-            console.log("sorted projects:", sortedProjects);
 
             setSubjects(sortedSubjects);
             setProjects(sortedProjects);
@@ -100,7 +95,6 @@ const ProjectsDashboard = () => {
     useEffect(() => {
         if (user?.id) {
             updateState();
-            console.log(projects);
         }
     }, [user?.id]);
 

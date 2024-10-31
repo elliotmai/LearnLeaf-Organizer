@@ -1,22 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { editSubject } from '/src/LearnLeaf_Functions.jsx';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
+import {
+    Modal,
+    Box,
+    TextField,
+    Button,
+    Typography,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { ChromePicker } from 'react-color';
 
+// Styles
 const boxStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: '90%',
+    maxWidth: 500,
     bgcolor: 'background.paper',
     boxShadow: 24,
     pt: 2,
     pb: 3,
     px: 4,
+    borderRadius: '12px',
 };
 
 const submitButtonStyle = {
@@ -80,7 +88,15 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
     return (
         <Modal open={isOpen} onClose={onClose}>
             <Box sx={boxStyle}>
-                <h2 style={{ color: "#8E5B9F" }}>Edit Subject</h2>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+                        Edit Subject
+                    </Typography>
+                    <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
                 <form noValidate autoComplete="off" onSubmit={handleSave}>
                     <TextField
                         fullWidth
@@ -90,6 +106,7 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                         value={formValues.subjectName}
                         onChange={handleChange}
                         required
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
                     <TextField
                         fullWidth
@@ -98,6 +115,7 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                         label="Semester"
                         value={formValues.subjectSemester}
                         onChange={handleChange}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
                     <TextField
                         fullWidth
@@ -108,21 +126,24 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
                         onChange={handleChange}
                         multiline
                         maxRows={4}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                         <ChromePicker
                             color={formValues.subjectColor || '#fff'}
                             onChangeComplete={handleColorChange}
                         />
-                    </div>
-                    <div style={{ marginTop: 16 }}>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
                         <Button type="submit" sx={submitButtonStyle} variant="contained">
                             Save
                         </Button>
                         <Button sx={cancelButtonStyle} onClick={onClose}>
                             Cancel
                         </Button>
-                    </div>
+                    </Box>
                 </form>
             </Box>
         </Modal>
