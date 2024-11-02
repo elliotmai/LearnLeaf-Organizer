@@ -1,17 +1,23 @@
-import React from 'react';
+// TopBar.jsx
+import React, { useState } from 'react';
 import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { useMediaQuery, useTheme, Menu, MenuItem, IconButton, Box, Typography, Grid, Popover } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser } from '/src/LearnLeaf_Functions.jsx'; // Add any necessary imports for logoutUser
+import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
 import '/src/Components/PageFormat.css';
 import '/src/App.css';
 
 const TopBar = () => {
     const theme = useTheme();
-    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm')); // Detect if screen size is small
-    const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md')); // Detect if screen size is medium
-    const isLargeScreen = useMediaQuery(theme.breakpoints.up('md')); // Detect if screen size is large
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
+
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+    const handleMenuClose = () => setAnchorEl(null);
 
     const handleLogout = async () => {
         try {
@@ -19,31 +25,73 @@ const TopBar = () => {
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
+        } finally {
+            handleMenuClose();
         }
     };
 
-    // Define the logo style based on screen size
     const logoStyle = {
-        width: isSmallScreen ? '95%' : isMediumScreen ? '70%' : '55%',
+        width: isSmallScreen ? '40%' : '40%',
+        display: 'block',
+        margin: 'auto',
     };
 
     return (
-        <div className="top-bar">
-            <a href="/tasks">
-                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
-            </a>
-            <div className="top-navigation">
-                <nav className="nav-links">
-                    <a href="/tasks">Tasks</a>
-                    {!isSmallScreen && <a href="/calendar">Calendar</a>}
-                    <a href="/subjects">Subjects</a>
-                    <a href="/projects">Projects</a>
-                    {!isSmallScreen && <a href="/archives">Archives</a>}
-                    <a href="/profile">User Profile</a>
-                </nav>
-                <button className="logout-button" onClick={handleLogout}>Logout</button>
-            </div>
-        </div>
+        <Box sx={{ width: '100%', backgroundColor: '#B6CDC8', paddingY: '8px', textAlign: 'center' }}>
+            <Grid container alignItems="center" justifyContent="center" sx={{ position: 'relative' }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        position: 'absolute',
+                        left: '5%',
+                    }}
+                    onMouseEnter={handleMenuOpen}
+                    onMouseLeave={handleMenuClose}
+                >
+                    {/* Menu Icon */}
+                    <IconButton
+                        color="inherit"
+                        aria-label="menu"
+                        sx={{
+                            color: '#9F6C5B',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.1)', borderRadius: '50%' },
+                        }}
+                    >
+                        <MenuIcon sx={{ fontSize: 40 }} />
+                    </IconButton>
+
+                    {/* Popover Menu */}
+                    <Popover
+                        open={Boolean(anchorEl)}
+                        anchorEl={anchorEl}
+                        onClose={handleMenuClose}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    >
+                        <Box
+                            onMouseLeave={handleMenuClose}
+                            sx={{ width: 200, padding: 1, ml: 2 }}
+                        >
+                            <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>Tasks</MenuItem>
+                            {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
+                            <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
+                            <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
+                            {!isSmallScreen && <MenuItem onClick={() => { navigate('/archives'); handleMenuClose(); }}>Archives</MenuItem>}
+                            <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>User Profile</MenuItem>
+                            <MenuItem onClick={handleLogout} sx={{ color: '#F3161E', fontWeight: 'bold' }}>Logout</MenuItem>
+                        </Box>
+                    </Popover>
+                </Box>
+
+                {/* Centered Logo */}
+                <Grid item>
+                    <a href="/tasks">
+                        <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
+                    </a>
+                </Grid>
+            </Grid>
+        </Box>
     );
 };
 

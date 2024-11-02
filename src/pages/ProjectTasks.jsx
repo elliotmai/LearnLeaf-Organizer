@@ -2,246 +2,158 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
-import { fetchProjects, fetchTasks, logoutUser, deleteTask } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore, saveToStore, deleteFromStore } from '/src/db.js';
+import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import CircularProgress from '@mui/material/CircularProgress';
-import Grid from '@mui/material/Grid';
+import {CircularProgress, Grid, Typography} from '@mui/material';
 
 const ProjectTasks = () => {
-    const [project, setProject] = useState(null);
+    const [pageProject, setPageProject] = useState(null);
     const [tasks, setTasks] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [projects, setProjects] = useState([]);
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const { user } = useUser();
-    const { projectId } = useParams(); // Get projectId from URL params
-    const [filterCriteria, setFilterCriteria] = useState({
-        searchQuery: '',
-        priority: '',
-        status: '',
-        startDate: '',
-        startDateComparison: '',
-        dueDate: '',
-        dueDateComparison: '',
-    });
+    const { projectId } = useParams();
+    const [isLoading, setIsLoading] = useState(true);
 
-    // useEffect to fetch the project data
-    useEffect(() => {
-        if (user?.id && projectId) {
-            setTasks([]); // Clear tasks while loading new project
-            fetchProjects(user.id, projectId)
-                .then(fetchedProjects => {
-                    if (fetchedProjects.length > 0) {
-                        setProject(fetchedProjects[0]);
-                        // console.log("Project fetched: ", fetchedProjects[0]);
-                    } else {
-                        setProject(null);
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching project:", error);
-                    setProject(null);
+    // Fetch data from IndexedDB
+    const loadFromIndexedDB = async () => {
+        try {
+            // Load and filter active subjects, projects, and tasks
+            const allSubjects = await getAllFromStore('subjects');
+            const allProjects = await getAllFromStore('projects');
+            const allTasks = await getAllFromStore('tasks');
+
+            const activeTasks = allTasks.filter(task => task.taskStatus !== 'Completed');
+
+            // Find the specified subject by ID
+            const foundProject = allProjects.find(project => project.projectId === projectId);
+            if (foundProject) {
+                setPageProject(foundProject);
+            } else {
+                console.error(`Project with ID ${projectId} not found`);
+            }
+
+            // Filter tasks specific to this subject
+            const filteredTasks = activeTasks.filter(task => task.taskProject === projectId);
+
+            if (filteredTasks.length > 0) {
+                // Add subject and project info into tasks
+                const tasksWithDetails = filteredTasks.map(task => {
+                    const taskSubject = allSubjects.find(subject => subject.subjectId === task.taskSubject);
+                    const taskProject = allProjects.find(project => project.projectId === task.taskProject);
+
+                    return {
+                        ...task,
+                        taskSubject, // Attach full subject details, including 'None'
+                        taskProject  // Attach full project details
+                    };
                 });
-        } else {
-            setProject(null);
-        }
-    }, [user?.id, projectId]);
 
-    // useEffect to fetch tasks when the project is set
-    useEffect(() => {
-        if (user?.id && project) {
-            fetchTasks(user.id, null, project.projectName)
-                .then(fetchedTasks => {
-                    setTasks(fetchedTasks);
-                    // console.log("Tasks fetched for project: ", project.projectName);
-                })
-                .catch(error => console.error("Error fetching tasks for project:", error));
-        }
-    }, [user?.id, project]); // This useEffect triggers when `project` is set.
+                const sortedTasks = sortTasks(tasksWithDetails);
+                setTasks(sortedTasks);
+            }
+            setSubjects(allSubjects);
+            setProjects(allProjects);
 
-    const refreshTasks = async () => {
-        const updatedTasks = await fetchTasks(user.id, null, project.projectName);
-        setTasks(updatedTasks);
+            setIsLoading(false);
+            console.log('Data loaded from IndexedDB');
+            return true;
+        } catch (error) {
+            console.error('Error loading data from IndexedDB:', error);
+            return false;
+        }
     };
 
-    const toggleFormVisibility = () => setIsAddTaskFormOpen(!isAddTaskFormOpen);
+    const updateState = async () => {
+        setIsLoading(true);
+        await loadFromIndexedDB();
+    };
+
+    useEffect(() => {
+        if (user?.id) {
+            updateState();
+        }
+    }, [user?.id]);
+
+    const toggleFormVisibility = () => {
+        setIsAddTaskFormOpen(!isAddTaskFormOpen);
+    };
 
     const handleCloseAddTaskForm = () => {
         setIsAddTaskFormOpen(false);
     };
 
-    const handleLogout = async () => {
-        try {
-            await logoutUser();
-            updateUser(null);
-            navigate('/');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
-
-    const filterByDate = (taskDateStr, filterDateStr, comparisonType) => {
-        let taskDate = new Date(taskDateStr);
-        taskDate = new Date(taskDate.getTime() - taskDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
-
-        let filterDate = new Date(filterDateStr);
-        filterDate = new Date(filterDate.getTime() - filterDate.getTimezoneOffset() * 60000).setHours(0, 0, 0, 0);
-
-        switch (comparisonType) {
-            case 'before':
-                return taskDate < filterDate;
-            case 'before-equal':
-                return taskDate <= filterDate;
-            case 'equal':
-                return taskDate === filterDate;
-            case 'after':
-                return taskDate > filterDate;
-            case 'after-equal':
-                return taskDate >= filterDate;
-            default:
-                return true;
-        }
-    };
-
-    const getFilteredTasks = (tasks, filterCriteria) => {
-        const filteredTasks = tasks.filter((task) => {
-            // Search filter
-            const matchesSearchQuery = filterCriteria.searchQuery === '' || task.assignment.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
-
-            // Check for priority and status filters
-            const matchesPriority = !filterCriteria.priority || task.priority === filterCriteria.priority;
-            const matchesStatus = !filterCriteria.status || task.status === filterCriteria.status;
-
-            // Start Date filtering
-            let matchesStartDate = true;
-            if (filterCriteria.startDateComparison === "none") {
-                matchesStartDate = !task.startDate; // Match tasks with no start date
-            } else if (filterCriteria.startDate) {
-                // Apply date comparison logic if startDate is provided and comparison isn't "none"
-                matchesStartDate = filterByDate(task.startDate, filterCriteria.startDate, filterCriteria.startDateComparison);
-            }
-
-            // Due Date filtering
-            let matchesDueDate = true;
-            if (filterCriteria.dueDateComparison === "none") {
-                matchesDueDate = !task.dueDate; // Match tasks with no due date
-            } else if (filterCriteria.dueDate) {
-                // Apply date comparison logic if dueDate is provided and comparison isn't "none"
-                matchesDueDate = filterByDate(task.dueDate, filterCriteria.dueDate, filterCriteria.dueDateComparison);
-            }
-
-            // Return true if task matches all criteria
-            return matchesSearchQuery && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
-        });
-
-        return filteredTasks;
-    };
-
-    const sortTasks = (tasks) => {
-        return tasks.sort((a, b) => {
-            // Convert date strings to Date objects for comparison
-            const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-            const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-    
-            // Compare by dueDate first
-            if (dateA < dateB) return -1;
-            if (dateA > dateB) return 1;
-    
-            // If due dates are the same, compare due times
-            // Ensure dueTime is not null; default to "23:59" if null to put them at the end of the day
-            const timeA = a.dueTime ? a.dueTime : '23:59';
-            const timeB = b.dueTime ? b.dueTime : '23:59';
-    
-            if (timeA < timeB) return -1;
-            if (timeA > timeB) return 1;
-    
-            // Finally, compare assignments
-            return a.assignment.localeCompare(b.assignment);
-        });    
-    };    
-
-    const handleAddTask = (newTask) => {
-        if (!newTask) {
-            console.error("New task is undefined!");
-            return;
-        }
-    
-        setTasks((prevTasks) => {
-            const updatedTasks = [...prevTasks, newTask];
-            return sortTasks(updatedTasks);
-        });
+    const handleAddTask = async () => {
+        updateState();
     };
 
     const handleDeleteTask = async (taskId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this task?");
+        const confirmation = window.confirm("Are you sure you want to permanently delete this task?");
         if (confirmation) {
             try {
                 await deleteTask(taskId);
-                setTasks((prevTasks) => {
-                    const updatedTasks = prevTasks.filter((task) => task.taskId !== taskId);
-                    return updatedTasks;
-                });
+                setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
+                console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
         }
     };
 
-    const updateTaskInState = (updatedTask) => {
-        setTasks((prevTasks) => {
-            let updatedTasks;
-            if (updatedTask.status !== 'Completed') {
-                updatedTasks = prevTasks.map((task) =>
-                    task.taskId === updatedTask.taskId ? updatedTask : task
-                );
-            } else {
-                updatedTasks = prevTasks.filter((task) => task.taskId !== updatedTask.taskId);
-            }
+    const handleEditTask = async (updatedTask) => {
+
+        const allSubjects = (await getAllFromStore('subjects')) || [];
+        setSubjects(allSubjects);
+
+        const allProjects = (await getAllFromStore('projects')) || [];
+        setProjects(allProjects);
+
+        setTasks(prevTasks => {
+            // Update or remove the specific task based on its status
+            const updatedTasks = prevTasks
+                .map(task => {
+                    if (task.taskId === updatedTask.taskId) {
+                        // Attach taskSubject and taskProject details
+                        const taskSubject = allSubjects.find(subject => subject.subjectId === updatedTask.taskSubject);
+                        const taskProject = allProjects.find(project => project.projectId === updatedTask.taskProject);
+
+                        return {
+                            ...updatedTask,
+                            taskSubject, // Attach full subject details
+                            taskProject  // Attach full project details
+                        };
+                    }
+                    return task;
+                })
+                .filter(task => task.taskStatus !== 'Completed' && task.taskProject.projectId === projectId); // Exclude completed tasks from the state
+
+            // Sort the updated list of tasks before returning
             return sortTasks(updatedTasks);
         });
     };
 
-
-    const clearFilters = () => {
-        setFilterCriteria({
-            searchQuery: '',
-            priority: '',
-            status: '',
-            startDate: '',
-            startDateComparison: '',
-            dueDate: '',
-            dueDateComparison: '',
-        });
-    };
-
     return (
-        <div className="view-container">
+        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <button className="fab" onClick={toggleFormVisibility}>+</button>
-            {isAddTaskFormOpen && (
-                <AddTaskForm
-                    isOpen={isAddTaskFormOpen}
-                    onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}  // Pass handleAddTask to AddTaskForm
-                    refreshTasks={refreshTasks}  // Optional, refresh to ensure data consistency
-                    initialSubject={project.subject}
-                    initialProject={project.projectName}
-                    initialDueDate={null}
-                />
-            )}
 
             <div>
-                <h1 style={{ color: '#907474' }}>
-                    {project ? `Upcoming Tasks for ${project.projectName}` : 'Loading project...'}
-                </h1>
+            <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {pageProject ? `Outstanding Tasks for ${pageProject.projectName}` : 'Loading project...'}
+                </Typography>
 
-                {/* Conditional Rendering for Tasks Table with Spinner */}
-                {project ? (
+                {pageProject ? (
                     <TasksTable
                         tasks={tasks}
-                        refreshTasks={refreshTasks}
+                        subjects={subjects}
+                        projects={projects}
+                        onAddTask={handleAddTask}
                         onDelete={handleDeleteTask}
-                        onUpdateTask={updateTaskInState}
+                        onUpdateTask={handleEditTask}
+                        initialProject={pageProject.projectId}
                     />
                 ) : (
                     <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>

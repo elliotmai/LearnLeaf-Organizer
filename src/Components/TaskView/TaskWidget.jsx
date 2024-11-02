@@ -1,148 +1,160 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardActions, Button, Grid, TextField, Select, MenuItem, InputLabel, FormControl, Typography, Snackbar } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import {
+    Card,
+    CardContent,
+    CardActions,
+    Button,
+    Grid,
+    TextField,
+    Select,
+    MenuItem,
+    InputLabel,
+    FormControl,
+    Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    IconButton,
+    Tooltip,
+    Divider
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
-import { editTask, addSubject, addProject } from '/src/LearnLeaf_Functions.jsx';
-import {TaskEditForm} from '/src/Components/TaskView/EditForm.jsx'
-import { debounce } from 'lodash';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import './TaskView.css';
 
-const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdateTask }) => {
-    const [formValues, setFormValues] = useState({ ...task });
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
+    const [formValues, setFormValues] = useState({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
+    const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [errors, setErrors] = useState({});
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [isNewProject, setIsNewProject] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
-    const [openSnackbar, setOpenSnackbar] = useState(false); // State to control the Snackbar visibility
+    const [isDescriptionOpen, setDescriptionOpen] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    const toggleFormVisibility = () => {
-        setIsEditTaskFormOpen(!isEditTaskFormOpen);
-    };
+    const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
-    const handleTextFieldChange = useCallback(
-        debounce((event) => {
-            const { name, value } = event.target;
-            setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
-        }, 300),
-        []
-    );
-
-    const handleTimeFieldChange = (event) => {
-        const { name, value } = event.target;
-        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
-    };
-
-    const handleSelectChange = (event) => {
-        const { name, value } = event.target;
-
-        if (name === 'subject') {
-            if (value === 'newSubject') {
-                setIsNewSubject(true); // Show text field for new subject
-            } else {
-                setIsNewSubject(false); // Hide the text field when another subject is selected
+    useEffect(() => {
+        // Warn user about unsaved changes when navigating away
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
             }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [hasUnsavedChanges]);
+
+    const handleInputChange = (event) => {
+        const { name, value } = event.target;
+
+        const isNewItemSelected = value === "newSubject" || value === "newProject";
+
+        if (name === "taskSubject") {
+            setIsNewSubject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskSubject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskProject") {
+            setIsNewProject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskProject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskDueTime" && value) {
+            if (!formValues.taskDueDate) {
+                setErrors(prevErrors => ({
+                    ...prevErrors,
+                    taskDueDate: 'Due date is required when due time is added.',
+                }));
+            } else {
+                setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
+            }
+        } else if (name === "taskDueDate") {
+            setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
         }
 
-        if (name === 'project') {
-            if (value === 'newProject') {
-                setIsNewProject(true); // Show text field for new project
-            } else {
-                setIsNewProject(false); // Hide the text field when another project is selected
-            }
+        if (!["taskSubject", "taskProject"].includes(name)) {
+            setFormValues(prevDetails => ({ ...prevDetails, [name]: value }));
         }
 
-        setFormValues((prevDetails) => ({ ...prevDetails, [name]: value }));
-    };
-
-    const handleDateChange = (event, field) => {
-        const value = event.target.value || ''; // Handle "Clear" action by setting to empty string
-        setFormValues((prevValues) => ({
-            ...prevValues,
-            [field]: value,
-        }));
+        setHasUnsavedChanges(true);
     };
 
     useEffect(() => {
-        setFormValues({ ...task });
+        setFormValues({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
+        setOriginalValues({ ...task });
         setIsNewSubject(false);
         setNewSubjectName('');
         setIsNewProject(false);
         setNewProjectName('');
     }, [task]);
 
-    const getValidSubject = () => subjects.some(subj => subj.subjectName === formValues.subject) ? formValues.subject : '';
-    const getValidProject = () => projects.some(proj => proj.projectName === formValues.project) ? formValues.project : '';
-
-    const getSubjectColor = () => {
-        const selectedSubject = subjects.find(subj => subj.subjectName === formValues.subject);
-        return selectedSubject ? selectedSubject.subjectColor : 'black';
-    };
-
-    const handleSave = async (editedTask) => {
+    const handleSave = async () => {
         try {
-            let updatedTask = { ...editedTask };
-    
-            let subjectAdded = false;
-            let projectAdded = false;
-    
-            // If a new subject is being added
+            if (formValues.taskDueTime && !formValues.taskDueDate) {
+                setErrors({ taskDueDate: 'Due date is required when due time is added.' });
+                return;
+            }
+
+            let updatedTask = { ...formValues };
+
+            // Add new subject if necessary
             if (isNewSubject && newSubjectName) {
-                const newSubjectDetails = {
-                    userId: updatedTask.userId,
+                const newSubject = await addSubject({
                     subjectName: newSubjectName,
-                    semester: '',
-                    subjectColor: 'black'
-                };
-                await addSubject(newSubjectDetails);
-                updatedTask.subject = newSubjectName;
-                subjectAdded = true;  // Mark subject as added
+                    subjectSemester: '',
+                    subjectDescription: '',
+                    subjectColor: 'black',
+                });
+                updatedTask.taskSubject = newSubject.subjectId;
+                formValues.taskSubject = updatedTask.taskSubject;
+                setIsNewSubject(false);
+                setNewSubjectName('');
             }
-    
-            // If a new project is being added
+
+            // Add new project if necessary
             if (isNewProject && newProjectName) {
-                const newProjectDetails = {
-                    userId: updatedTask.userId,
+                const newProject = await addProject({
                     projectName: newProjectName,
-                    subject: ''
-                };
-                await addProject(newProjectDetails);
-                updatedTask.project = newProjectName;
-                projectAdded = true;  // Mark project as added
+                    projectDescription: '',
+                    projectSubjects: [],
+                });
+                updatedTask.taskProject = newProject.projectId;
+                formValues.taskProject = updatedTask.taskProject;
+                setIsNewProject(false);
+                setNewProjectName('');
             }
-    
-            // Save the task with the new subject or project
-            await editTask(updatedTask);
-    
-            // Only after a successful save, update the local state
-            onUpdateTask(updatedTask);
-    
-            // Show the Snackbar indicating success
-            setOpenSnackbar(true);
-    
-            // Close the edit modal if it was open
-            if (isEditModalOpen) {
-                setEditModalOpen(false);
-            }
-    
-            // Optionally, refresh tasks if a new subject or project was added
-            // if (subjectAdded || projectAdded) {
-            //     refreshTasks();
-            // }
-    
+
+            // Call editTask with updated task
+            const refreshedTask = await editTask(updatedTask);
+            setTimeout(() => onUpdateTask(refreshedTask), 1);
+            setOriginalValues(refreshedTask);
+            setHasUnsavedChanges(false);
         } catch (error) {
             console.error('Error updating task:', error);
-            // Optionally, show an error Snackbar or handle the error case
         }
-    };    
-
-    const handleEditClick = (task) => {
-        setEditedTask({ ...task });
-        setEditModalOpen(true); // Open the edit modal
     };
 
-    const handleCloseSnackbar = () => {
-        setOpenSnackbar(false); // Hide the Snackbar after timeout or action
+    const handleClearChanges = () => {
+        setFormValues({ ...originalValues });
+        setHasUnsavedChanges(false);
+    };
+
+    const handleEditClick = () => {
+        setEditedTask({ ...formValues });
+        setEditModalOpen(true);
     };
 
     return (
@@ -150,87 +162,130 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
             <TaskEditForm
                 key={editedTask.taskId}
                 task={editedTask}
+                subjects={subjects}
+                projects={projects}
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}
-                onSave={handleSave}               
+                onSave={onUpdateTask}
             />
-
-            <Card sx={{ minWidth: 275 }}>
+            <Card
+                sx={{
+                    minWidth: 275,
+                    borderRadius: '12px',
+                    boxShadow: 4,
+                    backgroundColor: '#f9f9f9',
+                    padding: '16px'
+                }}
+            >
                 <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ color: getSubjectColor(), fontWeight: 'bold' }}>
-                        {formValues.assignment || 'Unnamed Task'}
+                    {/* Task Name */}
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: formValues.taskSubject?.subjectColor || '#355147',
+                            fontWeight: 'bold',
+                            marginBottom: '8px',
+                        }}
+                    >
+                        {formValues.taskName || 'Unnamed Task'}
                     </Typography>
 
+                    {/* Subject */}
+                    <Typography variant="body1" sx={{ color: '#355147', fontWeight: 'medium' }}>
+                        Subject:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#907474', marginBottom: '8px' }}>
+                        {formValues.taskSubject?.subjectName || 'No Subject'}
+                    </Typography>
+
+                    {/* Project */}
+                    <Typography variant="body1" sx={{ color: '#355147', fontWeight: 'medium' }}>
+                        Project:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#907474', marginBottom: '8px' }}>
+                        {formValues.taskProject?.projectName || 'No Project'}
+                    </Typography>
+
+                    {/* Description */}
+                    {task.taskDescription &&
+                        <Tooltip title="Click to view full description">
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                onClick={() => setDescriptionOpen(true)}
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
+                                    fontStyle: 'italic',
+                                    textAlign: 'left',
+                                    padding: '8px 0',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    cursor: 'pointer',
+                                    color: '#5B8E9F',
+                                }}
+                            >
+                                {formValues.taskDescription}
+                            </Typography>
+                        </Tooltip>
+                    }
+
+                    {/* Full Description Dialog */}
+                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
+                        <DialogTitle
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingRight: '16px',
+                            }}
+                        >
+                            Full Description
+                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
+                                <CloseIcon />
+                            </IconButton>
+                        </DialogTitle>
+                        <DialogContent
+                            dividers
+                            sx={{
+                                maxHeight: '400px', // Set your desired max height
+                                overflowY: 'auto', // Enable vertical scrolling
+                            }}
+                        >
+                            <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
+                                    fontStyle: 'italic',
+                                }}
+                            >
+                                {formValues.taskDescription}
+                            </Typography>
+                        </DialogContent>
+
+                    </Dialog>
+
+                    <Divider sx={{ marginY: 2 }} />
+
+                    {/* Editable Fields */}
                     <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel>Subject</InputLabel>
-                                <Select
-                                    value={isNewSubject ? 'newSubject' : getValidSubject()}
-                                    name="subject"
-                                    onChange={handleSelectChange}
-                                >
-                                    <MenuItem value="">Select Subject...</MenuItem>
-                                    {subjects.map(subj => (
-                                        <MenuItem key={subj.subjectName} value={subj.subjectName}>
-                                            {subj.subjectName}
-                                        </MenuItem>
-                                    ))}
-                                    <MenuItem value="newSubject">Add New Subject...</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        {isNewSubject && (
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="New Subject Name"
-                                    name="newSubjectName"
-                                    value={newSubjectName}
-                                    onChange={(e) => setNewSubjectName(e.target.value)}
-                                />
-                            </Grid>
-                        )}
-
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel>Project</InputLabel>
-                                <Select
-                                    value={isNewProject ? 'newProject' : getValidProject()}
-                                    name="project"
-                                    onChange={handleSelectChange}
-                                >
-                                    <MenuItem value="">Select Project...</MenuItem>
-                                    {projects.map(proj => (
-                                        <MenuItem key={proj.projectName} value={proj.projectName}>
-                                            {proj.projectName}
-                                        </MenuItem>
-                                    ))}
-                                    <MenuItem value="newProject">Add New Project...</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        {isNewProject && (
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="New Project Name"
-                                    name="newProjectName"
-                                    value={newProjectName}
-                                    onChange={(e) => setNewProjectName(e.target.value)}
-                                />
-                            </Grid>
-                        )}
-
                         <Grid item xs={6}>
                             <FormControl fullWidth>
                                 <InputLabel>Priority</InputLabel>
                                 <Select
-                                    name="priority"
-                                    value={formValues.priority || 'Medium'}
-                                    onChange={handleSelectChange}
+                                    value={formValues.taskPriority || 'Medium'}
+                                    name="taskPriority"
+                                    onChange={handleInputChange}
+                                    sx={{
+                                        backgroundColor: isFieldUnsaved('taskPriority') ? '#FFF4E5' : '#fff',
+                                        borderRadius: 1
+                                    }}
                                 >
                                     <MenuItem value="High">High</MenuItem>
                                     <MenuItem value="Medium">Medium</MenuItem>
@@ -243,9 +298,13 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                             <FormControl fullWidth>
                                 <InputLabel>Status</InputLabel>
                                 <Select
-                                    name="status"
-                                    value={formValues.status || 'Not Started'}
-                                    onChange={handleSelectChange}
+                                    value={formValues.taskStatus || 'Not Started'}
+                                    name="taskStatus"
+                                    onChange={handleInputChange}
+                                    sx={{
+                                        backgroundColor: isFieldUnsaved('taskStatus') ? '#FFF4E5' : '#fff',
+                                        borderRadius: 1
+                                    }}
                                 >
                                     <MenuItem value="Not Started">Not Started</MenuItem>
                                     <MenuItem value="In Progress">In Progress</MenuItem>
@@ -257,108 +316,110 @@ const TaskWidget = ({ task, onDelete, subjects, projects, refreshTasks, onUpdate
                         <Grid item xs={6}>
                             <TextField
                                 label="Start Date"
-                                name="startDate"
+                                name="taskStartDate"
                                 type="date"
-                                value={formValues.startDate || ''} // Ensure the field is cleared
-                                onChange={(e) => handleDateChange(e, 'startDate')}
+                                value={formValues.taskStartDate || ''}
+                                onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskStartDate') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
 
                         <Grid item xs={6}>
                             <TextField
                                 label="Deadline"
-                                name="dueDate"
+                                name="taskDueDate"
                                 type="date"
-                                value={formValues.dueDate || ''} // Ensure the field is cleared
-                                onChange={(e) => handleDateChange(e, 'dueDate')}
+                                value={formValues.taskDueDate || ''}
+                                onChange={handleInputChange}
+                                error={!!errors.taskDueDate}
+                                helperText={errors.taskDueDate}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskDueDate') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
 
                         <Grid item xs={12}>
                             <TextField
                                 label="Time Due"
-                                name="dueTime"
+                                name="taskDueTime"
                                 type="time"
-                                value={formValues.dueTime || ''}
-                                onChange={handleTimeFieldChange}
+                                value={formValues.taskDueTime || ''}
+                                onChange={handleInputChange}
                                 fullWidth
                                 InputLabelProps={{ shrink: true }}
+                                sx={{
+                                    backgroundColor: isFieldUnsaved('taskDueTime') ? '#FFF4E5' : '#fff',
+                                    borderRadius: 1
+                                }}
                             />
                         </Grid>
                     </Grid>
                 </CardContent>
 
-                <CardActions
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingRight: 2
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <Button
-                            size="small"
-                            onClick={() => handleSave(formValues)}
-                            variant="contained"
-                            sx={{
-                                backgroundColor: '#B6CDC8',
-                                color: '#355147',
-                                '&:hover': { backgroundColor: '#a8bdb8' },
-                                mr: 3,
-                                ml: 1
-                            }}
-                        >
-                            Save
-                        </Button>
-
-                        <EditIcon
-                            onClick={() => handleEditClick(task)}
-                            sx={{
-                                color: '#9F6C5B',
-                                fontSize: 'xl',
-                                cursor: 'pointer'
-                            }}
-                        />
-                    </div>
-
+                <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>
                     <Button
                         size="small"
-                        onClick={() => onDelete(task.taskId)}
+                        onClick={handleSave}
                         variant="contained"
                         sx={{
-                            backgroundColor: '#ff5252',
-                            color: '#fff',
-                            '&:hover': { backgroundColor: '#ff1744' },
+                            backgroundColor: '#B6CDC8',
+                            color: '#355147',
+                            '&:hover': { backgroundColor: '#A8BDB8', transform: 'scale(1.05)' },
                         }}
                     >
-                        Delete
+                        Save
                     </Button>
+                    {hasUnsavedChanges && (
+                        <Button
+                            size="small"
+                            onClick={handleClearChanges}
+                            variant="outlined"
+                            sx={{ color: '#F3161E', borderColor: '#F3161E', '&:hover': { backgroundColor: '#F3161E', color: '#fff' } }}
+                        >
+                            Clear Changes
+                        </Button>
+                    )}
+                    <Tooltip title="Edit Task">
+                        <EditIcon
+                            onClick={handleEditClick}
+                            sx={{
+                                color: '#9F6C5B',
+                                cursor: 'pointer',
+                                padding: '6px',
+                                borderRadius: '50%',
+                                '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
+                            }}
+                        />
+                    </Tooltip>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+
+                        <Tooltip title="Delete Task">
+                            <DeleteIcon
+                                onClick={() => onDelete(task.taskId)}
+                                sx={{
+                                    color: '#F3161E',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    borderRadius: '50%',
+                                    marginLeft: 1,
+                                    '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
+                                }}
+                            />
+                        </Tooltip>
+                    </div>
                 </CardActions>
-
-
-                {/* Snackbar Notification positioned at the top of the widget */}
-                <Snackbar
-                    open={openSnackbar}
-                    autoHideDuration={3000}
-                    onClose={handleCloseSnackbar}
-                    message="Task has been successfully saved!"
-                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }} // Position the Snackbar at the top
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)', // Center it within the widget
-                    }}
-                />
             </Card>
         </div>
     );
 };
 
-// Use React.memo correctly to wrap TaskWidget
 export default React.memo(TaskWidget);

@@ -1,103 +1,49 @@
+/* TopBar container styling */
 .top-bar {
-    display: flex;
-    flex-direction: column;
-    height: 5%;
     width: 100%;
-    align-items: center;
-    /* Align items vertically in the center */
-    justify-content: center;
     background-color: #B6CDC8;
-    /* padding: 0px 5px 10px 5px; */
-    margin: 0px 0px 20px 0px;
-    border-radius: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-align: center;
 }
 
-.top-bar img:hover {
-    transform: scale(1.01);
+/* Grid container styling within TopBar */
+.top-bar-grid {
+    position: relative;
 }
 
-.top-navigation {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-}
-
-.logout-button {
+/* Menu icon button */
+.menu-icon-button {
     color: #9F6C5B;
-    text-decoration: none;
-    font-style: italic;
-    font-size: 1em;
-    font-weight: 300;
+    position: absolute;
+    left: 5%;
 }
 
-.logout-button :hover {
-    text-decoration: underline;
-}
-
-.logo {
-    will-change: filter;
-    transition: filter 300ms;
-}
-
-.name-links {
-    display: flex;
-    position: center;
-    flex-direction: column;
-    align-items: center;
-    /* Center items vertically */
-    width: 65%;
-    height: fit-content;
-
-}
-
-.app-name {
-    color: #355147;
-    /* Adjust color as needed */
-    font-weight: bold;
-    font-size: 24px;
-}
-
-.links {
-    justify-content: center;
-    align-content: center;
-    margin-top: 0%;
-}
-
-.nav-links {
-    display: flex;
-    gap: 20px;
-    /* Space between links */
-}
-
-.nav-links a {
-    color: #9F6C5B;
-    text-decoration: none;
-    font-style: italic;
-    font-size: 1em;
-    font-weight: 300;
-}
-
-.nav-links a:hover {
-    text-decoration: underline;
-}
-
-.fab {
-    position: fixed;
-    z-index: 1;
-    bottom: 20px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
+.menu-icon-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
     border-radius: 50%;
-    background-color: #5B8E9F;
-    color: white;
-    border: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
-    cursor: pointer;
-    font-size: 24px;
 }
 
-.fab:hover {
-    background-color: #0056b3;
-    /* Darker blue */
+/* Icon font size */
+.menu-icon {
+    font-size: 40px;
+}
+
+/* Centered logo style */
+.top-bar-logo {
+    display: block;
+    margin: auto;
+}
+
+/* Menu item for logout with red color */
+.logout-menu-item {
+    color: #F3161E;
+    font-weight: bold;
+}
+
+/* Menu paper styling (can also be applied via sx prop if desired) */
+.menu-paper {
+    width: 200px;
+    padding: 8px;
+    margin-left: 16px;
 }

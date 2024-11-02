@@ -1,4 +1,3 @@
-import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState, useEffect } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -9,10 +8,8 @@ import '/src/Components/UserProfile/UserProfile.css';
 
 const UserProfile = () => {
     const { user, updateUser } = useUser();
-    const [showPassword, setShowPassword] = useState(false);
     const [name, setName] = useState(user.name || '');
     const [email, setEmail] = useState(user.email || '');
-    const [password, setPassword] = useState(user.password || '');
     const [timeFormat, setTimeFormat] = useState(user.timeFormat || '12-Hour');
     const [dateFormat, setDateFormat] = useState(user.dateFormat || 'MM/DD/YYYY');
     const [notificationsEnabled, setNotificationsEnabled] = useState(user.notifications || false);
@@ -22,7 +19,6 @@ const UserProfile = () => {
     useEffect(() => {
         setName(user.name || '');
         setEmail(user.email || '');
-        setPassword(user.password || '');
         setTimeFormat(user.timeFormat || '12h');
         setDateFormat(user.dateFormat || 'MM/DD/YYYY');
         setNotificationsEnabled(user.notifications || false);
@@ -50,7 +46,6 @@ const UserProfile = () => {
         const userDetails = {
             name,
             email,
-            password,
             timeFormat,
             dateFormat,
             notifications: notificationsEnabled,
@@ -103,21 +98,6 @@ const UserProfile = () => {
                         <label htmlFor="email">Email:</label>
                         <input type="text" id="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
                     </div>
-                    <div>
-                        <label htmlFor="password">Password:</label>
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            id="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <div>
-                            <label htmlFor="showPassword">Show Password:</label>
-                            <input type="checkbox" id="showPassword" onClick={() => setShowPassword(!showPassword)} />
-                        </div>
-                    </div>
-                    <button className="update" onClick={handleUpdateProfile}>Update Details</button>
                 </div>
                 <div className="preferences">
                     <h3>Preferences</h3>

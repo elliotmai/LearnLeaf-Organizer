@@ -73,7 +73,7 @@ const ProjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                         <Grid item xs={12} sm={4} className="filter-item">
                             <Grid container spacing={2} direction="column">
                                 <Grid item>
-                                    <FormControl fullWidth variant="outlined">
+                                    <FormControl xs={8} fullWidth variant="outlined">
                                         <InputLabel id="dueDateFilterLabel">Due Date</InputLabel>
                                         <Select
                                             labelId="dueDateFilterLabel"
@@ -94,6 +94,7 @@ const ProjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                                 </Grid>
                                 <Grid item>
                                     <TextField
+                                    xs={8}
                                         id="dueDate"
                                         label="Due Date"
                                         type="date"
@@ -107,7 +108,20 @@ const ProjectFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) =
                                     />
                                 </Grid>
                             </Grid>
+
                         </Grid>
+
+                        <Grid item xs={8} className="filter-item">
+                                    <TextField
+                                        id="searchDescription"
+                                        label="Search Descriptions"
+                                        variant="outlined"
+                                        fullWidth
+                                        value={filterCriteria.searchDescription}
+                                        onChange={(e) => setFilterCriteria({ ...filterCriteria, searchDescription: e.target.value })}
+                                        placeholder="Search descriptions..."
+                                    />
+                                </Grid>
 
                         {/* Clear Filters Button: Full Width at Bottom */}
                         <Grid item xs={12} className="filter-item">

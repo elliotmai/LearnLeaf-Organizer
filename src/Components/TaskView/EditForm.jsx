@@ -1,333 +1,366 @@
+import React, { useState } from 'react';
+import {
+    Modal,
+    Box,
+    TextField,
+    Button,
+    FormControl,
+    Select,
+    MenuItem,
+    InputLabel,
+    Typography,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
-import React, { useState, useEffect } from 'react';
-import { editTask, fetchSubjects, addSubject, fetchProjects, addProject } from '/src/LearnLeaf_Functions.jsx';
-import { useUser } from '/src/UserState.jsx';
-import './TaskView.css';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import InputLabel from '@mui/material/InputLabel';
-
+import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 
 const boxStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
-    height: '90vh', // Sets the height of the box to 90% of the viewport height
-    maxHeight: '90vh', // Ensures the content doesn't exceed this height
-    overflowY: 'auto', // Allows scrolling within the Box if content exceeds its height
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '90vh',
+    overflowY: 'auto',
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2, // Padding top
-    pb: 3, // Padding bottom
-    px: 4, // Padding left and right
+    borderRadius: '12px',
+    px: 4,
+    pt: 3,
+    pb: 3,
 };
 
-const submitButtonStyle = {
-    backgroundColor: '#B6CDC8', // Custom background color
-    color: '#355147', // Custom text color
-    '&:hover': {
-        backgroundColor: '#a8bdb8', // Darker shade for hover state
-    },
+const buttonStyle = {
+    mt: 2,
+    width: '48%',
 };
 
-const cancelButtonStyle = {
-    backgroundColor: 'transparent', // No background
-    color: '#355147', // Custom text color
-    marginLeft: 1, // Margin to the left
-    '&:hover': {
-        backgroundColor: '#a8bdb8', // Slight background on hover for visual feedback
-    },
-};
-
-export const TaskEditForm = ({ task, isOpen, onClose, onSave }) => {
-    const { user } = useUser();
-    const [formValues, setFormValues]  = useState({
-        taskId: task.taskId,
-        subject: '',  // Start with an empty string, meaning "None" by default.
-        assignment: task.assignment || '',
-        description: task.description || '',
-        priority: task.priority || 'Medium',
-        status: task.status || 'Not Started',
-        startDate: task.startDate || '',
-        dueDate: task.dueDate || '',
-        dueTime: task.dueTime || '',
-        project: '',  // Start with an empty string.
-        userId: task.userId
+export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave }) => {
+    const [formValues, setFormValues] = useState({
+        taskId: task?.taskId || '',
+        taskSubject: task?.taskSubject?.subjectId || 'None',
+        taskName: task?.taskName || '',
+        taskDescription: task?.taskDescription || '',
+        taskPriority: task?.taskPriority || 'Medium',
+        taskStatus: task?.taskStatus || 'Not Started',
+        taskStartDate: task?.taskStartDate || '',
+        taskDueDate: task?.taskDueDate || '',
+        taskDueTime: task?.taskDueTime || '',
+        taskProject: task?.taskProject?.projectId || 'None',
     });
-    const [subjects, setSubjects] = useState([]);
-    const [projects, setProjects] = useState([]);
+
+    const [errors, setErrors] = useState({});
     const [isNewSubject, setIsNewSubject] = useState(false);
     const [isNewProject, setIsNewProject] = useState(false);
     const [newSubjectName, setNewSubjectName] = useState('');
     const [newProjectName, setNewProjectName] = useState('');
-
-    useEffect(() => {
-        const loadSubjectsAndProjects = async () => {
-            try {
-                const fetchedSubjects = await fetchSubjects(user.id, null);
-                const fetchedProjects = await fetchProjects(user.id, null);
-    
-                setSubjects(fetchedSubjects);
-                setProjects(fetchedProjects);
-    
-                // Only update setFormValues if initial values are found in fetched data
-                setFormValues(prevDetails => ({
-                    ...prevDetails,
-                    subject: fetchedSubjects.some(subj => subj.subjectName === task.subject) ? task.subject : '',
-                    project: fetchedProjects.some(proj => proj.projectName === task.project) ? task.project : ''
-                }));
-    
-            } catch (error) {
-                console.error('Error fetching subjects or projects:', error);
-            }
-        };
-    
-        loadSubjectsAndProjects();
-    }, [user?.id, task]); 
+    const [step, setStep] = useState(1);
 
     const handleInputChange = (event) => {
         const { name, value } = event.target;
 
         const isNewItemSelected = value === "newSubject" || value === "newProject";
 
-        if (name === "subject") {
-            if (isNewItemSelected) {
-                setIsNewSubject(value === "newSubject");
-                setFormValues(prevDetails => ({ ...prevDetails, subject: '' }));
+        if (name === "taskSubject") {
+            setIsNewSubject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskSubject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskProject") {
+            setIsNewProject(isNewItemSelected);
+            setFormValues(prevDetails => ({
+                ...prevDetails,
+                taskProject: isNewItemSelected ? 'None' : value,
+            }));
+        } else if (name === "taskDueTime" && value) {
+            if (!formValues.taskDueDate) {
+                setErrors(prevErrors => ({
+                    ...prevErrors,
+                    taskDueDate: 'Due date is required when due time is added.',
+                }));
             } else {
-                setIsNewSubject(false);
-                setFormValues(prevDetails => ({ ...prevDetails, subject: value }));
+                setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
             }
-        } else if (name === "newSubjectName" && isNewSubject) {
-            setFormValues(prevDetails => ({ ...prevDetails, subject: value }));
+        } else if (name === "taskDueDate") {
+            setErrors(prevErrors => ({ ...prevErrors, taskDueDate: '' }));
         }
 
-        if (name === "project") {
-            if (isNewItemSelected) {
-                setIsNewProject(value === "newProject");
-                setFormValues(prevDetails => ({ ...prevDetails, project: '' }));
-            } else {
-                setIsNewProject(false);
-                setFormValues(prevDetails => ({ ...prevDetails, project: value }));
-            }
-        } else if (name === "newProjectName" && isNewProject) {
-            setFormValues(prevDetails => ({ ...prevDetails, project: value }));
-        }
-
-        // Handle all other inputs normally
-        if (!["subject", "project", "newSubjectName", "newProjectName"].includes(name)) {
+        if (!["taskSubject", "taskProject"].includes(name)) {
             setFormValues(prevDetails => ({ ...prevDetails, [name]: value }));
         }
     };
 
-    const handleSave = async () => {
-        try {
-            const updatedTaskDetails = {
-                taskId: formValues.taskId,
-                userId: formValues.userId,
-                subject: formValues.subject,
-                project: formValues.project,
-                assignment: formValues.assignment,
-                description: formValues.description,
-                priority: formValues.priority,
-                status: formValues.status,
-                startDate: formValues.startDate, 
-                dueDate: formValues.dueDate,     
-                dueTime: formValues.dueTime,     
-            };
+    const handleSave = async (e) => {
+        e.preventDefault();
 
-            // Check if "None" was selected for subject or project and replace with an empty string
-            if (updatedTaskDetails.subject === "None") {
-                updatedTaskDetails.subject = '';
-            }
-            if (updatedTaskDetails.project === "None") {
-                updatedTaskDetails.project = '';
-            }
-
-            if (isNewSubject && newSubjectName) {
-                const newSubjectDetails = {
-                    userId: user.id,
-                    subjectName: newSubjectName,
-                    semester: '',
-                    subjectColor: 'black' // Default color
-                };
-                await addSubject(newSubjectDetails);
-                updatedTaskDetails.subject = newSubjectName;
-            }
-
-            if (isNewProject && newProjectName) {
-                const newProjectDetails = {
-                    userId: user.id,
-                    projectName: newProjectName,
-                    subject: ''
-                };
-                await addProject(newProjectDetails);
-                updatedTaskDetails.project = newProjectName;
-            }
-
-            await editTask(updatedTaskDetails);
-            onSave(updatedTaskDetails); // This needs to pass back the original formValues for consistency
-            onClose();
-        } catch (error) {
-            console.error('Failed to update task:', error);
+        if (formValues.taskDueTime && !formValues.taskDueDate) {
+            setErrors(prevErrors => ({
+                ...prevErrors,
+                taskDueDate: 'Due date is required when due time is added.',
+            }));
+            return;
         }
+
+        let updatedTaskDetails = { ...formValues };
+
+        // If a new subject is being added
+        if (isNewSubject && newSubjectName) {
+            const newSubjectDetails = {
+                subjectName: newSubjectName,
+                subjectSemester: '',
+                subjectDescription: '',
+                subjectColor: 'black',
+                subjectStatus: 'Active',
+            };
+            const addedSubject = await addSubject(newSubjectDetails);
+            const sortedSubjects = sortSubjects([...subjects, addedSubject]);
+            subjects = sortedSubjects;
+            updatedTaskDetails.taskSubject = addedSubject.subjectId;
+        }
+
+        // If a new project is being added
+        if (isNewProject && newProjectName) {
+            const newProjectDetails = {
+                projectName: newProjectName,
+                projectDescription: '',
+                projectSubjects: [],
+                projectStatus: 'Active',
+            };
+            const addedProject = await addProject(newProjectDetails);
+            const sortedProjects = sortProjects([...projects, addedProject]);
+            projects = sortedProjects;
+            updatedTaskDetails.taskProject = addedProject.projectId;
+        }
+
+        const newTaskData = await editTask(updatedTaskDetails);
+
+        onSave(newTaskData);
+        onClose();
     };
 
+    const handleNext = () => {
+        setStep(2);
+    };
+
+    const handleBack = () => {
+        setStep(1);
+    };
 
     return (
         <Modal open={isOpen} onClose={onClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
             <Box sx={boxStyle}>
-                <h2 id="modal-modal-title" style={{ color: "#8E5B9F" }}>Edit Task</h2>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+                        Edit Task
+                    </Typography>
+                    <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
                 <form noValidate autoComplete="on">
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="subject-label">Subject</InputLabel>
-                        <Select
-                            labelId="subject-label"
-                            id="subject"
-                            name="subject"
-                            value={isNewSubject ? 'newSubject' : formValues.subject || 'None'}
-                            onChange={handleInputChange}
-                            required
-                        >
-                            <MenuItem value="None">None</MenuItem>
-                            {subjects.map(subject => (
-                                <MenuItem key={subject.subjectName} value={subject.subjectName}>{subject.subjectName}</MenuItem>
-                            ))}
-                            <MenuItem value="newSubject">Add New Subject...</MenuItem>
-                        </Select>
-                    </FormControl>
-                    {isNewSubject && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            label="New Subject Name"
-                            name="newSubjectName"
-                            value={newSubjectName}
-                            onChange={(e) => setNewSubjectName(e.target.value)}
-                            required
-                        />
+                    {step === 1 && (
+                        <>
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Task Name"
+                                name="taskName"
+                                value={formValues.taskName}
+                                onChange={handleInputChange}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Description"
+                                name="taskDescription"
+                                value={formValues.taskDescription}
+                                onChange={handleInputChange}
+                                multiline
+                                maxRows={4}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="subject-label">Subject</InputLabel>
+                                <Select
+                                    labelId="subject-label"
+                                    name="taskSubject"
+                                    value={formValues.taskSubject}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="None">Select Subject...</MenuItem>
+                                    {subjects
+                                        .sort((a, b) => a.subjectName.localeCompare(b.subjectName))
+                                        .filter(subject => subject.subjectStatus === "Active")
+                                        .map((subject) => (
+                                            <MenuItem key={subject.subjectId} value={subject.subjectId}>{subject.subjectName}</MenuItem>
+                                        ))}
+                                    <MenuItem value="newSubject">Add New Subject...</MenuItem>
+                                </Select>
+                            </FormControl>
+                            {isNewSubject && (
+                                <TextField
+                                    fullWidth
+                                    margin="normal"
+                                    label="New Subject Name"
+                                    name="newSubjectName"
+                                    value={newSubjectName}
+                                    onChange={(e) => setNewSubjectName(e.target.value)}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                    required
+                                />
+                            )}
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="project-label">Project</InputLabel>
+                                <Select
+                                    labelId="project-label"
+                                    name="taskProject"
+                                    value={formValues.taskProject}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="None">Select Project...</MenuItem>
+                                    {projects
+                                        .sort((a, b) => a.projectName.localeCompare(b.projectName))
+                                        .filter(project => project.projectStatus === "Active")
+                                        .map((project) => (
+                                            <MenuItem key={project.projectId} value={project.projectId}>{project.projectName}</MenuItem>
+                                        ))}
+                                    <MenuItem value="newProject">Add New Project...</MenuItem>
+                                </Select>
+                            </FormControl>
+                            {isNewProject && (
+                                <TextField
+                                    fullWidth
+                                    margin="normal"
+                                    label="New Project Name"
+                                    name="newProjectName"
+                                    value={newProjectName}
+                                    onChange={(e) => setNewProjectName(e.target.value)}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                    required
+                                />
+                            )}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                                <Button
+                                    onClick={handleNext}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#B6CDC8',
+                                        color: '#355147',
+                                        '&:hover': {
+                                            backgroundColor: '#B6CDC8',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Next
+                                </Button>
+                            </Box>
+                        </>
                     )}
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Assignment"
-                        name="assignment"
-                        value={formValues.assignment ? formValues.assignment : ''}
-                        onChange={handleInputChange}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Description"
-                        name="description"
-                        value={formValues.description ? formValues.description : ''}
-                        onChange={handleInputChange}
-                        multiline
-                        maxRows={4}
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="priority-label">Priority</InputLabel>
-                        <Select
-                            labelId="priority-label"
-                            id="priority"
-                            value={formValues.priority? formValues.priority : 'Medium'}
-                            label="Priority"
-                            name="priority"
-                            onChange={handleInputChange}
-                        >
-                            <MenuItem value="High">High</MenuItem>
-                            <MenuItem value="Medium">Medium</MenuItem>
-                            <MenuItem value="Low">Low</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="status-label">Status</InputLabel>
-                        <Select
-                            labelId="status-label"
-                            id="status"
-                            value={formValues.status? formValues.status : 'Not Started'}
-                            label="Status"
-                            name="status"
-                            onChange={handleInputChange}
-                        >
-                            <MenuItem value="Not Started">Not Started</MenuItem>
-                            <MenuItem value="In Progress">In Progress</MenuItem>
-                            <MenuItem value="Completed">Completed</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Start Date"
-                        name="startDate"
-                        type="date"
-                        value={formValues.startDate ? formValues.startDate : ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Due Date"
-                        name="dueDate"
-                        type="date"
-                        value={formValues.dueDate ? formValues.dueDate : ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <TextField
-                        fullWidth
-                        margin="normal"
-                        label="Time Due"
-                        name="dueTime"
-                        type="time"
-                        value={formValues.dueTime ? formValues.dueTime : ''}
-                        onChange={handleInputChange}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="project-label">Project</InputLabel>
-                        <Select
-                            labelId="project-label"
-                            id="project"
-                            name="project"
-                            value={isNewProject ? 'newProject' : formValues.project || 'None'}
-                            onChange={handleInputChange}
-                            required
-                        >
-                            <MenuItem value="None">None</MenuItem>
-                            {projects.map(project => (
-                                <MenuItem key={project.projectName} value={project.projectName}>{project.projectName}</MenuItem>
-                            ))}
-                            <MenuItem value="newProject">Add New Project...</MenuItem>
-                        </Select>
-                    </FormControl>
-                    {isNewProject && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            label="New Project Name"
-                            name="newProjectName"
-                            value={newProjectName}
-                            onChange={(e) => setNewProjectName(e.target.value)}
-                            required
-                        />
+
+                    {step === 2 && (
+                        <>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="priority-label">Priority</InputLabel>
+                                <Select
+                                    labelId="priority-label"
+                                    name="taskPriority"
+                                    value={formValues.taskPriority}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="High">High</MenuItem>
+                                    <MenuItem value="Medium">Medium</MenuItem>
+                                    <MenuItem value="Low">Low</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel id="status-label">Status</InputLabel>
+                                <Select
+                                    labelId="status-label"
+                                    name="taskStatus"
+                                    value={formValues.taskStatus}
+                                    onChange={handleInputChange}
+                                    sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                                >
+                                    <MenuItem value="Not Started">Not Started</MenuItem>
+                                    <MenuItem value="In Progress">In Progress</MenuItem>
+                                    <MenuItem value="Completed">Completed</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Start Date"
+                                name="taskStartDate"
+                                type="date"
+                                value={formValues.taskStartDate}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Due Date"
+                                name="taskDueDate"
+                                type="date"
+                                value={formValues.taskDueDate}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+                            <TextField
+                                fullWidth
+                                margin="normal"
+                                label="Time Due"
+                                name="taskDueTime"
+                                type="time"
+                                value={formValues.taskDueTime}
+                                onChange={handleInputChange}
+                                InputLabelProps={{ shrink: true }}
+                                sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
+                            />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                                <Button
+                                    onClick={handleBack}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#B6CDC8',
+                                        color: '#355147',
+                                        '&:hover': {
+                                            backgroundColor: '#B6CDC8',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Back
+                                </Button>
+                                <Button
+                                    onClick={handleSave}
+                                    sx={{
+                                        ...buttonStyle,
+                                        backgroundColor: '#8E5B9F', color: '#FFF'
+                                        ,
+                                        '&:hover': {
+                                            backgroundColor: '#8E5B9F',
+                                            transform: 'scale(1.03)',
+                                        },
+                                    }}
+                                >
+                                    Save
+                                </Button>
+                            </Box>
+                        </>
                     )}
-                    <div style={{ marginTop: 16 }}>
-                        <Button sx={submitButtonStyle} onClick={handleSave}>
-                            Save
-                        </Button>
-                        <Button sx={cancelButtonStyle} onClick={onClose}>
-                            Cancel
-                        </Button>
-                    </div>
                 </form>
             </Box>
         </Modal>

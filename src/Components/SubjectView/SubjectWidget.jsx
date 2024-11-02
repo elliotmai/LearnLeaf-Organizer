@@ -1,44 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { archiveSubject, deleteSubject } from '/src/LearnLeaf_Functions.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { EditSubjectForm } from './EditSubjectForm.jsx';
-import './SubjectDashboard.css';
-// import '/src/Components/TaskView/TaskView.css';
-
-const CustomIconButton = styled(IconButton)({
-    color: '#9F6C5B'
-});
+import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 
 const SubjectWidget = ({ subject, refreshSubjects }) => {
-    const [editedSubject, setEditedSubject] = useState({
-        subjectId: subject.id,
-        ...subject,
-    });
+    const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
-        try {
-            await archiveSubject(subject.id);
-            console.log("Subject archived successfully.");
-            refreshSubjects(); // Call refreshSubjects to update the dashboard
-        } catch (error) {
-            console.error("Error archiving subject:", error);
+        const confirmation = window.confirm("Archive this subject?\nThis will not delete any associated tasks.");
+        if (confirmation) {
+            try {
+                await archiveSubject(subject.subjectId);
+                console.log("Subject archived successfully.");
+                refreshSubjects(); // Call refreshSubjects to update the dashboard
+            } catch (error) {
+                console.error("Error archiving subject:", error);
+            }
         }
     };
-
-    useEffect(() => {
-        if (subject.description === undefined) {
-            subject.description = '';
-        }
-    }, []);
 
     const widgetStyle = {
         border: `3px solid ${subject.subjectColor}`,
@@ -53,10 +40,10 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
     };
 
     const handleDeleteClick = async () => {
-        const confirmation = window.confirm("Are you sure you want to delete this subject?\n(This will not delete any associated tasks.)");
+        const confirmation = window.confirm("Delete this subject?\nAssociated tasks won’t be grouped under this subject anymore.");
         if (confirmation) {
             try {
-                await deleteSubject(subject.id);
+                await deleteSubject(subject.subjectId);
                 refreshSubjects(); // Call this function to refresh the subjects in the parent component
             } catch (error) {
                 console.error("Error deleting subject:", error);
@@ -78,138 +65,111 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
             />
             <Card
                 sx={{
-                    border: '3px solid', // Add border style to make it visible
-                    borderRadius: '8px',
-                    borderColor: subject.subjectColor // Use dynamic color value
+                    borderRadius: '16px',
+                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+                    padding: '16px',
+                    backgroundColor: '#f9f9f9',
+                    border: `3px solid ${subject.subjectColor || '#355147'}`,
                 }}
             >
                 <CardContent>
-                    <Link
-                        href={`/subjects/${subject.id}`}
-                        underline="hover"
-                        variant="h6"
-                        color="inherit"
-                        sx={{
-                            color: '#355147',
-                            display: 'block',
-                            fontWeight: 'bold',
-                            fontSize: '22px'
-                        }}
-                        gutterBottom
-                    >
-                        {subject.subjectName}
-                    </Link>
-
-                    <Typography
-                        variant="body1"
-                        color="textPrimary"
-                    >
-                        {subject.semester}
-                    </Typography>
-
-                    {/* Description Typography with ellipsis and click event to expand */}
-                    <Typography
-                        variant="body2"
-                        color="textSecondary"
-                        onClick={() => setDescriptionOpen(true)}
-                        sx={{
-                            whiteSpace: 'pre-wrap',
-                            fontStyle: 'italic',
-                            textAlign: 'left',
-                            padding: '8px',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            textOverflow: 'ellipsis',
-                        }}
-                    >
-                        {subject.description}
-                    </Typography>
-
-                    {/* Dialog to show full description */}
-                    <Dialog
-                        open={isDescriptionOpen}
-                        onClose={() => setDescriptionOpen(false)}
-                        aria-labelledby="description-dialog-title"
-                    >
-                        <DialogTitle
+                    <Tooltip title="View Associated Tasks">
+                        <Link
+                            href={`/subjects/${subject.subjectId}`}
+                            underline="hover"
+                            variant="h6"
                             sx={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                paddingRight: '16px'
+                                fontWeight: 'bold',
+                                color: '#355147',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                '&:hover': { color: '#5B8E9F' },
                             }}
                         >
-                            Full Description
-                            <IconButton
-                                aria-label="close"
-                                onClick={() => setDescriptionOpen(false)}
-                                sx={{
-                                    color: (theme) => theme.palette.grey[500],
-                                }}
-                            >
-                                <CloseIcon />
-                            </IconButton>
-                        </DialogTitle>
-                        <DialogContent>
+                            {subject.subjectName}
+                        </Link>
+                    </Tooltip>
+
+                    <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mt: 1, fontWeight: 'bold', color: '#9F6C5B' }}>
+                        {subject.subjectSemester}
+                    </Typography>
+
+                    {subject.subjectDescription && (
+                        <Tooltip title="Click to view full description">
                             <Typography
                                 variant="body2"
                                 color="textSecondary"
+                                onClick={() => setDescriptionOpen(true)}
                                 sx={{
-                                    whiteSpace: 'pre-wrap',
                                     fontStyle: 'italic',
+                                    color: '#5B8E9F',
+                                    whiteSpace: 'pre-wrap',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    cursor: 'pointer',
+                                    padding: '8px 0',
+                                    textAlign: 'center',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#f1f3f4',
                                 }}
                             >
-                                {subject.description}
+                                {subject.subjectDescription}
+                            </Typography>
+                        </Tooltip>
+                    )}
+
+                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
+                        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '16px' }}>
+                            Full Description
+                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
+                                <CloseIcon />
+                            </IconButton>
+                        </DialogTitle>
+                        <DialogContent dividers sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+                                {subject.subjectDescription}
                             </Typography>
                         </DialogContent>
                     </Dialog>
                 </CardContent>
 
-                <CardActions
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                    }}
-                >
-                    {/* Edit Button on the far left */}
-                    <CustomIconButton
-                        aria-label="edit"
-                        onClick={() => handleEditClick(subject)}
-                    >
-                        <EditIcon
-                            fontSize="medium"
-                        />
-                    </CustomIconButton>
-
-                    {/* Grouping Archive and Delete buttons on the right */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>
+                    <Tooltip title="Edit Subject">
+                        <IconButton
+                            onClick={() => handleEditClick(subject)}
+                            sx={{
+                                color: '#9F6C5B',
+                                '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
+                            }}
+                        >
+                            <EditIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Box>
                         <Button
                             size="small"
                             onClick={handleArchiveSubject}
-                            variant="contained"
                             sx={{
-                                backgroundColor: '#B6CDC8',
                                 color: '#355147',
-                                '&:hover': { backgroundColor: '#a8bdb8' },
-                                mr: 1 // Reduce the margin to make them closer
+                                '&:hover': { backgroundColor: '#355147', color: '#fff' },
                             }}
                         >
                             Archive
                         </Button>
-
-                        <CustomIconButton
-                            aria-label="delete"
-                            onClick={() => handleDeleteClick(subject.subjectId)}
-                        >
-                            <DeleteIcon
-                                fontSize="medium"
-                            />
-                        </CustomIconButton>
-                    </div>
+                        <Tooltip title="Delete Subject">
+                            <IconButton
+                                onClick={() => handleDeleteClick(subject.subjectId)}
+                                sx={{
+                                    color: '#F3161E',
+                                    '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
+                                }}
+                            >
+                                <DeleteIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 </CardActions>
             </Card>
         </>

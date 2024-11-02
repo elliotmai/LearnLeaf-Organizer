@@ -2,6 +2,7 @@ import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resetPassword } from '/src/LearnLeaf_Functions.jsx';
+import { useMediaQuery, useTheme } from '@mui/material';
 
 function ResetPassword() {
     // State for each input field
@@ -26,10 +27,18 @@ function ResetPassword() {
         setEmail('');
     };
 
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg'));
+    const logoStyle = {
+        width: isSmallScreen ? '50%' : '30%',
+        display: 'block',
+        margin: 'auto',
+    };
+
     return (
         <div className="login-form-container">
             <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo"/>
+                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle}/>
             </div>
             <h2 style={{ color: '#907474' }}>Reset Password</h2>
             <form className="form-group" onSubmit={handleSubmit}>

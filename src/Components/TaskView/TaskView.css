@@ -15,6 +15,11 @@
     box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
 }
 
+.unsaved-bg {
+    background-color: #fffbd9; /* Light yellow for unsaved changes */
+    transition: background-color 0.3s ease; /* Smooth transition effect */
+}
+
 .popup-notification {
     position: fixed;
     top: 0;

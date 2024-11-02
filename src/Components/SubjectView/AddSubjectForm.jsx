@@ -1,51 +1,55 @@
 import React, { useState } from 'react';
 import { addSubject } from '/src/LearnLeaf_Functions.jsx';
-import { useUser } from '/src/UserState.jsx';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import { ChromePicker } from 'react-color'; // Make sure you've installed react-color
+import {
+    Modal,
+    Box,
+    TextField,
+    Button,
+    Typography,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import { ChromePicker } from 'react-color';
 
-
+// Styles
 const boxStyle = {
     position: 'absolute',
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: '90%',
+    maxWidth: 500,
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2, // Padding top
-    pb: 3, // Padding bottom
-    px: 4, // Padding left and right
+    pt: 2,
+    pb: 3,
+    px: 4,
+    borderRadius: '12px',
 };
 
 const submitButtonStyle = {
-    backgroundColor: '#B6CDC8', // Custom background color
-    color: '#355147', // Custom text color
+    backgroundColor: '#B6CDC8',
+    color: '#355147',
     '&:hover': {
-        backgroundColor: '#a8bdb8', // Darker shade for hover state
+        backgroundColor: '#A8BDB8',
+        transform: 'scale(1.03)',
     },
 };
 
 const cancelButtonStyle = {
-    backgroundColor: 'transparent', // No background
-    color: '#355147', // Custom text color
-    marginLeft: 1, // Margin to the left
+    color: '#ff5252',
+    marginLeft: 1,
     '&:hover': {
-        backgroundColor: '#a8bdb8', // Slight background on hover for visual feedback
+        color: '#fff',
+        backgroundColor: '#ff5252',
     },
 };
 
-
 export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
-    const { user } = useUser();
     const [subjectDetails, setSubjectDetails] = useState({
-        userId: user.id,
         subjectName: '',
-        semester: '',
-        description: '',
+        subjectSemester: '',
+        subjectDescription: '',
         subjectColor: 'black',
     });
 
@@ -68,7 +72,15 @@ export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
     return (
         <Modal open={isOpen} onClose={onClose}>
             <Box sx={boxStyle}>
-                <h2 style={{ color: "#8E5B9F" }}>Add a New Subject</h2>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+                        Add a New Subject
+                    </Typography>
+                    <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+
                 <form onSubmit={handleSubmit}>
                     <TextField
                         fullWidth
@@ -79,40 +91,43 @@ export function AddSubjectForm({ isOpen, onClose, refreshSubjects }) {
                         value={subjectDetails.subjectName}
                         onChange={handleInputChange}
                         required
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
                     <TextField
                         fullWidth
                         margin="normal"
                         id="semester"
-                        name="semester"
+                        name="subjectSemester"
                         label="Semester"
-                        value={subjectDetails.semester}
+                        value={subjectDetails.subjectSemester}
                         onChange={handleInputChange}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
                     <TextField
                         fullWidth
                         margin="normal"
                         label="Description"
-                        name="description"
-                        value={subjectDetails.description}
+                        name="subjectDescription"
+                        value={subjectDetails.subjectDescription}
                         onChange={handleInputChange}
                         multiline
                         maxRows={4}
+                        sx={{ backgroundColor: '#F9F9F9', borderRadius: 1 }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                         <ChromePicker
                             color={subjectDetails.subjectColor}
                             onChangeComplete={handleColorChange}
                         />
-                    </div>
-                    <div style={{ marginTop: 16 }}>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
                         <Button sx={submitButtonStyle} type="submit" variant="contained">
                             Add Subject
                         </Button>
                         <Button sx={cancelButtonStyle} onClick={onClose}>
                             Cancel
                         </Button>
-                    </div>
+                    </Box>
                 </form>
             </Box>
         </Modal>

@@ -1,91 +1,97 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '/src/UserState.jsx';
-import { useNavigate } from 'react-router-dom';
-import { fetchSubjects, logoutUser } from '/src/LearnLeaf_Functions.jsx';
+import { getAllFromStore } from '/src/db.js';
+import { sortSubjects } from '/src/LearnLeaf_Functions.jsx';
 import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import SubjectFilterBar from './SubjectFilterBar';
-import { Grid, useMediaQuery, useTheme } from '@mui/material';
-import { FixedSizeList as List } from 'react-window'; // List component from react-window
-import '/src/Components/PageFormat.css';
-import '/src/Components/FilterBar.css';
+import { Grid, Typography, CircularProgress, Box, Button, Paper, useTheme, useMediaQuery } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { FixedSizeList as List } from 'react-window';
 
-
-// Memoized Row component for rendering tasks
 const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow }) => {
-    const startIndex = index * itemsPerRow; // Each row starts with itemsPerRow number of subjects
-
+    const startIndex = index * itemsPerRow;
     return (
-        <div style={style}>
-            <Grid container spacing={3} className="task-widgets">
+        <Box sx={{ ...style, width: '100%', display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+            <Grid container spacing={3} sx={{ maxWidth: '100%' }}>
                 {Array(itemsPerRow).fill(null).map((_, i) => {
                     const subjectIndex = startIndex + i;
                     return subjectIndex < subjects.length ? (
-                        <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={subjects[subjectIndex].id}>
-                            <SubjectWidget
-                                subject={subjects[subjectIndex]}
-                                refreshSubjects={refreshSubjects}
-                            />
+                        <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={subjects[subjectIndex].subjectId}>
+                            <SubjectWidget subject={subjects[subjectIndex]} refreshSubjects={refreshSubjects} />
                         </Grid>
                     ) : null;
                 })}
             </Grid>
-        </div>
+        </Box>
     );
 });
 
 const SubjectsDashboard = () => {
-    const [isOpen, setIsOpen] = useState(false); // Renamed to isOpen for clarity
+    const [isOpen, setIsOpen] = useState(false);
     const [subjects, setSubjects] = useState([]);
     const { user } = useUser();
-    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(true);
     const [filterCriteria, setFilterCriteria] = useState({
         searchSubject: '',
         searchSemester: '',
         searchDescription: ''
     });
-    
+
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
     const isLargeScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const isXLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
 
-    // Adjust the number of items per row based on screen size
     const getItemsPerRow = useCallback(() => {
         if (isSmallScreen) return 1;
         if (isMediumScreen) return 2;
         if (isLargeScreen) return 3;
         if (isXLargeScreen) return 4;
-        return 3; // Default to 3 items per row
+        return 3;
     }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
+
+    // Fetch active subjects from IndexedDB
+    const loadFromIndexedDB = async () => {
+        try {
+            const allSubjects = await getAllFromStore('subjects');
+            const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
+            if (activeSubjects.length > 0) {
+                setSubjects(sortSubjects(activeSubjects));
+                setIsLoading(false);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error("Error loading subjects from IndexedDB:", error);
+            return false;
+        }
+    };
+
+    const updateState = async () => {
+        setIsLoading(true);
+        const isLoadedFromIndexedDB = await loadFromIndexedDB();
+        if (!isLoadedFromIndexedDB) {
+            console.log("No subjects data found in IndexedDB.");
+        }
+    };
 
     useEffect(() => {
         if (user?.id) {
-            fetchSubjects(user.id)
-                .then(fetchedSubjects => setSubjects(fetchedSubjects))
-                .catch(error => console.error("Error fetching subjects:", error));
-
-            // console.log(subjects);
+            updateState();
         }
     }, [user?.id]);
 
-    const onClose = () => setIsOpen(false); // Function to close the modal
-    const onOpen = () => setIsOpen(true); // Function to open the modal
-
-    const refreshSubjects = async () => {
-        // console.log("Refreshing subjects...");
-        const updatedSubjects = await fetchSubjects(user.id);
-        // console.log("Successfully refreshed subjects");
-        setSubjects(updatedSubjects);
-    };
+    const onClose = () => setIsOpen(false);
+    const onOpen = () => setIsOpen(true);
 
     const getFilteredSubjects = (subjects, filterCriteria) => {
         return subjects.filter((subject) => {
             const matchesSearchSubject = filterCriteria.searchSubject === '' || subject.subjectName.toLowerCase().includes(filterCriteria.searchSubject.toLowerCase());
-            const matchesSearchSemester = filterCriteria.searchSemester === '' || subject.semester.toLowerCase().includes(filterCriteria.searchSemester.toLowerCase())
-            const matchesSearchDescription = filterCriteria.searchDescription === '' || subject.description.toLowerCase().includes(filterCriteria.searchDescription.toLowerCase())
+            const matchesSearchSemester = filterCriteria.searchSemester === '' || subject.subjectSemester.toLowerCase().includes(filterCriteria.searchSemester.toLowerCase());
+            const matchesSearchDescription = filterCriteria.searchDescription === '' || subject.subjectDescription.toLowerCase().includes(filterCriteria.searchDescription.toLowerCase());
 
             return matchesSearchSubject && matchesSearchSemester && matchesSearchDescription;
         });
@@ -99,44 +105,105 @@ const SubjectsDashboard = () => {
         });
     };
 
+    const handleSubject = () => {
+        updateState();
+    };
+
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 280; // Approximate height of each widget
+    const rowHeight = 280;
     const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
-    // console.log(filteredSubjects.length);
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
     return (
-        <div className="view-container">
+        <Box sx={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
-            <button className="fab" onClick={onOpen}>
-                +
-            </button>
-            {isOpen && <AddSubjectForm isOpen={isOpen} onClose={onClose} refreshSubjects={refreshSubjects} />}
-            <h1 style={{ color: '#907474' }}>{user?.name}'s Current Subjects</h1>
-            <div className="subjects-grid">
-                <SubjectFilterBar
-                    filterCriteria={filterCriteria}
-                    setFilterCriteria={setFilterCriteria}
-                    clearFilters={clearFilters}
-                />
-                <List
-                    height={600} // Adjust the height to the desired value
-                    itemCount={totalRows} // Number of rows needed to display subjects
-                    itemSize={rowHeight} // Adjust the row height to fit the content
-                    width="100%"
+            <Grid container direction="column" alignItems="center" justifyContent="center" width="90%" margin="auto">
+                <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                    {user?.name}'s Current Subjects
+                </Typography>
+                <Grid
+                    container
+                    alignItems="center"
+                    justifyContent="center"
+                    spacing={1}
+                    paddingBottom="10px"
+                    paddingTop="10px"
+                    position="relative"
+                    sx={{
+                        borderTop: "1px solid #d9d9d9",
+                        borderBottom: "1px solid #d9d9d9",
+                        margin: "auto",
+                        flexDirection: "column",
+                    }}
                 >
-                    {({ index, style }) => (
-                        <Row
-                            index={index}
-                            style={style}
-                            subjects={filteredSubjects}
-                            refreshSubjects={refreshSubjects}
-                            itemsPerRow={itemsPerRow}
+                    <Box display="flex" justifyContent="center">
+                        <SubjectFilterBar
+                            filterCriteria={filterCriteria}
+                            setFilterCriteria={setFilterCriteria}
+                            clearFilters={clearFilters}
                         />
+                    </Box>
+                    <Button
+                        onClick={onOpen}
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        sx={{
+                            color: '#355147',
+                            borderColor: '#355147',
+                            marginTop: 2,
+                            '&:hover': {
+                                backgroundColor: '#355147',
+                                color: '#fff',
+                            },
+                        }}
+                    >
+                        Add New Subject
+                    </Button>
+                </Grid>
+            </Grid>
+            <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }} justifyContent="center">
+                <Box sx={{ flex: 1, overflowY: 'auto', padding: '1%', maxWidth: '90%' }}>
+                    {isLoading ? (
+                        <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
+                            <CircularProgress />
+                        </Grid>
+                    ) : filteredSubjects.length > 0 ? (
+                        <List height={600} itemCount={totalRows} itemSize={rowHeight} width="100%">
+                            {({ index, style }) => (
+                                <Row index={index} style={style} subjects={filteredSubjects} refreshSubjects={updateState} itemsPerRow={itemsPerRow} />
+                            )}
+                        </List>
+                    ) : (
+                        <Grid container justifyContent="center" alignItems="center" style={{ width: '100%', marginTop: '2rem' }}>
+                            <Paper
+                                elevation={3}
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '2rem',
+                                    backgroundColor: '#f5f5f5',
+                                    width: '90%',
+                                }}
+                            >
+                                <Typography variant="h6" color="textSecondary">No subjects found!</Typography>
+                                <Typography variant="body2" color="textSecondary" textAlign="center">
+                                    Click the + button to add your first subject!
+                                </Typography>
+                            </Paper>
+                        </Grid>
                     )}
-                </List>
-            </div>
-        </div>
+                </Box>
+            </Grid>
+            {isOpen && (
+                <AddSubjectForm
+                    isOpen={isOpen}
+                    onClose={onClose}
+                    refreshSubjects={updateState}
+                />
+            )}
+        </Box>
     );
 };
 
