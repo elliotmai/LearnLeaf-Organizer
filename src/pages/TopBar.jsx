@@ -1,12 +1,10 @@
-// TopBar.jsx
 import React, { useState } from 'react';
 import logo from '/src/LearnLeaf_Name_Logo_Wide.png';
-import { useMediaQuery, useTheme, Menu, MenuItem, IconButton, Box, Typography, Grid, Popover } from '@mui/material';
+import { useMediaQuery, useTheme, MenuItem, IconButton, Box, Typography, Grid, Popover, Button } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
-import '/src/Components/PageFormat.css';
-import '/src/App.css';
+import TaskImportPopup from '/src/Components/TaskView/TaskImportPopup'; // Assuming TaskImportPopup is the import popup component
 
 const TopBar = () => {
     const theme = useTheme();
@@ -14,6 +12,7 @@ const TopBar = () => {
     const navigate = useNavigate();
 
     const [anchorEl, setAnchorEl] = useState(null);
+    const [isTaskImportOpen, setIsTaskImportOpen] = useState(false); // For the Task Import popup
     const open = Boolean(anchorEl);
 
     const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
@@ -69,11 +68,31 @@ const TopBar = () => {
                         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                     >
-                        <Box
-                            onMouseLeave={handleMenuClose}
-                            sx={{ width: 200, padding: 1, ml: 2 }}
-                        >
-                            <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>Tasks</MenuItem>
+                        <Box onMouseLeave={handleMenuClose} sx={{ width: 200, padding: 1, ml: 2 }}>
+                            <MenuItem onClick={() => { navigate('/tasks'); handleMenuClose(); }}>
+                                Tasks
+                            </MenuItem>
+
+                            {/* Indented Task Import Button */}
+                            {!isSmallScreen &&
+                                <Button
+                                    onClick={() => { setIsTaskImportOpen(true); handleMenuClose(); }}
+                                    sx={{
+                                        color: 'text.primary',
+                                        textTransform: 'none',
+                                        fontSize: '0.875rem',
+                                        textAlign: 'left',
+                                        pl: 4, // Indentation effect
+                                        width: '100%',
+                                        justifyContent: 'flex-start',
+                                        backgroundColor: 'transparent',
+                                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+                                    }}
+                                >
+                                    Import Tasks
+                                </Button>
+                            }
+
                             {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
                             <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
                             <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
@@ -91,6 +110,9 @@ const TopBar = () => {
                     </a>
                 </Grid>
             </Grid>
+
+            {/* Task Import Popup */}
+            {isTaskImportOpen && <TaskImportPopup isOpen={isTaskImportOpen} onClose={() => setIsTaskImportOpen(false)} />}
         </Box>
     );
 };
