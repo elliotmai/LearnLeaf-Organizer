@@ -33,6 +33,8 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
         taskStartDateComparison: '',
         taskDueDate: '',
         taskDueDateComparison: '',
+        taskSubject: '',
+        taskProject: ''
     });
 
     const { user } = useUser();
@@ -85,6 +87,8 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
     const getFilteredTasks = (tasks, filterCriteria) => {
         return tasks.filter((task) => {
             const matchesSearchQuery = filterCriteria.searchQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
+            const matchesSubject = filterCriteria.taskSubject === '' || task.taskSubject.subjectName.toLowerCase().includes(filterCriteria.taskSubject.toLowerCase());
+            const matchesProject = filterCriteria.taskProject === '' || task.taskProject.projectName.toLowerCase().includes(filterCriteria.taskProject.toLowerCase());
             const matchesPriority = !filterCriteria.taskPriority || task.taskPriority === filterCriteria.taskPriority;
             const matchesStatus = !filterCriteria.taskStatus || task.taskStatus === filterCriteria.taskStatus;
 
@@ -102,7 +106,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
                 matchesDueDate = filterByDate(task.taskDueDate, filterCriteria.taskDueDate, filterCriteria.taskDueDateComparison);
             }
 
-            return matchesSearchQuery && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
+            return matchesSearchQuery && matchesSubject && matchesProject && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
         });
     };
 
@@ -116,6 +120,8 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
             taskStartDateComparison: '',
             taskDueDate: '',
             taskDueDateComparison: '',
+            taskSubject: '',
+            taskProject: ''
         });
     };
 

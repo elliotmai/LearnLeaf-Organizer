@@ -212,7 +212,7 @@ const ProjectsDashboard = () => {
                 </Grid>
             </Grid>
             <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1%'}}>
+                <div style={{ flex: 1, overflowY: 'auto', paddingLeft: '1%', paddingRight: '1%'}}>
                     {isLoading ? (
                         <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
                             <CircularProgress />

@@ -161,8 +161,8 @@ const SubjectsDashboard = () => {
                     </Button>
                 </Grid>
             </Grid>
-            <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }} justifyContent="center">
-                <Box sx={{ flex: 1, overflowY: 'auto', padding: '1%', maxWidth: '90%' }}>
+            <Grid container style={{ flexGrow: 1, overflowY: 'auto', width: '100%' }} justifyContent="center">
+                <Box sx={{ flex: 1, paddingLeft: '1%', paddingRight: '1%', maxWidth: '90%' }}>
                     {isLoading ? (
                         <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
                             <CircularProgress />

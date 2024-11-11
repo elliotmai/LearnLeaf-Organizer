@@ -40,24 +40,22 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                 </AccordionSummary>
                 <AccordionDetails>
                     <Grid container spacing={3}>
-                        {/* Search Input: Full Width on Top */}
-                        <Grid item xs={12} className="filter-item">
-                            <TextField
-                                id="searchTask"
-                                label="Search Tasks"
-                                variant="outlined"
-                                fullWidth
-                                value={filterCriteria.searchQuery}
-                                onChange={(e) => setFilterCriteria({ ...filterCriteria, searchQuery: e.target.value })}
-                                placeholder="Search tasks..."
-                            />
-                        </Grid>
-
                         {/* Below the Search Input: 3 Columns */}
                         <Grid container item spacing={3} xs={12}>
                             {/* First Column: Status on top, Priority below */}
                             <Grid item xs={12} sm={4} className="filter-item">
                                 <Grid container spacing={2} direction="column">
+                                    <Grid item>
+                                        <TextField
+                                            id="searchTask"
+                                            label="Search Tasks"
+                                            variant="outlined"
+                                            fullWidth
+                                            value={filterCriteria.searchQuery}
+                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, searchQuery: e.target.value })}
+                                            placeholder="Search tasks..."
+                                        />
+                                    </Grid>
                                     <Grid item>
                                         <FormControl fullWidth variant="outlined">
                                             <InputLabel id="statusFilterLabel">Status</InputLabel>
@@ -99,6 +97,17 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                             <Grid item xs={12} sm={4} className="filter-item">
                                 <Grid container spacing={2} direction="column">
                                     <Grid item>
+                                        <TextField
+                                            id="searchSubject"
+                                            label="Search Subjects"
+                                            variant="outlined"
+                                            fullWidth
+                                            value={filterCriteria.taskSubject}
+                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, taskSubject: e.target.value })}
+                                            placeholder="Search subjects..."
+                                        />
+                                    </Grid>
+                                    <Grid item>
                                         <FormControl fullWidth variant="outlined">
                                             <InputLabel id="startDateFilterLabel">Start Date</InputLabel>
                                             <Select
@@ -138,6 +147,17 @@ const TaskFilterBar = ({ filterCriteria, setFilterCriteria, clearFilters }) => {
                             {/* Third Column: Due Date Comparison on top, Due Date Entry below */}
                             <Grid item xs={12} sm={4} className="filter-item">
                                 <Grid container spacing={2} direction="column">
+                                    <Grid item>
+                                        <TextField
+                                            id="searchProject"
+                                            label="Search Projects"
+                                            variant="outlined"
+                                            fullWidth
+                                            value={filterCriteria.taskProject}
+                                            onChange={(e) => setFilterCriteria({ ...filterCriteria, taskProject: e.target.value })}
+                                            placeholder="Search projects..."
+                                        />
+                                    </Grid>
                                     <Grid item>
                                         <FormControl fullWidth variant="outlined">
                                             <InputLabel id="dueDateFilterLabel">Due Date</InputLabel>

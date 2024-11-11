@@ -373,14 +373,8 @@ export async function updateUserDetails(userId, userDetails) {
 
     try {
         await updateDoc(userDocRef, userDetails);
-        setUserIdAndCollections(null);
-        await Promise.all([
-            localStorage.clear(),
-            clearStore(TASKS_STORE),
-            clearStore(SUBJECTS_STORE),
-            clearStore(PROJECTS_STORE)
-
-        ]);
+        localStorage.setItem('user', JSON.stringify({userId, userDetails}));
+        fetchAllData();
     } catch (error) {
         console.error("Error updating user:", error);
     }

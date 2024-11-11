@@ -154,7 +154,7 @@ export const TaskEditForm = ({ task, subjects, projects, isOpen, onClose, onSave
             <Box sx={boxStyle}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h5" sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
-                        Edit Task
+                        {step === 1 ? 'Edit Task' : formValues.taskName}
                     </Typography>
                     <IconButton onClick={onClose} sx={{ color: 'grey.600' }}>
                         <CloseIcon />
