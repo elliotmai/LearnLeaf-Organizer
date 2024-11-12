@@ -2,6 +2,7 @@ clear
 .vs
 lib
 node_modules
-.firebasesendgrid.env
+.firebase
+sendgrid.env
 .DS_Store
 dist
