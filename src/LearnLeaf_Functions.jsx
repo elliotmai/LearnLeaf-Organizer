@@ -499,18 +499,19 @@ export async function editTask(taskDetails) {
     const taskSubjectRef = taskDetails.taskSubject
         ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
             ? doc(subjectCollection, taskDetails.taskSubject)
-            : taskDetails.taskSubject?.subjectId
+            : (typeof taskDetails.taskSubject === 'object' && taskDetails.taskSubject.subjectId && taskDetails.taskSubject.subjectId !== 'None'
                 ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
-                : doc(firestore, "noneSubject", "None"))
+                : doc(firestore, "noneSubject", "None")))
         : doc(firestore, "noneSubject", "None");
 
     const taskProjectRef = taskDetails.taskProject
         ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
             ? doc(projectCollection, taskDetails.taskProject)
-            : taskDetails.taskProject?.projectId
+            : (typeof taskDetails.taskProject === 'object' && taskDetails.taskProject.projectId && taskDetails.taskProject.projectId !== 'None'
                 ? doc(projectCollection, taskDetails.taskProject.projectId)
-                : doc(firestore, "noneProject", "None"))
+                : doc(firestore, "noneProject", "None")))
         : doc(firestore, "noneProject", "None");
+
 
     // Prepare the Firestore update data
     const taskData = {
@@ -525,7 +526,7 @@ export async function editTask(taskDetails) {
     // Helper function to create a date object with exact local time components
     function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
         const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // month - 1 due to JS Date 0-indexed months
+        return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, milliseconds));
     }
 
     // Set start and due dates exactly as provided
