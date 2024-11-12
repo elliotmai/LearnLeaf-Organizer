@@ -373,7 +373,7 @@ export async function updateUserDetails(userId, userDetails) {
 
     try {
         await updateDoc(userDocRef, userDetails);
-        localStorage.setItem('user', JSON.stringify({userId, userDetails}));
+        localStorage.setItem('user', JSON.stringify({ userId, userDetails }));
         fetchAllData();
     } catch (error) {
         console.error("Error updating user:", error);
@@ -412,9 +412,27 @@ export async function addTask(taskDetails) {
 
     const taskId = `${Date.now()}`;
 
+    console.log(taskDetails);
+
+    const taskSubjectRef = taskDetails.taskSubject
+        ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
+            ? doc(subjectCollection, taskDetails.taskSubject)
+            : taskDetails.taskSubject?.subjectId
+                ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
+                : doc(firestore, "noneSubject", "None"))
+        : doc(firestore, "noneSubject", "None");
+
+    const taskProjectRef = taskDetails.taskProject
+        ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
+            ? doc(projectCollection, taskDetails.taskProject)
+            : taskDetails.taskProject?.projectId
+                ? doc(projectCollection, taskDetails.taskProject.projectId)
+                : doc(firestore, "noneProject", "None"))
+        : doc(firestore, "noneProject", "None");
+
     const taskData = {
-        taskSubject: doc(subjectCollection, taskDetails.taskSubject),
-        taskProject: doc(projectCollection, taskDetails.taskProject),
+        taskSubject: taskSubjectRef,
+        taskProject: taskProjectRef,
         taskName: taskDetails.taskName,
         taskDescription: taskDetails.taskDescription,
         taskPriority: taskDetails.taskPriority,
@@ -459,6 +477,8 @@ export async function addTask(taskDetails) {
     };
 
     try {
+
+        console.log(taskData);
         await setDoc(taskRef, taskData);
 
         // Save updated task data to IndexedDB
@@ -473,14 +493,24 @@ export async function addTask(taskDetails) {
 export async function editTask(taskDetails) {
     const taskId = taskDetails.taskId;
 
-    // Determine if taskSubject and taskProject are objects or strings, then create Firestore references
-    const taskSubjectRef = typeof taskDetails.taskSubject === 'string'
-        ? doc(subjectCollection, taskDetails.taskSubject)
-        : doc(subjectCollection, taskDetails.taskSubject?.subjectId);
+    console.log(taskDetails);
 
-    const taskProjectRef = typeof taskDetails.taskProject === 'string'
-        ? doc(projectCollection, taskDetails.taskProject)
-        : doc(projectCollection, taskDetails.taskProject?.projectId);
+    // Determine if taskSubject and taskProject are objects or strings, then create Firestore references
+    const taskSubjectRef = taskDetails.taskSubject
+        ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
+            ? doc(subjectCollection, taskDetails.taskSubject)
+            : taskDetails.taskSubject?.subjectId
+                ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
+                : doc(firestore, "noneSubject", "None"))
+        : doc(firestore, "noneSubject", "None");
+
+    const taskProjectRef = taskDetails.taskProject
+        ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
+            ? doc(projectCollection, taskDetails.taskProject)
+            : taskDetails.taskProject?.projectId
+                ? doc(projectCollection, taskDetails.taskProject.projectId)
+                : doc(firestore, "noneProject", "None"))
+        : doc(firestore, "noneProject", "None");
 
     // Prepare the Firestore update data
     const taskData = {
@@ -490,28 +520,46 @@ export async function editTask(taskDetails) {
         taskDescription: taskDetails.taskDescription,
         taskPriority: taskDetails.taskPriority,
         taskStatus: taskDetails.taskStatus,
-        taskStartDate: taskDetails.taskStartDate
-            ? (() => {
-                const startDate = new Date(taskDetails.taskStartDate);
-                startDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
-                return Timestamp.fromDate(startDate);
-            })()
-            : deleteField(),
-        taskDueDate: taskDetails.taskDueDate
-            ? (() => {
-                const dueDate = new Date(taskDetails.taskDueDate);
-                dueDate.setHours(23, 59, 59, 999); // Set time to 23:59:59
-                return Timestamp.fromDate(dueDate);
-            })()
-            : deleteField(),
-        taskDueTime: taskDetails.taskDueTime
-            ? Timestamp.fromDate(new Date(taskDetails.taskDueDate + "T" + taskDetails.taskDueTime))
-            : deleteField()
     };
+
+    // Helper function to create a date object with exact local time components
+    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // month - 1 due to JS Date 0-indexed months
+    }
+
+    // Set start and due dates exactly as provided
+    if (taskDetails.taskStartDate) {
+        const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100); // 00:00:00 local time
+        taskData.taskStartDate = Timestamp.fromDate(startDate);
+    }
+    else {
+        taskData.taskStartDate = null;
+    }
+
+    if (taskDetails.taskDueDate) {
+        const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900); // 23:59:59 local time
+        taskData.taskDueDate = Timestamp.fromDate(dueDate);
+    }
+    else {
+        taskData.taskDueDate = null;
+    }
+
+    // If both dueDateInput and dueTimeInput are provided, set due time
+    if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
+        const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
+        const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0); // Set to specified due time in local time
+        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+    }
+    else {
+        taskData.taskDueTime = null;
+    }
 
     const taskRef = doc(taskCollection, taskId);
 
     try {
+
+        console.log(taskData);
         // Update Firestore
         await updateDoc(taskRef, taskData);
 
@@ -604,9 +652,9 @@ export async function deleteSubject(subjectId) {
 
         // Update each task that references this subject
         for (const task of allTasks) {
-                // Change taskSubject to 'None'
-                task.taskSubject = 'None';
-                await editTask(task); // Call editTask with updated task
+            // Change taskSubject to 'None'
+            task.taskSubject = 'None';
+            await editTask(task); // Call editTask with updated task
         }
 
         // Fetch all projects and update those containing the deleted subject
@@ -616,7 +664,7 @@ export async function deleteSubject(subjectId) {
         for (const project of allProjects) {
             if (project.projectSubjects.includes(subjectId)) {
                 const updatedProject = { ...project };
-                
+
                 // If project has more than one subject, remove the specific subjectId
                 if (project.projectSubjects.length > 1) {
                     updatedProject.projectSubjects = project.projectSubjects.filter(subj => subj !== subjectId);
@@ -717,9 +765,9 @@ export async function editProject(projectDetails) {
 
     // Convert subject IDs to Firebase Document References
     const subjectRefs = projectDetails.projectSubjects.map(subject => {
-            const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
-            return doc(subjectCollection, subjectId);
-        }).filter(ref => ref);
+        const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
+        return doc(subjectCollection, subjectId);
+    }).filter(ref => ref);
 
     const subjectIds = subjectRefs.map(subject => subject.id);
 
