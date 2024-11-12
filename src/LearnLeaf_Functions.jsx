@@ -94,106 +94,82 @@ async function resolveProjectReferences(projects, subjects) {
 // Formatting functions for date and time
 // Helper function to format Firestore Timestamp to "day month, year"
 export function formatDate(input) {
-
     if (!input) {
         return ''; // Return empty string if input is undefined, null, etc.
     }
 
     let date;
     if (input instanceof Date) {
-        // Input is already a JavaScript Date object
         date = input;
     } else if (input.toDate && typeof input.toDate === 'function') {
-        // Input is a Firestore Timestamp object
         date = input.toDate();
     } else if (typeof input === 'string' || typeof input === 'number') {
-        // Input is a string or a number (timestamp), attempt to parse it
         date = new Date(input);
     } else {
-        // Unsupported type, return empty string
         return '';
     }
 
-    // Format the date to 'YYYY-MM-DD'
-    let year = date.getFullYear();
-    let month = (date.getMonth() + 1).toString().padStart(2, '0'); // JS months are 0-indexed
-    let day = date.getDate().toString().padStart(2, '0');
-
-    return `${year}-${month}-${day}`; // Return the formatted date string
+    // Format date in YYYY-MM-DD using locale options
+    return date.toLocaleDateString('en-CA'); // ISO format: 'YYYY-MM-DD'
 }
 
 export function formatDateDisplay(input, dateFormat) {
-
     let date = input instanceof Date ? input : input.toDate ? input.toDate() : new Date(input);
-    let month = (date.getMonth() + 1).toString().padStart(2, '0');
-    let day = (date.getDate() + 1).toString().padStart(2, '0');
-    let year = date.getFullYear();
 
+    // Format according to dateFormat
     if (dateFormat === 'DD/MM/YYYY') {
-        return `${day}/${month}/${year}`;
-    }
-    else {
-        return `${month}/${day}/${year}`;
+        return date.toLocaleDateString('en-GB'); // 'DD/MM/YYYY' format
+    } else {
+        return date.toLocaleDateString('en-US'); // 'MM/DD/YYYY' format
     }
 }
 
 export function formatTimeDisplay(input, timeFormat) {
+    if (!input || typeof input !== 'string') return 'N/A';
 
-    if (!input || typeof input !== 'string') return 'N/A'; // Handle null, undefined, or non-string input
-
-    // Split the input string by the colon to get hours and minutes
     const [strHours, strMinutes] = input.split(':');
-
-    // Parse the hours and minutes into numbers
     let hours = parseInt(strHours, 10);
     let minutes = parseInt(strMinutes, 10);
-    const ampm = hours >= 12 ? 'PM' : 'AM';
 
-    // Validate the hours and minutes
     if (isNaN(hours) || isNaN(minutes) || hours > 23 || minutes > 59) {
-        console.error('Invalid time string:', input); // Log the invalid input
-        return 'Invalid Time'; // The input was not a valid time string
+        console.error('Invalid time string:', input);
+        return 'Invalid Time';
     }
 
-    if (timeFormat === '12h') {
-        // Convert hours from 24-hour to 12-hour format for AM/PM notation
-        hours = hours % 12;
-        hours = hours || 12; // the hour '0' should be '12'
-    }
+    // Create a temporary Date object to use locale time formatting
+    const tempDate = new Date();
+    tempDate.setHours(hours, minutes);
 
-    // Format hours and minutes with leading zeros
-    const formattedHours = hours.toString().padStart(2, '0');
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-
-    // Return the formatted time string depending on the format
-    return timeFormat === '12h' ? `${formattedHours}:${formattedMinutes} ${ampm}` : `${formattedHours}:${formattedMinutes}`;
+    // Return time in the desired format
+    return tempDate.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: timeFormat === '12h'
+    });
 }
 
-// Helper function to format Firestore Timestamp to "HH:MM AM/PM"
 export function formatTime(input) {
     if (!input) {
-        return ''; // Return empty string if input is undefined, null, etc.
+        return '';
     }
 
     let time;
     if (input instanceof Date) {
-        // Input is already a JavaScript Date object
         time = input;
     } else if (input.toDate && typeof input.toDate === 'function') {
-        // Input is a Firestore Timestamp object
         time = input.toDate();
     } else if (typeof input === 'string' || typeof input === 'number') {
-        // Input is a string or a number (timestamp), attempt to parse it
         time = new Date(input);
     } else {
-        // Unsupported type, return empty string
         return '';
     }
 
-    // Format the time to 'HH:MM'
-    let hours = time.getHours().toString().padStart(2, '0');
-    let minutes = time.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`; // Return the formatted time string
+    // Format the time to 'HH:MM' in local time
+    return time.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
 }
 
 export async function fetchAllData() {
@@ -523,38 +499,35 @@ export async function editTask(taskDetails) {
         taskStatus: taskDetails.taskStatus,
     };
 
-    // Helper function to create a date object with exact local time components
     function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
         const [year, month, day] = dateString.split('-').map(Number);
-        return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, milliseconds));
+        // Use local time by directly creating a Date object with the provided values
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
     }
-
+    
     // Set start and due dates exactly as provided
     if (taskDetails.taskStartDate) {
         const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100); // 00:00:00 local time
         taskData.taskStartDate = Timestamp.fromDate(startDate);
-    }
-    else {
+    } else {
         taskData.taskStartDate = null;
     }
-
+    
     if (taskDetails.taskDueDate) {
         const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900); // 23:59:59 local time
         taskData.taskDueDate = Timestamp.fromDate(dueDate);
-    }
-    else {
+    } else {
         taskData.taskDueDate = null;
     }
-
+    
     // If both dueDateInput and dueTimeInput are provided, set due time
     if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
         const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
         const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0); // Set to specified due time in local time
         taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
-    }
-    else {
+    } else {
         taskData.taskDueTime = null;
-    }
+    }    
 
     const taskRef = doc(taskCollection, taskId);
 
