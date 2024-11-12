@@ -41,4 +41,7 @@ export default defineConfig({
     },
   })
   ],
+  optimizeDeps: {
+    importParser: 'v2',  // Use 'v2' as a string
+  }
 })
