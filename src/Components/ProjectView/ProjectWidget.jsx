@@ -11,6 +11,7 @@ import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box, Di
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
+import { useUser } from '/src/UserState.jsx';
 
 const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     const [editedProject, setEditedProject] = useState({
@@ -18,7 +19,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
     });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
-    const navigate = useNavigate();
+    const { user } = useUser();
     const theme = useTheme();
     const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg')); // Large screen detection
 
@@ -171,7 +172,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                     {project.nextTaskName ? (
                         <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}>
                             Next Task: {project.nextTaskName} <br />
-                            {project.nextTaskDueDate ? `Due: ${formatDateDisplay(project.nextTaskDueDate)} ${project.nextTaskDueTime ? `at ${formatTimeDisplay(project.nextTaskDueTime)}` : ''}` : 'No Due Date Set'}
+                            {project.nextTaskDueDate ? `Due: ${formatDateDisplay(project.nextTaskDueDate, user.dateFormat)} ${project.nextTaskDueTime ? `at ${formatTimeDisplay(project.nextTaskDueTime, user.timeFormat)}` : ''}` : 'No Due Date Set'}
                         </Typography>
                     ) : (
                         <Typography variant="body2" sx={{ color: '#9F6C5B', fontWeight: 'bold' }}>No Upcoming Tasks</Typography>
@@ -201,7 +202,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                         }}
                     >
                         {project.projectDueDate
-                            ? `Project Due: ${formatDateDisplay(project.projectDueDate)}${project.projectDueTime ? ` at ${formatTimeDisplay(project.projectDueTime)}` : ''}`
+                            ? `Project Due: ${formatDateDisplay(project.projectDueDate, user.dateFormat)}${project.projectDueTime ? ` at ${formatTimeDisplay(project.projectDueTime, user.timeFormat)}` : ''}`
                             : 'No Due Date Set'}
                     </Typography>
                 </CardContent>
