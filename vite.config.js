@@ -14,10 +14,9 @@ function removeUseClientDirective() {
     },
   }
 }
-
+// base: "/LearnLeaf-Organizer"
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/LearnLeaf-Organizer",
   plugins: [
     react(),
     VitePWA({
