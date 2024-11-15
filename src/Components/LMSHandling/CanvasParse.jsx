@@ -13,6 +13,8 @@ export default function CanvasParse({ icalUrl }) {
         // Replace the base URL in the iCal URL to use the correct proxy
         const proxiedUrl = `${baseURL}/${icalUrl.replace(/^https?:\/\/[^\/]+\//, '')}`;
 
+        console.log("Proxied URL:", proxiedUrl);
+
         fetch(proxiedUrl)
             .then((response) => {
                 if (!response.ok) {
