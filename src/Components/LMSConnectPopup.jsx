@@ -12,13 +12,16 @@ import {
   IconButton,
   Box,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import CanvasParse from '/src/Components/LMSHandling/CanvasParse'; // Static import of CanvasParse
 
 const LMSConnectPopup = ({ isOpen, onClose }) => {
   const [selectedLMS, setSelectedLMS] = useState('Canvas');
   const [icalLink, setIcalLink] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const instructions = {
     Canvas: `To get your iCal link from Canvas:\n
@@ -29,27 +32,33 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
 
   const handleLMSChange = (event) => {
     setSelectedLMS(event.target.value);
+    setError(null); // Clear any previous error when changing LMS
   };
 
   const handleLinkChange = (event) => {
     setIcalLink(event.target.value);
+    setError(null); // Clear any previous error when editing the link
   };
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
+    setError(null); // Reset any previous error
 
-    if (selectedLMS === 'Canvas') {
-      const { default: CanvasParse } = await import('/src/Components/LMSHandling/CanvasParse');
-      try {
-        await CanvasParse({ icalUrl: icalLink });
-      } catch (error) {
-        console.error("Parsing failed:", error);
-      } finally {
-        setLoading(false);
-        onClose();
-        // window.location.reload();
-      }
+    if (!icalLink.startsWith('http')) {
+      setError('Invalid URL. Please enter a valid iCal URL.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await CanvasParse({ icalUrl: icalLink });
+      onClose(); // Close the dialog on successful parsing
+    } catch (error) {
+      console.error('Parsing failed:', error);
+      setError('Failed to parse the iCal link. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,9 +78,7 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
         <IconButton
           aria-label="close"
           onClick={onClose}
-          sx={{
-            color: 'grey.600',
-          }}
+          sx={{ color: 'grey.600' }}
           disabled={loading} // Prevent closing the dialog while loading
         >
           <CloseIcon />
@@ -88,7 +95,7 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
           margin="normal"
         >
           <MenuItem value="Canvas">Canvas</MenuItem>
-          {/* Additional LMS options can be added here */}
+          {/* Add more LMS options here */}
         </TextField>
 
         <Typography variant="body1" color="textSecondary" sx={{ mt: 2, mb: 2 }}>
@@ -111,6 +118,12 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
           margin="normal"
           required
         />
+
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {/* Show loading indicator */}
         {loading && (
