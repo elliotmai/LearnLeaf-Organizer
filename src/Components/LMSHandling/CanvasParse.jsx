@@ -1,7 +1,7 @@
 // CanvasParse.jsx
 import ICAL from 'ical.js';
 import { addTask, addSubject, editTask } from '/src/LearnLeaf_Functions';
-import { getFromStore, saveToStore } from '/src/db';
+import { getFromStore } from '/src/db';
 
 export default function CanvasParse({ icalUrl }) {
     return new Promise((resolve, reject) => {
