@@ -65,11 +65,8 @@ export default function CanvasParse({ icalUrl }) {
                             // Step 2: Remove parentheses only if they contain a URL (http or https)
                             description = description.replace(/\(\s*https?:\/\/[^\s()]+?\s*\)/g, '');
                         
-                            // Step 3: Trim any extra whitespace caused by the removals
-                            description = description.replace(/\s+/g, ' ').trim();
-                        
                             return description;
-                        }
+                        }                        
 
                         // Skip adding the subject if it's in the deleted subjects array
                         if (deletedSubjects.includes(subjectCleaned)) {
