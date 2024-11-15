@@ -1,7 +1,7 @@
 // icsProxy.js
-const fetch = require("node-fetch");
+import fetch from "node-fetch";
 
-exports.handler = async (event) => {
+export async function handler(event) {
     const url = event.queryStringParameters.url;
 
     if (!url) {
@@ -29,4 +29,4 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: "Failed to fetch data", details: error.message }),
         };
     }
-};
+}

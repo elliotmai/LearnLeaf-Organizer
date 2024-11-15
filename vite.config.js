@@ -42,15 +42,6 @@ export default defineConfig({
       },
     }),
   ],
-  optimizeDeps: {
-    include: ['@mui/material', '@mui/icons-material', 'hoist-non-react-statics'],
-  },
-  // resolve: {
-  //   alias: {
-  //     '@mui/material': 'node_modules/@mui/material/index.js',
-  //     '@mui/icons-material': 'node_modules/@mui/icons-material/index.js',
-  //   },
-  // },
   server: {
     proxy: {
       '/proxy': {
