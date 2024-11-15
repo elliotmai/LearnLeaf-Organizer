@@ -8,7 +8,7 @@ export default function CanvasParse({ icalUrl }) {
         // Determine base URL based on environment
         const baseURL = window.location.hostname === 'localhost'
             ? 'http://localhost:8080/proxy'
-            : 'https://lms-integration--learnleaf-organizer.netlify.app//.netlify/functions/proxy';
+            : 'https://lms-integration--learnleaf-organizer.netlify.app/.netlify/functions/proxy';
 
         // Replace the base URL in the iCal URL to use the correct proxy
         const proxiedUrl = `${baseURL}/${icalUrl.replace(/^https?:\/\/[^\/]+\//, '')}`;
