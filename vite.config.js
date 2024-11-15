@@ -2,19 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Custom plugin to remove "use client" directives in MUI files
-function removeUseClientDirective() {
-  return {
-    name: 'remove-use-client-directive',
-    transform(code, id) {
-      if (id.includes('node_modules/@mui')) {
-        return code.replace(/"use client";?/g, '')
-      }
-      return code
-    },
-  }
-}
-
 export default defineConfig({
   plugins: [
     react(),
@@ -51,19 +38,19 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Set cache limit to 5 MB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
-    removeUseClientDirective() 
   ],
   optimizeDeps: {
     include: ['@mui/material', '@mui/icons-material', 'hoist-non-react-statics'],
   },
-  build: {
-    rollupOptions: {
-      external: ['@mui/material', '@mui/icons-material'],
-    },
-  },
+  // resolve: {
+  //   alias: {
+  //     '@mui/material': 'node_modules/@mui/material/index.js',
+  //     '@mui/icons-material': 'node_modules/@mui/icons-material/index.js',
+  //   },
+  // },
   server: {
     proxy: {
       '/proxy': {
