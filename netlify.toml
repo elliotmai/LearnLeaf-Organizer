@@ -7,7 +7,7 @@
 # Redirect for SPA (Single Page Application) support
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/index.js"
   status = 200
 
 # Redirect /proxy/* to the ICS proxy function with CORS handling
