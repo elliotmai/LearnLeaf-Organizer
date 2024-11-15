@@ -50,9 +50,15 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    exclude: ['@mui/material', '@mui/icons-material'], // Exclude from optimization
+  },
   build: {
     rollupOptions: {
       external: ['@mui/material', '@mui/icons-material'], // Exclude MUI packages from bundling
+    },
+    commonjsOptions: {
+      include: [/node_modules/], // Include all node modules in commonjs plugin handling
     },
   },
 })
