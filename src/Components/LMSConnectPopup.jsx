@@ -44,23 +44,32 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
     event.preventDefault();
     setLoading(true);
     setError(null); // Reset any previous error
-
-    if (!icalLink.startsWith('http')) {
-      setError('Invalid URL. Please enter a valid iCal URL.');
+  
+    // Regex for basic URL validation with common domains (e.g., .com, .org, etc.)
+    const urlPattern = /^(https?:\/\/)?([\w.-]+)\.([a-z.]{2,6})(\/[\w.-]*)*\/?.ics$/i;
+    
+    if (!urlPattern.test(icalLink)) {
+      setError('Invalid URL. Please enter a valid iCal URL ending in .ics');
       setLoading(false);
       return;
     }
-
-    try {
-      await CanvasParse({ icalUrl: icalLink });
-      onClose(); // Close the dialog on successful parsing
-    } catch (error) {
-      console.error('Parsing failed:', error);
-      setError('Failed to parse the iCal link. Please try again.');
-    } finally {
+  
+    // Only call CanvasParse if the selected LMS is "Canvas"
+    if (selectedLMS === "Canvas") {
+      try {
+        await CanvasParse({ icalUrl: icalLink });
+        onClose(); // Close the dialog on successful parsing
+      } catch (error) {
+        console.error('Parsing failed:', error);
+        setError('Failed to parse the iCal link. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setError("Currently, only Canvas is supported for LMS integration.");
       setLoading(false);
     }
-  };
+  };  
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
