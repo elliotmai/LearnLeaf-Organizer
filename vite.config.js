@@ -60,7 +60,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/proxy': {
-        target: 'https://instructure.com',  // Placeholder target
+        target: 'https://uta.instructure.com',  // Placeholder target
         changeOrigin: true,
         rewrite: (path) => {
           console.log("Original path:", path);  // Log the incoming path
