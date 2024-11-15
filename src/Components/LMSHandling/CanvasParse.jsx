@@ -58,6 +58,19 @@ export default function CanvasParse({ icalUrl }) {
                         const [taskName, subjectName] = summary.split(' [');
                         const subjectCleaned = subjectName ? subjectName.replace(']', '') : 'None';
 
+                        function formatDescription(description) {
+                            // Step 1: Remove content within square brackets [] only if it contains a file name
+                            description = description.replace(/\[[^\[\]]*?\.\w{2,4}\]/g, '');
+                        
+                            // Step 2: Remove parentheses only if they contain a URL (http or https)
+                            description = description.replace(/\(\s*https?:\/\/[^\s()]+?\s*\)/g, '');
+                        
+                            // Step 3: Trim any extra whitespace caused by the removals
+                            description = description.replace(/\s+/g, ' ').trim();
+                        
+                            return description;
+                        }
+
                         // Skip adding the subject if it's in the deleted subjects array
                         if (deletedSubjects.includes(subjectCleaned)) {
                             return;
@@ -74,7 +87,7 @@ export default function CanvasParse({ icalUrl }) {
 
                         const task = {
                             taskName: taskName.trim(),
-                            taskDescription: event.description ? event.description.replace(/http[^\s]+/, "") : "",
+                            taskDescription: event.description ? formatDescription (event.description) : "",
                             dueDateInput: formattedDate, // Set formatted date
                             dueTimeInput: formattedTime, // Set formatted time
                             taskLMSDetails: {
@@ -102,7 +115,6 @@ export default function CanvasParse({ icalUrl }) {
                         // Check if the subject is already in IndexedDB
                         const existingSubject = await getFromStore('subjects', subject.subjectLMSDetails.LMS_UID);
                         if (!existingSubject && !subjects.has(subjectCleaned)) {
-                            console.log("Adding Subject:", subject);
                             await addSubject(subject);
                             subjects.add(subjectCleaned);
                         }
@@ -110,13 +122,11 @@ export default function CanvasParse({ icalUrl }) {
                         // Check if the task is already in IndexedDB
                         const existingTask = await getFromStore('tasks', task.taskLMSDetails.LMS_UID);
                         if (!existingTask) {
-                            console.log("Adding Task:", task);
                             await addTask(task);
                             tasks.push(task);
                         } else {
                             const existingDueDate = new Date(existingTask.taskDueDate);
                             if (existingDueDate.getTime() !== task.dueDateInput) {
-                                console.log("Updating Task Due Date:", task);
                                 await editTask({
                                     ...existingTask,
                                     taskDueDate: task.dueDateInput,
