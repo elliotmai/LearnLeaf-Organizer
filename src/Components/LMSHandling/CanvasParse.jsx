@@ -32,7 +32,7 @@ export default function CanvasParse({ icalUrl }) {
                         throw new Error("No iCal data received.");
                     }
 
-                    console.log("Fetched iCal Data (Snippet):", icalData.slice(0, 100));
+                    console.log("Fetched iCal Data (Snippet):", icalData.slice(0, 500));
 
                     const jcal = ICAL.parse(icalData);
                     const component = new ICAL.Component(jcal);

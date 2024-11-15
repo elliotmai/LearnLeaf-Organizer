@@ -1,42 +1,50 @@
-// icsProxy.js
-import fetch from "node-fetch";
+import fetch from 'node-fetch';
 
 export async function handler(event) {
     const url = event.queryStringParameters.url;
 
-    if (!url || !url.endsWith(".ics")) {
+    if (!url) {
         return {
             statusCode: 400,
-            body: JSON.stringify({ error: "Invalid or missing .ics URL" }),
+            body: JSON.stringify({ error: 'No URL provided' }),
         };
     }
 
     try {
-        const response = await fetch(url);
-        const contentType = response.headers.get("content-type");
+        const response = await fetch(url, {
+            headers: {
+                Accept: 'text/calendar',
+            },
+        });
 
-        // Ensure the response is a valid calendar file
-        if (!contentType || !contentType.includes("text/calendar")) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: "Invalid .ics file response" }),
-            };
+        if (!response.ok) {
+            throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('text/calendar')) {
+            throw new Error(`Unexpected content type: ${contentType}`);
         }
 
         const data = await response.text();
 
         return {
-            statusCode: response.status,
+            statusCode: 200,
             headers: {
-                "Content-Type": "text/calendar",
-                "Access-Control-Allow-Origin": "*",
+                'Content-Type': 'text/calendar',
+                'Access-Control-Allow-Origin': '*',
             },
             body: data,
         };
     } catch (error) {
+        console.error('Proxy error:', error);
+
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Failed to fetch data", details: error.message }),
+            body: JSON.stringify({
+                error: 'Failed to fetch data from the specified URL',
+                details: error.message,
+            }),
         };
     }
 }
