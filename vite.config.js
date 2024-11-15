@@ -50,7 +50,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/, '$2'),
         router: (req) => {
           const matches = req.url.match(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/);
-          return matches ? matches[1] : 'https://instructure.com';
+          return matches ? matches[1] : 'https://uta.instructure.com';
         },
       },
     },
