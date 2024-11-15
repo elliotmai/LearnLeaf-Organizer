@@ -57,4 +57,38 @@ export default defineConfig({
     }),
     removeUseClientDirective() // Add the custom plugin here without changing the existing structure
   ],
-})
+  server: {
+    proxy: {
+      '/proxy': {
+        target: 'https://instructure.com',  // Placeholder target
+        changeOrigin: true,
+        rewrite: (path) => {
+          console.log("Original path:", path);  // Log the incoming path
+          
+          // Strip the initial `/proxy` to get the correct path for proxying
+          const newPath = path.replace(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/, '$2');
+          console.log("Rewritten path:", newPath);  // Log the rewritten path
+          return newPath;
+        },
+        router: (req) => {
+          // Dynamically set the target based on the URL in the path
+          const matches = req.url.match(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/);
+          if (matches && matches[1]) {
+            const domain = matches[1];  // Extract the correct domain, e.g., `https://uta.instructure.com`
+            console.log("Dynamic target domain:", domain);
+            return domain; // Proxy to the extracted domain
+          }
+          return 'https://instructure.com'; // Fallback target, should rarely be used
+        },
+        onProxyReq: (proxyReq, req, res) => {
+          console.log("Request Headers:", req.headers);
+          console.log("Request URL:", req.url);
+        },
+        onProxyRes: (proxyRes, req, res) => {
+          console.log("Response Headers:", proxyRes.headers);
+          console.log("Response Status Code:", proxyRes.statusCode);
+        },
+      },
+    },
+  },
+});

@@ -30,6 +30,7 @@
     "firebase": "^10.6.0",
     "handsontable": "^14.6.1",
     "i": "^0.3.7",
+    "ical.js": "^2.1.0",
     "idb": "^8.0.0",
     "lodash.debounce": "^4.0.8",
     "npm": "^10.9.0",
@@ -39,7 +40,7 @@
     "react-data-grid": "^7.0.0-beta.47",
     "react-data-table-component": "^7.6.2",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.1",
+    "react-router-dom": "^6.28.0",
     "react-window": "^1.8.10",
     "recharts": "^2.12.3",
     "yup": "^1.4.0"

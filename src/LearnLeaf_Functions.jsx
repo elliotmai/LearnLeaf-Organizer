@@ -386,9 +386,7 @@ export async function deleteUser(userId) {
 
 export async function addTask(taskDetails) {
 
-    const taskId = `${Date.now()}`;
-
-    console.log(taskDetails);
+    const taskId = taskDetails.taskLMSDetails?.LMS_UID || `${Date.now()}`;
 
     const taskSubjectRef = taskDetails.taskSubject
         ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
@@ -413,6 +411,7 @@ export async function addTask(taskDetails) {
         taskDescription: taskDetails.taskDescription,
         taskPriority: taskDetails.taskPriority,
         taskStatus: taskDetails.taskStatus,
+        taskLMSDetails: taskDetails.taskLMSDetails || [],
     };
 
     // Helper function to create a date object with exact local time components
@@ -453,9 +452,7 @@ export async function addTask(taskDetails) {
     };
 
     try {
-
-        console.log(taskData);
-        await setDoc(taskRef, taskData);
+        await setDoc(taskRef, taskData, { merge: true });
 
         // Save updated task data to IndexedDB
         await saveToStore('tasks', [localTaskData]);
@@ -468,8 +465,6 @@ export async function addTask(taskDetails) {
 
 export async function editTask(taskDetails) {
     const taskId = taskDetails.taskId;
-
-    console.log(taskDetails);
 
     // Determine if taskSubject and taskProject are objects or strings, then create Firestore references
     const taskSubjectRef = taskDetails.taskSubject
@@ -501,39 +496,36 @@ export async function editTask(taskDetails) {
 
     function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
         const [year, month, day] = dateString.split('-').map(Number);
-        // Use local time by directly creating a Date object with the provided values
-        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // month - 1 due to JS Date 0-indexed months
     }
-    
+
     // Set start and due dates exactly as provided
     if (taskDetails.taskStartDate) {
         const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100); // 00:00:00 local time
         taskData.taskStartDate = Timestamp.fromDate(startDate);
     } else {
-        taskData.taskStartDate = null;
+        deleteField();
     }
-    
+
     if (taskDetails.taskDueDate) {
         const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900); // 23:59:59 local time
         taskData.taskDueDate = Timestamp.fromDate(dueDate);
     } else {
-        taskData.taskDueDate = null;
+        deleteField();
     }
-    
+
     // If both dueDateInput and dueTimeInput are provided, set due time
     if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
         const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
         const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0); // Set to specified due time in local time
         taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
     } else {
-        taskData.taskDueTime = null;
-    }    
+        deleteField();
+    }
 
     const taskRef = doc(taskCollection, taskId);
 
     try {
-
-        console.log(taskData);
         // Update Firestore
         await updateDoc(taskRef, taskData);
 
@@ -586,12 +578,21 @@ export function sortTasks(tasks) {
 
 // Subject Functions: addSubject, editSubject, deleteSubject, archiveSubject, reactivateSubject
 
-export async function addSubject({ subjectName, subjectDescription, subjectSemester, subjectColor }) {
-    const subjectId = `${Date.now()}`;
-    const subjectData = { subjectName, subjectSemester, subjectDescription, subjectStatus: 'Active', subjectColor };
+export async function addSubject(subjectDetails) {
+    const subjectId = subjectDetails.subjectLMSDetails?.LMS_UID || `${Date.now()}`;
+
+    const subjectData = {
+        subjectName: subjectDetails.subjectName,
+        subjectStatus: subjectDetails.subjectStatus || "Active",
+        subjectSemester: subjectDetails.subjectSemester || "",
+        subjectColor: subjectDetails.subjectColor || "black",
+        subjectLMSDetails: subjectDetails.subjectLMSDetails || [],
+    };
+
+    const subjectRef = doc(subjectCollection, subjectId);
 
     try {
-        await setDoc(doc(subjectCollection, subjectId), subjectData);
+        await setDoc(subjectRef, subjectData, { merge: true });
         await saveToStore('subjects', [{ ...subjectData, subjectId }]);
         return { ...subjectData, subjectId };
     } catch (error) {
@@ -600,9 +601,15 @@ export async function addSubject({ subjectName, subjectDescription, subjectSemes
 }
 
 export async function editSubject(subjectDetails) {
-    const { subjectId, subjectName, subjectSemester, subjectDescription, subjectColor, subjectStatus } = subjectDetails;
-
-    const subjectData = { subjectName, subjectSemester, subjectDescription, subjectColor, subjectStatus };
+    const subjectId = subjectDetails.subjectId;
+    
+    const subjectData = { 
+        subjectName: subjectDetails.subjectName, 
+        subjectSemester: subjectDetails.subjectSemester, 
+        subjectDescription: subjectDetails.subjectDescription || "", 
+        subjectColor: subjectDetails.subjectColor, 
+        subjectStatus: subjectDetails.subjectStatus 
+    };
 
     try {
         await updateDoc(doc(subjectCollection, subjectId), subjectData);
@@ -621,37 +628,46 @@ export async function deleteSubject(subjectId) {
         await deleteFromStore('subjects', subjectId);
 
         // Fetch all tasks and update those with the deleted subject
-        // Fetch all tasks
         const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskSubject === subjectId);
-
-        // Update each task that references this subject
         for (const task of allTasks) {
-            // Change taskSubject to 'None'
             task.taskSubject = 'None';
-            await editTask(task); // Call editTask with updated task
+            await editTask(task);
         }
 
         // Fetch all projects and update those containing the deleted subject
         const allProjects = await getAllFromStore('projects');
-
-        const updatedProjects = [];
         for (const project of allProjects) {
             if (project.projectSubjects.includes(subjectId)) {
                 const updatedProject = { ...project };
-
-                // If project has more than one subject, remove the specific subjectId
                 if (project.projectSubjects.length > 1) {
                     updatedProject.projectSubjects = project.projectSubjects.filter(subj => subj !== subjectId);
                 } else {
-                    updatedProject.projectSubjects = ['None']; // Set to 'None' if it was the only subject
+                    updatedProject.projectSubjects = ['None'];
                 }
-
-                await editProject(updatedProject); // Call editProject to update in Firebase and IndexedDB
+                await editProject(updatedProject);
             }
         }
 
+        // Check if "deletedSubjects" entry exists in IndexedDB
+        let deletedSubjectsEntry = await getFromStore('subjects', 'deletedSubjects');
+
+        if (deletedSubjectsEntry) {
+            // If "deletedSubjects" exists, append the deleted subjectId to its array
+            deletedSubjectsEntry.deletedSubjects.push(subjectId);
+            await saveToStore('subjects', [deletedSubjectsEntry]); // Save updated entry in IndexedDB
+            await updateDoc(doc(subjectCollection, 'deletedSubjects'), deletedSubjectsEntry); // Update in Firestore
+        } else {
+            // If "deletedSubjects" does not exist, create it with initial deleted subject
+            deletedSubjectsEntry = {
+                subjectId: 'deletedSubjects',
+                deletedSubjects: [subjectId],
+                subjectName: 'Deleted'
+            };
+            await saveToStore('subjects', [deletedSubjectsEntry]); // Save new entry in IndexedDB
+            await setDoc(doc(subjectCollection, 'deletedSubjects'), deletedSubjectsEntry); // Create in Firestore
+        }
     } catch (error) {
-        console.error("Error deleting subject or updating tasks and projects:", error);
+        console.error("Error deleting subject or updating tasks, projects, or deletedSubjects:", error);
     }
 }
 

@@ -221,7 +221,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     textAlign: 'left',
                                     padding: '8px 0',
                                     display: '-webkit-box',
-                                    WebkitLineClamp: 3,
+                                    WebkitLineClamp: 2,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
                                     cursor: 'pointer',
