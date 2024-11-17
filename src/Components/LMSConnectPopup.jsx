@@ -59,7 +59,7 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
       try {
         await CanvasParse({ icalUrl: icalLink });
         onClose(); // Close the dialog on successful parsing
-        // window.location.reload();
+        window.location.reload();
       } catch (error) {
         console.error('Parsing failed:', error);
         setError('Failed to parse the iCal link. Please try again.');

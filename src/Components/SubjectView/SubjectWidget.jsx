@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { archiveSubject, deleteSubject } from '/src/LearnLeaf_Functions.jsx';
+import { archiveSubject, deleteSubject, blockSubject } from '/src/LearnLeaf_Functions.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
@@ -7,19 +7,19 @@ import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from '@mui/material';
 
 const SubjectWidget = ({ subject, refreshSubjects }) => {
     const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
         const confirmation = window.confirm("Archive this subject?\nThis will not delete any associated tasks.");
         if (confirmation) {
             try {
                 await archiveSubject(subject.subjectId);
-                console.log("Subject archived successfully.");
                 refreshSubjects(); // Call refreshSubjects to update the dashboard
             } catch (error) {
                 console.error("Error archiving subject:", error);
@@ -27,27 +27,27 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
         }
     };
 
-    const widgetStyle = {
-        border: `3px solid ${subject.subjectColor}`,
-        padding: '16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-    };
-
     const handleEditClick = (subject) => {
         setEditedSubject({ ...subject });
         setEditModalOpen(true); // Open the edit modal
     };
 
-    const handleDeleteClick = async () => {
-        const confirmation = window.confirm("Delete this subject?\nAssociated tasks won’t be grouped under this subject anymore.");
-        if (confirmation) {
-            try {
-                await deleteSubject(subject.subjectId);
-                refreshSubjects(); // Call this function to refresh the subjects in the parent component
-            } catch (error) {
-                console.error("Error deleting subject:", error);
+    const handleDeleteClick = () => {
+        setDeleteModalOpen(true); // Open the delete confirmation modal
+    };
+
+    const handleDeleteAction = async (blocked) => {
+        setDeleteModalOpen(false);
+        try {
+            if (blocked) {
+                await blockSubject(subject.subjectId);
             }
+            else {
+                await deleteSubject(subject.subjectId);
+            }
+            refreshSubjects(); // Call to refresh subjects
+        } catch (error) {
+            console.error(`Error ${blocked ? 'deleting and blocking' : 'deleting'} subject:`, error);
         }
     };
 
@@ -160,7 +160,7 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                         </Button>
                         <Tooltip title="Delete Subject">
                             <IconButton
-                                onClick={() => handleDeleteClick(subject.subjectId)}
+                                onClick={handleDeleteClick}
                                 sx={{
                                     color: '#F3161E',
                                     '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
@@ -172,6 +172,49 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                     </Box>
                 </CardActions>
             </Card>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">
+                        What action would you like to take for this subject?
+                        <br/>
+                        <strong> Delete </strong> will delete the subject and unlink all associated tasks and projects.
+                        <br/>
+                        <strong> Delete and Block </strong> will also prevent the subject from being reloaded from your school.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => handleDeleteAction(false)} // Normal delete
+                        sx={{
+                            color: '#F3161E',
+                            '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
+                        }}
+                    >
+                        Delete
+                    </Button>
+                    <Button
+                        onClick={() => handleDeleteAction(true)} // Delete and block
+                        sx={{
+                            color: '#9F6C5B',
+                            '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
+                        }}
+                    >
+                        Delete and Block
+                    </Button>
+                    <Button
+                        onClick={() => setDeleteModalOpen(false)}
+                        sx={{
+                            color: '#355147',
+                            '&:hover': { backgroundColor: '#355147', color: '#fff' },
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 };

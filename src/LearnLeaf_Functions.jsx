@@ -628,46 +628,37 @@ export async function deleteSubject(subjectId) {
         await deleteFromStore('subjects', subjectId);
 
         // Fetch all tasks and update those with the deleted subject
+        // Fetch all tasks
         const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskSubject === subjectId);
+
+        // Update each task that references this subject
         for (const task of allTasks) {
+            // Change taskSubject to 'None'
             task.taskSubject = 'None';
-            await editTask(task);
+            await editTask(task); // Call editTask with updated task
         }
 
         // Fetch all projects and update those containing the deleted subject
         const allProjects = await getAllFromStore('projects');
+
+        const updatedProjects = [];
         for (const project of allProjects) {
             if (project.projectSubjects.includes(subjectId)) {
                 const updatedProject = { ...project };
+
+                // If project has more than one subject, remove the specific subjectId
                 if (project.projectSubjects.length > 1) {
                     updatedProject.projectSubjects = project.projectSubjects.filter(subj => subj !== subjectId);
                 } else {
-                    updatedProject.projectSubjects = ['None'];
+                    updatedProject.projectSubjects = ['None']; // Set to 'None' if it was the only subject
                 }
-                await editProject(updatedProject);
+
+                await editProject(updatedProject); // Call editProject to update in Firebase and IndexedDB
             }
         }
 
-        // Check if "deletedSubjects" entry exists in IndexedDB
-        let deletedSubjectsEntry = await getFromStore('subjects', 'deletedSubjects');
-
-        if (deletedSubjectsEntry) {
-            // If "deletedSubjects" exists, append the deleted subjectId to its array
-            deletedSubjectsEntry.deletedSubjects.push(subjectId);
-            await saveToStore('subjects', [deletedSubjectsEntry]); // Save updated entry in IndexedDB
-            await updateDoc(doc(subjectCollection, 'deletedSubjects'), deletedSubjectsEntry); // Update in Firestore
-        } else {
-            // If "deletedSubjects" does not exist, create it with initial deleted subject
-            deletedSubjectsEntry = {
-                subjectId: 'deletedSubjects',
-                deletedSubjects: [subjectId],
-                subjectName: 'Deleted'
-            };
-            await saveToStore('subjects', [deletedSubjectsEntry]); // Save new entry in IndexedDB
-            await setDoc(doc(subjectCollection, 'deletedSubjects'), deletedSubjectsEntry); // Create in Firestore
-        }
     } catch (error) {
-        console.error("Error deleting subject or updating tasks, projects, or deletedSubjects:", error);
+        console.error("Error deleting subject or updating tasks and projects:", error);
     }
 }
 
@@ -679,6 +670,21 @@ export async function archiveSubject(subjectId) {
 
         const storedSubjects = await getAllFromStore('subjects');
         const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject);
+        await saveToStore('subjects', updatedSubjects);
+
+    } catch (error) {
+        console.error("Error archiving subject:", error);
+    }
+}
+
+export async function blockSubject(subjectId) {
+    const subjectRef = doc(subjectCollection, subjectId);
+
+    try {
+        await updateDoc(subjectRef, { subjectStatus: 'Blocked' });
+
+        const storedSubjects = await getAllFromStore('subjects');
+        const updatedSubjects = storedSubjects.map(subject => subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Blocked' } : subject);
         await saveToStore('subjects', updatedSubjects);
 
     } catch (error) {
