@@ -174,42 +174,43 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
             </Card>
 
             {/* Delete Confirmation Modal */}
-            <Dialog open={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2">
+            <Dialog open={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1.5rem', pb: 0 }}>
+                    Confirm Deletion
+                </DialogTitle>
+                <DialogContent sx={{ pt: 2, textAlign: 'center' }}>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
                         What action would you like to take for this subject?
-                        <br/>
-                        <strong> Delete </strong> will delete the subject and unlink all associated tasks and projects.
-                        <br/>
-                        <strong> Delete and Block </strong> will also prevent the subject from being reloaded from your school.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Delete</strong>: This will delete the subject and unlink all associated tasks and projects.
+                    </Typography>
+                    <Typography variant="body2">
+                        <strong>Delete and Block</strong>: This will also prevent the subject from being reloaded from your school.
                     </Typography>
                 </DialogContent>
-                <DialogActions>
+                <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3 }}>
                     <Button
+                        variant="outlined"
+                        color="error"
                         onClick={() => handleDeleteAction(false)} // Normal delete
-                        sx={{
-                            color: '#F3161E',
-                            '&:hover': { backgroundColor: '#F3161E', color: '#fff' },
-                        }}
+                        sx={{ px: 3 }}
                     >
                         Delete
                     </Button>
                     <Button
+                        variant="outlined"
+                        color="warning"
                         onClick={() => handleDeleteAction(true)} // Delete and block
-                        sx={{
-                            color: '#9F6C5B',
-                            '&:hover': { backgroundColor: '#9F6C5B', color: '#fff' },
-                        }}
+                        sx={{ px: 3 }}
                     >
                         Delete and Block
                     </Button>
                     <Button
+                        variant="outlined"
+                        color="success"
                         onClick={() => setDeleteModalOpen(false)}
-                        sx={{
-                            color: '#355147',
-                            '&:hover': { backgroundColor: '#355147', color: '#fff' },
-                        }}
+                        sx={{ px: 3 }}
                     >
                         Cancel
                     </Button>

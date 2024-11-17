@@ -41,10 +41,6 @@ export default function CanvasParse({ icalUrl }) {
                     const tasks = [];
                     const subjects = new Set();
 
-                    // Fetch the deleted subjects list
-                    const deletedSubjectsEntry = await getFromStore('subjects', 'deletedSubjects');
-                    const deletedSubjects = deletedSubjectsEntry ? deletedSubjectsEntry.deletedSubjects : [];
-
                     // Process each event using Promise.all for async handling
                     await Promise.all(vevents.map(async (vevent) => {
                         const event = new ICAL.Event(vevent);
@@ -66,11 +62,6 @@ export default function CanvasParse({ icalUrl }) {
                             description = description.replace(/\(\s*https?:\/\/[^\s()]+?\s*\)/g, '');
                         
                             return description;
-                        }                        
-
-                        // Skip adding the subject if it's in the deleted subjects array
-                        if (deletedSubjects.includes(subjectCleaned)) {
-                            return;
                         }
 
                         // Extract date and time in the desired formats
