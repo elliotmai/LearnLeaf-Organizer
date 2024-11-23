@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function PullToRefresh({ children }) {
+export function PullToRefresh({ children }) {
   const [startY, setStartY] = useState(null);
   const [pulling, setPulling] = useState(false);
 
