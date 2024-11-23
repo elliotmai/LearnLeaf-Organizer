@@ -3,6 +3,7 @@ import { CircularProgress } from '@mui/material'; // Material-UI spinner
 
 export function PullToRefresh({ children }) {
   const [startY, setStartY] = useState(null);
+  const [diff, setDiff] = useState(0); // Track the current pull distance
   const [pulling, setPulling] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -21,21 +22,29 @@ export function PullToRefresh({ children }) {
     if (!isStandalone || startY === null) return;
 
     const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
+    const newDiff = currentY - startY;
 
-    // If the user pulls down more than 150px
-    if (diff > 150) {
-      setPulling(true);
+    if (newDiff > 0) {
+      setDiff(newDiff);
+
+      // If the user pulls down more than 150px, show the spinner
+      if (newDiff > 150) {
+        setPulling(true);
+      } else {
+        setPulling(false);
+      }
     }
   };
 
   const handleTouchEnd = () => {
-    if (pulling) {
-      setPulling(false);
-      setStartY(null);
-      // Trigger page reload
+    if (pulling && diff > 150) {
+      // Only reload if the pull distance was sufficient
       window.location.reload();
     }
+    // Reset state after touch ends
+    setPulling(false);
+    setStartY(null);
+    setDiff(0);
   };
 
   return (
