@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CircularProgress } from '@mui/material'; // Example: Material-UI spinner
 
 export function PullToRefresh({ children }) {
   const [startY, setStartY] = useState(null);
@@ -34,10 +35,25 @@ export function PullToRefresh({ children }) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      style={{ overflow: 'hidden', touchAction: 'pan-y' }}
+      style={{ overflow: 'hidden', touchAction: 'pan-y', position: 'relative' }}
     >
-      {/* Optional: Show a visual indicator */}
-      {pulling && <div style={{ textAlign: 'center' }}>Refreshing...</div>}
+      {/* Show a refresh icon or spinner when pulling */}
+      {pulling && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress size={24} />
+          <span style={{ marginLeft: '10px' }}>Refresh...</span>
+        </div>
+      )}
       {children}
     </div>
   );
