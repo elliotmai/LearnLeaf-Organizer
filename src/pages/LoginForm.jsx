@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import '/src/Components/Login_Register_Reset.css';
 import '/src/Components/PageFormat.css';
+import { loginWithGoogle } from '../LearnLeaf_Functions';
 
 
 function LoginForm() {
@@ -40,10 +41,24 @@ function LoginForm() {
         margin: 'auto',
     };
 
+    const handleLoginWithGoogle = async (event) => {
+        event.preventDefault(); // Prevent the default form submission
+
+        try {
+            // Use the Google login function
+            await loginWithGoogle(updateUser, navigate);
+       
+            
+
+        } catch (error) {
+            alert(`Login Error: ${error.message}`);
+        }
+    };
+
     return (
         <div className="login-form-container">
             <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle}/>
+                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
             </div>
             <h1 style={{ color: '#907474' }}>Streamlining success, one task at a time!</h1>
             <form className="form-group" onSubmit={handleSubmit}>
@@ -68,6 +83,8 @@ function LoginForm() {
                     />
                 </div>
                 <button type="submit">Login</button> {/* Changed button text to Login */}
+                <button type="button" onClick={handleLoginWithGoogle}>Login with Google</button> {/* Changed to a separate button for Google login */}
+
                 <i><p><Link to="/resetPassword">Reset Password</Link></p></i>
                 <p>Don't have an account? <Link to="/register">Register</Link></p>
             </form>

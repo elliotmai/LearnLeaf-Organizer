@@ -1,7 +1,7 @@
 // @flow
 import { saveToStore, getFromStore, getAllFromStore, deleteFromStore, clearStore, TASKS_STORE, SUBJECTS_STORE, PROJECTS_STORE } from './db.js';
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteFirebaseUser } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteFirebaseUser, GoogleAuthProvider, signInWithCredential, signInWithPopup } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, where, query, Timestamp, deleteDoc, deleteField, updateDoc, writeBatch } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 import { useUser } from '/src/UserState.jsx';
@@ -18,10 +18,25 @@ const firebaseConfig = {
     measurementId: "G-8XX0HRFBCX"
 };
 
+
+
+// const firebaseConfig = {
+//     apiKey: "AIzaSyC4vBgTyZ2Rw9jpbuszAL1cuvKuLffRCuw",
+//     authDomain: "projectlearnleaf.firebaseapp.com",
+//     projectId: "projectlearnleaf",
+//     storageBucket: "projectlearnleaf.firebasestorage.app",
+//     messagingSenderId: "200824618802",
+//     appId: "1:200824618802:web:d6d804d947938119be612b"
+// };
+
+
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const firestore = getFirestore();
+
+auth.languageCode = 'en';
+const provider = new GoogleAuthProvider();
 
 /// Global variable to store the current userId and Firestore collections
 let userId = null;
@@ -183,14 +198,15 @@ export async function fetchAllData() {
             const formattedDueTime = data.taskDueTime ? formatTime(data.taskDueTime) : '';
             const formattedStartDate = data.taskStartDate ? formatDate(data.taskStartDate) : '';
 
+            
             return {
                 taskId: doc.id,
                 ...data,
                 taskDueDate: formattedDueDate,
                 taskDueTime: formattedDueTime,
                 taskStartDate: formattedStartDate,
-                taskProject: data.taskProject.id,
-                taskSubject: data.taskSubject.id
+                taskProject: data.taskProject.id || null,
+                taskSubject: data.taskSubject.id || null
             };
         });
 
@@ -504,7 +520,7 @@ export async function editTask(taskDetails) {
         // Use local time by directly creating a Date object with the provided values
         return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
     }
-    
+
     // Set start and due dates exactly as provided
     if (taskDetails.taskStartDate) {
         const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100); // 00:00:00 local time
@@ -512,14 +528,14 @@ export async function editTask(taskDetails) {
     } else {
         taskData.taskStartDate = null;
     }
-    
+
     if (taskDetails.taskDueDate) {
         const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900); // 23:59:59 local time
         taskData.taskDueDate = Timestamp.fromDate(dueDate);
     } else {
         taskData.taskDueDate = null;
     }
-    
+
     // If both dueDateInput and dueTimeInput are provided, set due time
     if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
         const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
@@ -527,7 +543,7 @@ export async function editTask(taskDetails) {
         taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
     } else {
         taskData.taskDueTime = null;
-    }    
+    }
 
     const taskRef = doc(taskCollection, taskId);
 
@@ -867,4 +883,100 @@ export function sortProjects(projects) {
         // Sort by projectName
         return a.projectName.localeCompare(b.projectName);
     });
+}
+
+
+export async function loginWithGoogle(updateUser, navigate) {
+
+   
+    signInWithPopup(auth, provider)
+        .then(async (result) => {
+
+            setUserIdAndCollections(null);
+            await Promise.all([
+                localStorage.clear(),
+                clearStore(TASKS_STORE),
+                clearStore(SUBJECTS_STORE),
+                clearStore(PROJECTS_STORE)
+        
+            ]);
+            // This gives you a Google Access Token. You can use it to access the Google API.
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const token = credential.accessToken;
+            // The signed-in user info.
+            const user = result.user;
+
+
+            // Fetch user document from Firestore
+            const userDoc = await getDoc(doc(firestore, "users", user.uid));
+            if (!userDoc.exists()) {
+
+                await setDoc(doc(firestore, "users", user.uid), {
+                    name: user.displayName,
+                    email: user.email,
+                    authMethod: "google", // Use authMethod to distinguish
+                    timeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationsFrequency: [true, false, false, false],
+                });
+
+                const userData = {
+                    id: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    userTimeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationFrequency: [true, false, false, false],
+                };
+                localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
+
+                // Initialize collections in Indexedfirestore
+                setUserIdAndCollections(user.uid);
+
+                await fetchAllData();
+                updateUser({ id: userData.id, name: userData.name, email: userData.email, password: "dummypassword", notifications: userData.notifications, notificationFrequency: userData.notificationFrequency }); // Update global user state
+                navigate('/tasks'); // Navigate to tasks page upon successful login
+            }
+            else {
+                const userData = {
+                    id: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    userTimeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationFrequency: [true, false, false, false],
+                };
+                localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
+
+                // Initialize collections in Indexedfirestore
+                setUserIdAndCollections(user.uid);
+
+
+                await fetchAllData();
+                updateUser({ id: userData.id, name: userData.name, email: userData.email, password: "dummypassword", notifications: userData.notifcations, notificationFrequency: userData.notificationFrequency }); // Update global user state
+                navigate('/tasks'); // Navigate to tasks page upon successful login
+
+
+
+
+            }
+
+
+
+
+        }).catch((error) => {
+            console.log(error);
+            // Handle Errors here.
+            const errorCode = error.code;
+            const errorMessage = error.message;
+            // The email of the user's account used.
+            const email = error.customData.email;
+            // The AuthCredential type that was used.
+            const credential = GoogleAuthProvider.credentialFromError(error);
+            // ...
+        });
+
 }
