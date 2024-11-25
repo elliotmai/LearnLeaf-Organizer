@@ -55,8 +55,10 @@ export function PullToRefresh({ children }) {
       style={{
         position: 'relative',
         height: '100vh',
+        width: '100vw', // Explicitly set width to 100vw to prevent adjustments
         overflow: 'hidden',
         touchAction: 'pan-y',
+        boxSizing: 'border-box', // Ensure padding and borders don’t affect width
       }}
     >
       {/* Show a refresh icon or spinner when pulling */}
@@ -71,7 +73,7 @@ export function PullToRefresh({ children }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)', // Optional: Add a background
+            pointerEvents: 'none', // Ensure the spinner doesn't interfere with user interactions
             borderRadius: '50%',
             padding: '10px',
           }}

@@ -21,8 +21,10 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
+import TaskInfoWindow from '/src/Components/TaskView/TaskInfoWindow.jsx';
 import './TaskView.css';
 
 const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
@@ -37,6 +39,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
     const [newProjectName, setNewProjectName] = useState('');
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [isInfoOpen, setInfoOpen] = useState(false);
 
     const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
@@ -168,7 +171,15 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 onClose={() => setEditModalOpen(false)}
                 onSave={onUpdateTask}
             />
+            <TaskInfoWindow
+                task={task}
+                open={isInfoOpen}
+                onClose={() => setInfoOpen(false)}
+                onEdit={handleEditClick}
+                onDelete={onDelete}
+            />
             <Card
+                onClick={() => setInfoOpen(true)}
                 sx={{
                     minWidth: 275,
                     borderRadius: '12px',
@@ -177,6 +188,23 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                     padding: '16px'
                 }}
             >
+                <IconButton
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setInfoOpen(true);
+                    }}
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: '#355147',
+                        '&:hover': { color: '#5B8E9F' },
+                    }}
+                >
+                    <Tooltip title="View Info">
+                        <SearchIcon />
+                    </Tooltip>
+                </IconButton>
                 <CardContent>
                     {/* Task Name */}
                     <Typography
@@ -233,7 +261,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                         </Tooltip>
                     }
 
-                    {/* Full Description Dialog */}
+                    {/* Full Description Dialog
                     <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
                         <DialogTitle
                             sx={{
@@ -269,7 +297,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                             </Typography>
                         </DialogContent>
 
-                    </Dialog>
+                    </Dialog> */}
 
                     <Divider sx={{ marginY: 2 }} />
 
