@@ -6,15 +6,17 @@ import './App.css';  // Assuming you have some global styles
 
 function App() {
   return (
-    <PullToRefresh>
-      <UserProvider>
+
+    <UserProvider>
+      <PullToRefresh>
         <div className="app-container">
           <main className="main-content">
             <Outlet /> {/* This will render the current route's component */}
           </main>
         </div>
-      </UserProvider>
-    </PullToRefresh>
+      </PullToRefresh>
+    </UserProvider>
+
   );
 }
 
