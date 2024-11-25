@@ -21,6 +21,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import TaskInfoWindow from '/src/Components/TaskView/TaskInfoWindow.jsx';
@@ -187,6 +188,23 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                     padding: '16px'
                 }}
             >
+                <IconButton
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setInfoOpen(true);
+                    }}
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: '#355147',
+                        '&:hover': { color: '#5B8E9F' },
+                    }}
+                >
+                    <Tooltip title="View Info">
+                        <SearchIcon />
+                    </Tooltip>
+                </IconButton>
                 <CardContent>
                     {/* Task Name */}
                     <Typography
