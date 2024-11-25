@@ -70,7 +70,7 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                         {
                             label: 'Due Date',
                             value: task.taskDueDate
-                                ? `Task Due: ${formatDateDisplay(
+                                ? `${formatDateDisplay(
                                     task.taskDueDate,
                                     user.dateFormat
                                 )}${task.taskDueTime
