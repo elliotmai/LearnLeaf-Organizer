@@ -179,7 +179,6 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 onDelete={onDelete}
             />
             <Card
-                onClick={() => setInfoOpen(true)}
                 sx={{
                     minWidth: 275,
                     borderRadius: '12px',
@@ -189,10 +188,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 }}
             >
                 <IconButton
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setInfoOpen(true);
-                    }}
+                    onClick={() => setInfoOpen(true)}
                     sx={{
                         position: 'absolute',
                         top: 8,
