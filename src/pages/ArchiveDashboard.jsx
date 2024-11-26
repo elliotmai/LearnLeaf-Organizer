@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     Accordion, AccordionSummary, AccordionDetails,
-    Typography, List, ListItem, ListItemText,
-    Card, CardContent, Grid, Divider, Button,
-    Tooltip, CircularProgress, Box
+    Typography, List, ListItem, Card, CardContent,
+    Grid, Divider, Button, Tooltip, CircularProgress,
+    Box, TextField
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -25,6 +25,19 @@ const ArchivePage = () => {
     const [archivedSubjects, setArchivedSubjects] = useState([]);
     const [archivedProjects, setArchivedProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Search states
+    const [taskSearch, setTaskSearch] = useState('');
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [projectSearch, setProjectSearch] = useState('');
+    const [globalSearch, setGlobalSearch] = useState('');
+
+    // Track manually controlled accordions
+    const [expandedAccordions, setExpandedAccordions] = useState({
+        tasks: false,
+        subjects: false,
+        projects: false
+    });
 
     const loadArchivedData = async () => {
         setIsLoading(true);
@@ -62,6 +75,58 @@ const ArchivePage = () => {
     useEffect(() => {
         loadArchivedData();
     }, []);
+
+    const matchesGlobalSearch = (item, fields) => {
+        const search = globalSearch.toLowerCase();
+        return fields.some(field => {
+            if (field === 'taskSubject.subjectName' || field === 'taskProject.projectName') {
+                // Handle nested fields for tasks
+                return item?.[field.split('.')[0]]?.[field.split('.')[1]]?.toLowerCase().includes(search);
+            }
+            if (Array.isArray(item[field])) {
+                // Handle array fields for projects
+                return item[field].some(subItem =>
+                    subItem?.subjectName?.toLowerCase().includes(search)
+                );
+            } else {
+                return item[field]?.toString().toLowerCase().includes(search);
+            }
+        });
+    };
+
+    const filterResults = (items, localSearch, fields) => {
+        return items.filter(item =>
+            (!globalSearch || matchesGlobalSearch(item, fields)) &&
+            (!localSearch || item?.[fields[0]]?.toLowerCase().includes(localSearch.toLowerCase()))
+        );
+    };
+
+    const filteredTasks = filterResults(completedTasks, taskSearch, [
+        'taskName',
+        'taskDescription',
+        'taskSubject.subjectName',
+        'taskProject.projectName',
+        'taskSubject.subjectSemester'
+    ]);
+
+    const filteredSubjects = filterResults(archivedSubjects, subjectSearch, [
+        'subjectName',
+        'subjectDescription',
+        'subjectSemester'
+    ]);
+
+    const filteredProjects = filterResults(archivedProjects, projectSearch, [
+        'projectName',
+        'projectDescription',
+        'projectSubjects'
+    ]);
+
+    const handleAccordionToggle = (section) => {
+        setExpandedAccordions((prevState) => ({
+            ...prevState,
+            [section]: !prevState[section]
+        }));
+    };
 
     const handleChangeStatus = async (task) => {
         const updatedTask = { ...task, taskStatus: 'In Progress' };
@@ -116,11 +181,22 @@ const ArchivePage = () => {
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%' }}>
+        <Box style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <TopBar />
             <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
                 {user?.name}'s Archive
             </Typography>
+
+            {/* Global Search Bar */}
+            <TextField
+                fullWidth
+                label="Search..."
+                variant="outlined"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                sx={{ my: 2, maxWidth: '40%' }}
+            />
+
             <Divider sx={{ my: 2, width: '90%' }} />
 
             {isLoading ? (
@@ -129,10 +205,13 @@ const ArchivePage = () => {
                     <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>Loading archived data...</Typography>
                 </Grid>
             ) : (
-                <Box sx={{ width: '90%', maxWidth: '1200px' }}>
+                <Box sx={{ width: '90%', maxWidth: '1200px', overflowY: 'scroll', padding: '5px' }}>
 
                     {/* Completed Tasks Section */}
-                    <Accordion>
+                    <Accordion
+                        expanded={expandedAccordions.tasks}
+                        onChange={() => handleAccordionToggle('tasks')}
+                    >
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                             <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#64b5f6' }}>
                                 <CheckCircleOutlineIcon sx={{ mr: 1 }} />
@@ -140,67 +219,81 @@ const ArchivePage = () => {
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
-                            <List>
-                                {completedTasks.length > 0 ? completedTasks.map(task => (
-                                    <ListItem key={task.taskId} divider>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Typography variant="subtitle1">{task.taskName}</Typography>
-                                            <Typography variant="body2" color="textSecondary">
-                                                {task.taskDescription || 'No description provided.'}
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary">
-                                                Subject: {task.taskSubject?.subjectName || 'None'}
-                                                <br />
-                                                Project: {task.taskProject?.projectName || 'None'}
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary">
-                                                Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', mt: 1 }}>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="secondary"
-                                                    onClick={() => handleChangeStatus(task)}
-                                                    startIcon={<RemoveDoneIcon />}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Reactivate
-                                                </Button>
-                                                <Tooltip title="Delete Task">
+                            <TextField
+                                fullWidth
+                                label="Search Name..."
+                                variant="outlined"
+                                value={taskSearch}
+                                onChange={(e) => setTaskSearch(e.target.value)}
+                                sx={{ mb: 2 }}
+                            />
+                            <Grid container spacing={2}>
+                                {filteredTasks.length > 0 ? filteredTasks.map(task => (
+                                    <Grid item xs={12} sm={6} md={4} key={task.taskId}>
+                                        <Card variant="outlined">
+                                            <CardContent>
+                                                <Typography variant="h6">{task.taskName}</Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    {task.taskDescription || 'No description provided.'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    Subject: {task.taskSubject?.subjectName || 'None'}
+                                                    <br />
+                                                    Project: {task.taskProject?.projectName || 'None'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" sx={{ pb: 1 }}>
+                                                    Due Date: {task.taskDueDate ? formatDateDisplay(task.taskDueDate, user.dateFormat) : 'No Due Date'}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                                                     <Button
-                                                        color="error"
-                                                        onClick={() => handleDeleteTask(task.taskId)}
-                                                        sx={{
-                                                            color: '#d1566e',
-                                                            minWidth: '40px',
-                                                            width: '40px',
-                                                            height: '40px',
-                                                            p: '6px',
-                                                            borderRadius: '50%',
-                                                            '&:hover': {
-                                                                transform: 'scale(1.05)',
-                                                                backgroundColor: '#d1566e',
-                                                                color: '#fff',
-                                                            },
-                                                        }}
+                                                        variant="outlined"
+                                                        color="secondary"
+                                                        onClick={() => handleChangeStatus(task)}
+                                                        startIcon={<RemoveDoneIcon />}
                                                     >
-                                                        <DeleteIcon />
+                                                        Reactivate
                                                     </Button>
-                                                </Tooltip>
-                                            </Box>
-                                        </Box>
-                                    </ListItem>
+                                                    <Tooltip title="Delete Task">
+                                                        <Button
+                                                            color="error"
+                                                            onClick={() => handleDeleteTask(task.taskId)}
+                                                            sx={{
+                                                                color: '#d1566e',
+                                                                minWidth: '40px',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                p: '6px',
+                                                                borderRadius: '50%',
+                                                                '&:hover': {
+                                                                    transform: 'scale(1.05)',
+                                                                    backgroundColor: '#d1566e',
+                                                                    color: '#fff',
+                                                                },
+                                                            }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </Button>
+                                                    </Tooltip>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
                                 )) : (
-                                    <Typography variant="body2" color="textSecondary">No completed tasks found.</Typography>
+                                    <Typography variant="body2" color="textSecondary" textAlign="center" sx={{ width: '100%' }}>
+                                        No completed tasks found.
+                                    </Typography>
                                 )}
-                            </List>
+                            </Grid>
                         </AccordionDetails>
                     </Accordion>
 
                     <Divider sx={{ my: 2 }} />
 
                     {/* Archived Subjects Section */}
-                    <Accordion>
+                    <Accordion
+                        expanded={expandedAccordions.subjects}
+                        onChange={() => handleAccordionToggle('subjects')}
+                    >
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                             <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#ffa726' }}>
                                 <ArchiveIcon sx={{ mr: 1 }} />
@@ -208,8 +301,16 @@ const ArchivePage = () => {
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
+                            <TextField
+                                fullWidth
+                                label="Search Name..."
+                                variant="outlined"
+                                value={subjectSearch}
+                                onChange={(e) => setSubjectSearch(e.target.value)}
+                                sx={{ mb: 2 }}
+                            />
                             <Grid container spacing={2}>
-                                {archivedSubjects.length > 0 ? archivedSubjects.map(subject => (
+                                {filteredSubjects.length > 0 ? filteredSubjects.map(subject => (
                                     <Grid item xs={12} sm={6} md={4} key={subject.subjectId}>
                                         <Card variant="outlined">
                                             <CardContent>
@@ -255,11 +356,9 @@ const ArchivePage = () => {
                                         </Card>
                                     </Grid>
                                 )) : (
-                                    <Grid item xs={12} display="flex" justifyContent="center" alignItems="center">
-                                        <Typography variant="body2" color="textSecondary" textAlign="center">
-                                            No archived subjects found.
-                                        </Typography>
-                                    </Grid>
+                                    <Typography variant="body2" color="textSecondary" textAlign="center">
+                                        No archived subjects found.
+                                    </Typography>
                                 )}
                             </Grid>
                         </AccordionDetails>
@@ -268,7 +367,10 @@ const ArchivePage = () => {
                     <Divider sx={{ my: 2 }} />
 
                     {/* Archived Projects Section */}
-                    <Accordion>
+                    <Accordion
+                        expanded={expandedAccordions.projects}
+                        onChange={() => handleAccordionToggle('projects')}
+                    >
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                             <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#ff7043' }}>
                                 <ArchiveIcon sx={{ mr: 1 }} />
@@ -276,8 +378,16 @@ const ArchivePage = () => {
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
+                            <TextField
+                                fullWidth
+                                label="Search Name..."
+                                variant="outlined"
+                                value={projectSearch}
+                                onChange={(e) => setProjectSearch(e.target.value)}
+                                sx={{ mb: 2 }}
+                            />
                             <Grid container spacing={2}>
-                                {archivedProjects.length > 0 ? archivedProjects.map(project => (
+                                {filteredProjects.length > 0 ? filteredProjects.map(project => (
                                     <Grid item xs={12} sm={6} md={4} key={project.projectId}>
                                         <Card variant="outlined">
                                             <CardContent>
@@ -326,11 +436,9 @@ const ArchivePage = () => {
                                         </Card>
                                     </Grid>
                                 )) : (
-                                    <Grid item xs={12} display="flex" justifyContent="center" alignItems="center">
-                                        <Typography variant="body2" color="textSecondary" textAlign="center">
-                                            No archived projects found.
-                                        </Typography>
-                                    </Grid>
+                                    <Typography variant="body2" color="textSecondary" textAlign="center">
+                                        No archived projects found.
+                                    </Typography>
                                 )}
                             </Grid>
                         </AccordionDetails>
