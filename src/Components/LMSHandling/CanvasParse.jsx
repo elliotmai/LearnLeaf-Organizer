@@ -41,6 +41,24 @@ export default function CanvasParse({ icalUrl }) {
                     const tasks = [];
                     const subjects = new Set();
 
+                    async function processTask(task, tasks) {
+                        const existingTask = await getFromStore('tasks', task.taskLMSDetails.LMS_UID);
+
+                        if (!existingTask) {
+                            await addTask(task);
+                            tasks.push(task);
+                        } else {
+                            const existingDueDate = new Date(existingTask.taskDueDate);
+                            if (existingDueDate.getTime() !== new Date(task.dueDateInput).getTime()) {
+                                await editTask({
+                                    ...existingTask,
+                                    taskDueDate: task.dueDateInput,
+                                    taskDueTime: task.dueTimeInput
+                                });
+                            }
+                        }
+                    }
+
                     // Process each event using Promise.all for async handling
                     await Promise.all(vevents.map(async (vevent) => {
                         const event = new ICAL.Event(vevent);
@@ -57,10 +75,10 @@ export default function CanvasParse({ icalUrl }) {
                         function formatDescription(description) {
                             // Step 1: Remove content within square brackets [] only if it contains a file name
                             description = description.replace(/\[[^\[\]]*?\.\w{2,4}\]/g, '');
-                        
+
                             // Step 2: Remove parentheses only if they contain a URL (http or https)
                             description = description.replace(/\(\s*https?:\/\/[^\s()]+?\s*\)/g, '');
-                        
+
                             return description;
                         }
 
@@ -75,7 +93,7 @@ export default function CanvasParse({ icalUrl }) {
 
                         const task = {
                             taskName: taskName.trim(),
-                            taskDescription: event.description ? formatDescription (event.description) : "",
+                            taskDescription: event.description ? formatDescription(event.description) : "",
                             dueDateInput: formattedDate, // Set formatted date
                             dueTimeInput: formattedTime, // Set formatted time
                             taskLMSDetails: {
@@ -100,30 +118,27 @@ export default function CanvasParse({ icalUrl }) {
                             subjectDescription: ""
                         };
 
-                        // Check if the subject is already in IndexedDB
+                        // Fetch the subject from the store
                         const existingSubject = await getFromStore('subjects', subject.subjectLMSDetails.LMS_UID);
-                        if (!existingSubject && !subjects.has(subjectCleaned)) {
+
+                        // If the subject does not exist, add it and process the task
+                        if (!existingSubject) {
+                            console.log(`Adding new subject: ${subjectCleaned}`);
                             await addSubject(subject);
                             subjects.add(subjectCleaned);
+                            await processTask(task, tasks);
                         }
-
-                        // Check if the task is already in IndexedDB
-                        const existingTask = await getFromStore('tasks', task.taskLMSDetails.LMS_UID);
-                        if (!existingTask) {
-                            await addTask(task);
-                            tasks.push(task);
-                        } else {
-                            const existingDueDate = new Date(existingTask.taskDueDate);
-                            if (existingDueDate.getTime() !== task.dueDateInput) {
-                                await editTask({
-                                    ...existingTask,
-                                    taskDueDate: task.dueDateInput,
-                                    taskDueTime: task.dueTimeInput
-                                });
-                            }
+                        // If the subject exists and is not blocked, process the task
+                        else if (existingSubject.subjectStatus !== "Blocked") {
+                            console.log(`Processing task for existing subject: ${subjectCleaned}`);
+                            await processTask(task, tasks);
+                        }
+                        // If the subject exists and is blocked, skip the task
+                        else {
+                            console.log(`Skipping task for blocked subject: ${subjectCleaned}`);
                         }
                     }));
-
+                    
                     // Log result only after all tasks and subjects are processed
                     console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length);
                     resolve(); // Resolve the promise after successful completion
