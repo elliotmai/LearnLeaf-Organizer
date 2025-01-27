@@ -17,53 +17,74 @@ export const UserProvider = ({ children }) => {
 
     // Enhanced setUser to manage localStorage
     const updateUser = (newUserData) => {
-        if (newUserData) {
-            // Update user state and localStorage
-            setUser(newUserData);
-            localStorage.setItem('user', JSON.stringify(newUserData));
-        } else {
+        if (!newUserData) {
             // Clear user state and localStorage
             setUser(null);
             localStorage.removeItem('user');
+            return;
         }
-    };
+    
+        // Merge new data with the existing user state, guarding against undefined values
+        const mergedData = {
+            ...user, // Keep existing fields
+            ...newUserData, // Overwrite only provided fields
+            notifications: newUserData.notifications !== undefined ? newUserData.notifications : user?.notifications,
+            notificationsFrequency: newUserData.notificationsFrequency || user?.notificationsFrequency,
+        };
+    
+        // Avoid re-updating localStorage with unchanged data
+        if (JSON.stringify(user) !== JSON.stringify(mergedData)) {
+            setUser(mergedData);
+            localStorage.setItem('user', JSON.stringify(mergedData));
+            console.log("Updated User Data in localStorage:", mergedData);
+        }
+    };        
 
     useEffect(() => {
+        let isMounted = true; // To track component mount state
+        let authListenerTriggered = false; // Ensure the listener is called only once
+    
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (!isMounted || authListenerTriggered) return;
+            authListenerTriggered = true; // Prevent multiple triggers
+    
             if (firebaseUser) {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
+    
                 if (userDoc.exists()) {
                     const userData = {
                         id: firebaseUser.uid,
                         name: userDoc.data().name,
                         email: userDoc.data().email,
-                        password: userDoc.data().password,
                         timeFormat: userDoc.data().timeFormat || '12h',
                         dateFormat: userDoc.data().dateFormat || 'MM/DD/YYYY',
-                        theme: userDoc.data().theme || 'light',
-                        notifications: userDoc.data().notifications || false,
-                        notificationsFrequency: userDoc.data().notificationsFrequency || [true, false, false, false]
+                        notifications: userDoc.data().notifications !== undefined ? userDoc.data().notifications : false,
+                        notificationsFrequency: userDoc.data().notificationsFrequency || [true, false, false, false],
                     };
-                    updateUser(userData);
+                    console.log("User Data Constructed:", userData);
+                    updateUser(userData); // Pass full user data
                 } else {
                     console.error("No user document found!");
-                    updateUser(null); // Ensure state and localStorage are cleared if Firestore doc is missing
+                    updateUser(null); // Clear state if no document exists
                 }
             } else {
-                updateUser(null); // Clear state and localStorage on sign-out
+                updateUser(null); // Clear state if user logs out
             }
         });
-
-        return () => unsubscribe(); // Cleanup on unmount
-    }, [auth, db]); // Removed updateUser from the dependency array to avoid re-creating the effect unnecessarily
-
+    
+        return () => {
+            isMounted = false; // Cleanup on component unmount
+            unsubscribe();
+        };
+    }, [auth, db]);    
+    
     return (
         <UserContext.Provider value={{ user, updateUser }}>
             {children}
         </UserContext.Provider>
     );
-    
+
 };
 
 export function useUser() {

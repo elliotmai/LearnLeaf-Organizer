@@ -13,10 +13,11 @@ const UserProfile = () => {
     const [timeFormat, setTimeFormat] = useState(user.timeFormat || '12-Hour');
     const [dateFormat, setDateFormat] = useState(user.dateFormat || 'MM/DD/YYYY');
     const [notificationsEnabled, setNotificationsEnabled] = useState(user.notifications || false);
-    const [notificationFrequencies, setNotificationFrequencies] = useState(user.notificationsFrequency || [true, false, false, false]);
+    const [notificationsFrequency, setNotificationFrequencies] = useState(user.notificationsFrequency || [true, false, false, false]);
     const navigate = useNavigate();
 
     useEffect(() => {
+        console.log("User object in UserProfile:", user); // Log the user object
         setName(user.name || '');
         setEmail(user.email || '');
         setTimeFormat(user.timeFormat || '12h');
@@ -31,12 +32,12 @@ const UserProfile = () => {
         if (!enabled) {
             setNotificationFrequencies([true, false, false, false]);
         } else {
-            setNotificationFrequencies([false, ...notificationFrequencies.slice(1)]);
+            setNotificationFrequencies([false, ...notificationsFrequency.slice(1)]);
         }
     };
 
     const handleFrequencyChange = (index) => {
-        const newFrequencies = notificationFrequencies.map((freq, idx) =>
+        const newFrequencies = notificationsFrequency.map((freq, idx) =>
             idx === index ? !freq : freq
         );
         setNotificationFrequencies(newFrequencies);
@@ -44,15 +45,17 @@ const UserProfile = () => {
 
     const handleUpdateProfile = async () => {
         const userDetails = {
+            id: user.id,
             name,
             email,
             timeFormat,
             dateFormat,
             notifications: notificationsEnabled,
-            notificationsFrequency: notificationFrequencies
+            notificationsFrequency: notificationsFrequency
         };
         try {
             await updateUserDetails(user.id, userDetails);
+            await updateUser (userDetails);
             alert('Profile updated successfully!');
         } catch (error) {
             console.error('Failed to update profile:', error);
@@ -123,15 +126,15 @@ const UserProfile = () => {
                         <div className="notification-preferences">
                             <div className="preference-selection">
                                 <label htmlFor="weekly" title="Receive updates once a week.">Weekly:</label>
-                                <input type="checkbox" id="weekly" name="weekly" checked={notificationFrequencies[1]} onChange={() => handleFrequencyChange(1)} />
+                                <input type="checkbox" id="weekly" name="weekly" checked={notificationsFrequency[1]} onChange={() => handleFrequencyChange(1)} />
                             </div>
                             <div className="preference-selection">
                                 <label htmlFor="daily" title="Receive updates once a day.">Daily:</label>
-                                <input type="checkbox" id="daily" name="daily" checked={notificationFrequencies[2]} onChange={() => handleFrequencyChange(2)} />
+                                <input type="checkbox" id="daily" name="daily" checked={notificationsFrequency[2]} onChange={() => handleFrequencyChange(2)} />
                             </div>
                             <div className="preference-selection">
                                 <label htmlFor="urgent" title="Receive updates of tasks due today.">Urgent:</label>
-                                <input type="checkbox" id="urgent" name="urgent" checked={notificationFrequencies[3]} onChange={() => handleFrequencyChange(3)} />
+                                <input type="checkbox" id="urgent" name="urgent" checked={notificationsFrequency[3]} onChange={() => handleFrequencyChange(3)} />
                             </div>
                         </div>
                     )}

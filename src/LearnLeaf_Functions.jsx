@@ -424,7 +424,7 @@ export async function loginUser(email, password) {
                 userTimeFormat: userDoc.data().timeFormat,
                 dateFormat: userDoc.data().dateFormat,
                 notifications: userDoc.data().notifications,
-                notificationFrequency: userDoc.data().notificationFrequency,
+                notificationsFrequency: userDoc.data().notificationsFrequency,
             };
             localStorage.setItem('user', JSON.stringify(userData));
 
@@ -492,19 +492,24 @@ export async function updateUserDetails(userId, userDetails) {
     const userDocRef = doc(firestore, "users", userId);
 
     try {
-        // Update Firestore user document
-        await updateDoc(userDocRef, userDetails);
+        // Fetch existing user data to merge with provided details
+        const existingUserDoc = await getDoc(userDocRef);
+        const existingData = existingUserDoc.exists() ? existingUserDoc.data() : {};
 
-        // Update localStorage with new user details
-        localStorage.setItem('user', JSON.stringify({ userId, ...userDetails }));
+        const updatedData = {
+            ...existingData, // Keep existing fields
+            ...userDetails,  // Overwrite only the provided fields
+        };
 
-        // Refresh data after update
+        await updateDoc(userDocRef, updatedData);
+        localStorage.setItem('user', JSON.stringify({ userId, ...updatedData })); // Save merged data
         fetchAllData();
     } catch (error) {
         console.error("Error updating user details:", error);
         throw error;
     }
 }
+
 
 /**
  * Deletes a user from Firestore and Firebase Authentication.
