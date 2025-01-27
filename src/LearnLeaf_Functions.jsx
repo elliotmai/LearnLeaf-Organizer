@@ -202,7 +202,14 @@ export function formatDate(input) {
  * @returns {string} - The formatted date as a string.
  */
 export function formatDateDisplay(input, dateFormat) {
-    const date = input instanceof Date ? input : input.toDate ? input.toDate() : new Date(input);
+    let date;
+    if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+        // Parse the date string as a local date (ignores time zone)
+        const [year, month, day] = input.split('-').map(Number);
+        date = new Date(year, month - 1, day); // Month is 0-indexed
+    } else {
+        date = input instanceof Date ? input : input.toDate ? input.toDate() : new Date(input);
+    }
 
     if (dateFormat === 'DD/MM/YYYY') {
         return date.toLocaleDateString('en-GB'); // British format
