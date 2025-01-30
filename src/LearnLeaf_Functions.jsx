@@ -441,10 +441,11 @@ export async function loginUser(email, password) {
                 id: userId,
                 name: userDoc.data().name,
                 email: userDoc.data().email,
-                userTimeFormat: userDoc.data().timeFormat,
+                timeFormat: userDoc.data().timeFormat,
                 dateFormat: userDoc.data().dateFormat,
                 notifications: userDoc.data().notifications,
                 notificationsFrequency: userDoc.data().notificationsFrequency,
+                icsURLs: userDoc.data().icsURLs || {}
             };
             localStorage.setItem('user', JSON.stringify(userData));
 

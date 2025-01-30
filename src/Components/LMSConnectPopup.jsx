@@ -1,5 +1,5 @@
 // LMSConnectPopup.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,12 +16,17 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CanvasParse from '/src/Components/LMSHandling/CanvasParse'; // Static import of CanvasParse
+import { updateUserDetails } from '/src/LearnLeaf_Functions.jsx';
 
 const LMSConnectPopup = ({ isOpen, onClose }) => {
   const [selectedLMS, setSelectedLMS] = useState('Canvas');
   const [icalLink, setIcalLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [existingURLs, setExistingURLs] = useState([]);
+  const [isNewEntry, setIsNewEntry] = useState(false);
+  const [entryName, setEntryName] = useState('');
 
   const instructions = {
     Canvas: `To get your iCal link from Canvas:\n
@@ -30,47 +35,79 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
       3. Copy the iCal URL provided.`,
   };
 
+  useEffect(() => {
+    // Retrieve user data from localStorage
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    if (storedUser) {
+      setUser(storedUser);
+      // Extract existing iCal URLs for the selected LMS
+      setExistingURLs(storedUser.icsURLs?.[selectedLMS] ? Object.entries(storedUser.icsURLs[selectedLMS]) : []);
+    }
+  }, [selectedLMS]);
+
   const handleLMSChange = (event) => {
     setSelectedLMS(event.target.value);
-    setError(null); // Clear any previous error when changing LMS
+    setError(null);
+    setIsNewEntry(false);
+    setExistingURLs(user?.icsURLs?.[event.target.value] ? Object.entries(user.icsURLs[event.target.value]) : []);
   };
 
-  const handleLinkChange = (event) => {
-    setIcalLink(event.target.value);
-    setError(null); // Clear any previous error when editing the link
+  const handleNewEntry = () => {
+    setIsNewEntry(true);
+    // setIcalLink(''); // Ensure the iCal link is empty until the user inputs one
   };
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError(null); // Reset any previous error
-  
+
+    // Ensure user selects an existing URL or enters a new one
+    if (!isNewEntry && !icalLink) {
+      setError('Please select an existing URL or add a new one.');
+      setLoading(false);
+      return;
+    }
+
     // Regex for basic URL validation with common domains (e.g., .com, .org, etc.)
     const urlPattern = /^(https?:\/\/)?([\w.-]+)\.([a-z.]{2,6})(\/[\w.-]*)*\/?.ics$/i;
-    
-    if (!urlPattern.test(icalLink)) {
+
+    if (isNewEntry && (!urlPattern.test(icalLink) || !entryName.trim())) {
+      setError('Invalid entry. Ensure name and a valid iCal URL ending in .ics are provided.');
+      setLoading(false);
+      return;
+    }
+    else if ((!urlPattern.test(icalLink))) {
       setError('Invalid URL. Please enter a valid iCal URL ending in .ics');
       setLoading(false);
       return;
     }
-  
-    // Only call CanvasParse if the selected LMS is "Canvas"
-    if (selectedLMS === "Canvas") {
-      try {
+
+    // Prepare updated iCal URLs by merging new data
+    const updatedICSURLs = {
+      ...user.icsURLs,
+      [selectedLMS]: {
+        ...user.icsURLs?.[selectedLMS],
+        ...(isNewEntry ? { [entryName]: icalLink } : {}),
+      },
+    };
+
+    try {
+      await updateUserDetails(user.id, { icsURLs: updatedICSURLs });
+      setUser({ ...user, icsURLs: updatedICSURLs });
+      localStorage.setItem('user', JSON.stringify({ ...user, icsURLs: updatedICSURLs }));
+      if (selectedLMS === "Canvas") {
         await CanvasParse({ icalUrl: icalLink });
-        onClose(); // Close the dialog on successful parsing
-        window.location.reload();
-      } catch (error) {
-        console.error('Parsing failed:', error);
-        setError('Failed to parse the iCal link. Please try again.');
-      } finally {
-        setLoading(false);
       }
-    } else {
-      setError("Currently, only Canvas is supported for LMS integration.");
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error('Operation failed:', error);
+      setError('An error occurred while saving or parsing the iCal link. Please try again.');
+    } finally {
       setLoading(false);
     }
-  };  
+  };
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
@@ -120,14 +157,57 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
         </Typography>
 
         <TextField
-          label="Paste your iCal link here"
-          value={icalLink}
-          onChange={handleLinkChange}
-          placeholder="https://your-calendar-link.ics"
-          fullWidth
-          margin="normal"
-          required
-        />
+          select
+          label="Select an existing iCal URL or add new"
+          value={isNewEntry ? 'new' : icalLink}
+          onChange={(e) => {
+            if (e.target.value === 'new') {
+              handleNewEntry();
+            } else {
+              setIsNewEntry(false);
+              setIcalLink(e.target.value);
+            }
+          }}
+          fullWidth margin="normal"
+        >
+          {existingURLs.map(([key, url]) => (
+            <MenuItem key={key} value={url}>{key}</MenuItem>
+          ))}
+          <MenuItem
+            value="new"
+          >
+            Add New
+          </MenuItem>
+        </TextField>
+
+        {isNewEntry && (
+          <>
+            <TextField
+              label="Name"
+              value={entryName}
+              onChange={(e) => setEntryName(e.target.value)}
+              placeholder='e.g., UTA Canvas'
+              fullWidth
+              margin="normal"
+              required />
+            <TextField
+              label="Paste your iCal link here"
+              value={icalLink}
+              onChange={(e) => {
+                const newUrl = e.target.value;
+                setIcalLink(newUrl);
+                if (existingURLs.some(([_, url]) => url === newUrl)) {
+                  setError('This iCal link has already been added.');
+                } else {
+                  setError(null);
+                }
+              }} 
+              placeholder="https://your-calendar-link.ics"
+              fullWidth margin="normal"
+              required
+            />
+          </>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -174,7 +254,7 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
               },
               mt: 1,
             }}
-            disabled={loading || !icalLink} // Prevent submission if loading or no link is provided
+            disabled={loading || !icalLink || error} // Prevent submission if loading or no link is provided
           >
             Submit
           </Button>
