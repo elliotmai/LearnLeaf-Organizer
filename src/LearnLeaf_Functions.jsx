@@ -5,51 +5,54 @@
 //------------------------------------
 
 // Import required modules and functions
-import { 
-    saveToStore, 
-    getFromStore, 
-    getAllFromStore, 
-    deleteFromStore, 
-    clearStore, 
-    TASKS_STORE, 
-    SUBJECTS_STORE, 
-    PROJECTS_STORE 
+import {
+    saveToStore,
+    getFromStore,
+    getAllFromStore,
+    deleteFromStore,
+    clearStore,
+    clearFirebaseStores,
+    TASKS_STORE,
+    SUBJECTS_STORE,
+    PROJECTS_STORE
 } from './db.js';
 
-import { 
-    initializeApp 
+import {
+    initializeApp
 } from "firebase/app";
 
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    deleteUser as deleteFirebaseUser 
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail,
+    sendEmailVerification,
+    signOut,
+    deleteUser as deleteFirebaseUser
 } from "firebase/auth";
 
-import { 
-    getFirestore, 
-    doc, 
-    setDoc, 
-    getDoc, 
-    getDocs, 
-    collection, 
-    where, 
-    query, 
-    Timestamp, 
-    deleteDoc, 
-    deleteField, 
-    updateDoc, 
-    writeBatch 
+import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    collection,
+    where,
+    query,
+    Timestamp,
+    deleteDoc,
+    deleteField,
+    updateDoc,
+    writeBatch
 } from "firebase/firestore";
 
-import { 
-    getAnalytics 
+import {
+    getAnalytics
 } from "firebase/analytics";
 
-import { 
-    useUser 
+import {
+    useUser
 } from '/src/UserState.jsx';
 
 //------------------------------------
@@ -378,6 +381,16 @@ export function registerUser(email, password, name) {
         .then(async (userCredential) => {
             const user = userCredential.user;
 
+            // Send verification email
+            sendEmailVerification(user)
+                .then(() => {
+                    alert('Verification email sent. Please check your inbox.');
+                })
+                .catch((error) => {
+                    console.error('Error sending verification email:', error);
+                    alert('Failed to send verification email. Please try again.');
+                });
+
             // Save user information and default settings to Firestore
             await setDoc(doc(firestore, "users", user.uid), {
                 name: name,
@@ -479,7 +492,8 @@ export async function logoutUser() {
                 localStorage.clear(),
                 clearStore(TASKS_STORE),
                 clearStore(SUBJECTS_STORE),
-                clearStore(PROJECTS_STORE)
+                clearStore(PROJECTS_STORE),
+                clearFirebaseStores() // Call to clear Firebase-specific stores
             ]);
         })
         .catch((error) => {
@@ -564,7 +578,7 @@ export async function deleteUser(userId) {
  * editTask, 
  * deleteTask, 
  * sortTasks 
- */ 
+ */
 
 /**
  * Adds a new task to Firestore and updates IndexedDB with the task details.

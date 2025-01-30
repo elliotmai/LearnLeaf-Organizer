@@ -23,6 +23,25 @@ export async function initDB() {
     });
 }
 
+export async function clearFirebaseStores() {
+    const firebaseDatabases = ["firebase-heartbeat-database", "firebase-installations-database", "firebaseLocalStorageDb"];
+
+    for (const dbName of firebaseDatabases) {
+        try {
+            const db = await openDB(dbName);
+            const tx = db.transaction(db.objectStoreNames, 'readwrite');
+            for (const storeName of db.objectStoreNames) {
+                await tx.objectStore(storeName).clear();
+                console.log(`Cleared store: ${storeName} in database: ${dbName}`);
+            }
+            await tx.done;
+            db.close();
+        } catch (error) {
+            console.error(`Error clearing stores in database ${dbName}:`, error);
+        }
+    }
+}
+
 // Helper functions to interact with IndexedDB
 export async function saveToStore(storeName, data) {
     const db = await initDB();
