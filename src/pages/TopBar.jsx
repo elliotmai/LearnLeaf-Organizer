@@ -12,12 +12,24 @@ const TopBar = () => {
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
 
+    const [menuOpen, setMenuOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
-    const [isTaskImportOpen, setIsTaskImportOpen] = useState(false); // For the Task Import popup
+    const [isTaskImportOpen, setIsTaskImportOpen] = useState(false);
     const [isLMSConnectOpen, setIsLMSConnectOpen] = useState(false);
 
-    const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-    const handleMenuClose = () => setAnchorEl(null);
+    const handleMenuToggle = (event) => {
+        if (menuOpen) {
+            setAnchorEl(null);
+        } else {
+            setAnchorEl(event.currentTarget);
+        }
+        setMenuOpen(!menuOpen);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuOpen(false);
+    };
 
     const handleLogout = async () => {
         try {
@@ -46,8 +58,8 @@ const TopBar = () => {
                         position: 'absolute',
                         left: '5%',
                     }}
-                    onMouseEnter={handleMenuOpen}
-                    onMouseLeave={handleMenuClose}
+                    onClick={handleMenuToggle}
+
                 >
                     {/* Menu Icon */}
                     <IconButton
@@ -63,7 +75,7 @@ const TopBar = () => {
 
                     {/* Popover Menu */}
                     <Popover
-                        open={Boolean(anchorEl)}
+                        open={menuOpen}
                         anchorEl={anchorEl}
                         onClose={handleMenuClose}
                         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
