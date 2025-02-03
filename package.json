@@ -3,10 +3,11 @@
   "name": "learnleaf",
   "main": "index.html",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "vite",
     "build": "vite build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
@@ -60,12 +61,5 @@
     "vite": "^4.1.0",
     "vite-plugin-babel-macros": "^1.0.6",
     "vite-plugin-pwa": "^0.20.5"
-  },
-  "flow": {
-    "name": "my-flow-project",
-    "version": "1.0.0",
-    "devDependencies": {
-      "flow-bin": "^0.231.0"
-    }
   }
 }
