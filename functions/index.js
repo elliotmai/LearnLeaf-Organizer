@@ -1,9 +1,18 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const sgMail = require('@sendgrid/mail');
+require('dotenv').config();
 
 admin.initializeApp();
+
+if (process.env.FUNCTIONS_EMULATOR) {
+    const functionsConfig = require('./.runtimeconfig.json');
+    process.env.SENDGRID_KEY = functionsConfig.sendgrid.key;
+}
+
+console.log("Firebase Config SendGrid Key:", functions.config().sendgrid?.key);
 sgMail.setApiKey(functions.config().sendgrid.key);
+
 
 // Query tasks due before or on the end date and where status != 'Completed'
 async function queryTasks(userId, endDate) {
