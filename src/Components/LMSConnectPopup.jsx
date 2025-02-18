@@ -17,6 +17,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import CanvasParse from '/src/Components/LMSHandling/CanvasParse'; // Static import of CanvasParse
 import { updateUserDetails } from '/src/LearnLeaf_Functions.jsx';
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const LMSConnectPopup = ({ isOpen, onClose }) => {
   const [selectedLMS, setSelectedLMS] = useState('Canvas');
@@ -96,18 +97,21 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
       await updateUserDetails(user.id, { icsURLs: updatedICSURLs });
       setUser({ ...user, icsURLs: updatedICSURLs });
       localStorage.setItem('user', JSON.stringify({ ...user, icsURLs: updatedICSURLs }));
-      if (selectedLMS === "Canvas") {
-        await CanvasParse({ icalUrl: icalLink });
-      }
+
+      const functions = getFunctions();
+      const processICalFromPopup = httpsCallable(functions, "processICalFromPopup");
+
+      await processICalFromPopup({ userId: user.id, icalUrl: icalLink });
+
       onClose();
       window.location.reload();
-    } catch (error) {
+  } catch (error) {
       console.error('Operation failed:', error);
-      setError('An error occurred while saving or parsing the iCal link. Please try again.');
-    } finally {
+      setError('An error occurred while saving or processing the iCal link. Please try again.');
+  } finally {
       setLoading(false);
-    }
-  };
+  }
+};
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">

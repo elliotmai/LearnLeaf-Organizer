@@ -5,28 +5,16 @@ import { getFromStore } from '/src/db';
 export default function CanvasParse({ icalUrl }) {
     return new Promise((resolve, reject) => {
         try {
-            // Determine base URL based on environment
-            const baseURL = window.location.hostname === 'localhost'
-                ? 'http://localhost:8080/proxy'
-                : 'https://lms-integration--learnleaf-organizer.netlify.app/.netlify/functions/proxy';
+            const flaskServer = window.location.hostname === 'localhost'
+                ? 'http://127.0.0.1:5000/fetch_ical'
+                : 'https://learnleaf-organizer.onrender.com/fetch_ical';
 
-            // Replace the base URL in the iCal URL to use the correct proxy
-            const proxiedUrl = `${baseURL}/${icalUrl.replace(/^https?:\/\/[^\/]+\//, '')}`;
+            const proxiedUrl = `${flaskServer}?ical_url=${encodeURIComponent(icalUrl)}`;
 
-            // Add debug logs
-            console.log("Debug Info:");
-            console.log("Original iCal URL:", icalUrl);
-            console.log("Base URL:", baseURL);
-            console.log("Proxied URL:", proxiedUrl);
+            console.log("Fetching from:", proxiedUrl);
 
             fetch(proxiedUrl)
-                .then((response) => {
-                    console.log("HTTP Response Status:", response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.text();
-                })
+                .then(response => response.text())
                 .then(async (icalData) => {
                     if (!icalData) {
                         throw new Error("No iCal data received.");

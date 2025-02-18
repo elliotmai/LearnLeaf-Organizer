@@ -1,7 +1,10 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const sgMail = require('@sendgrid/mail');
+const logger = require('firebase-functions/logger');
 require('dotenv').config();
+const axios = require('axios');
+const ICAL = require('ical.js');
 
 admin.initializeApp();
 
@@ -179,3 +182,187 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
         await sendNotificationEmailFromNotificationDoc(notificationDocId, notificationType);
     }    
 });
+
+exports.fetchAndProcessCanvasData = functions.pubsub
+    .schedule('every 60 minutes')
+    .timeZone('America/Chicago')
+    .onRun(async (context) => {
+        const flaskServer = 'https://learnleaf-organizer.onrender.com/fetch_ical';
+        const firestore = admin.firestore();
+
+        const usersSnapshot = await firestore.collection('users').get();
+
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+            const userData = userDoc.data();
+
+            if (!userData.icsURLs || !userData.icsURLs.Canvas) {
+                console.log(`No Canvas iCal URLs found for user ${userId}, skipping.`);
+                continue;
+            }
+            console.log(`Processing Canvas iCal URLs for user ${userId}`);
+
+
+            for (const [name, url] of Object.entries(userData.icsURLs.Canvas)) {
+                try {
+                    console.log(`Fetching iCal for ${name} (User ${userId}) from ${url}`);
+
+                    const response = await axios.get(`${flaskServer}?ical_url=${encodeURIComponent(url)}`);
+                    const icalData = response.data;
+
+                    if (!icalData) {
+                        console.warn(`No iCal data received for ${name} (User ${userId}).`);
+                        continue;
+                    }
+
+                    console.log(`Fetched iCal Data (Snippet) for ${name} (User ${userId}):`, icalData.slice(0, 50));
+
+                    await processICalData(userId, icalData, firestore);
+
+                } catch (error) {
+                    console.error(`Error fetching iCal for ${name} (User ${userId}):`, error);
+                }
+            }
+        }
+    });
+
+async function processICalData(userId, icalData, firestore) {
+    const jcal = ICAL.parse(icalData);
+    const component = new ICAL.Component(jcal);
+    const vevents = component.getAllSubcomponents('vevent');
+
+    const tasks = [];
+    const subjects = new Set();
+
+    for (const vevent of vevents) {
+        const event = new ICAL.Event(vevent);
+
+        if (!event.summary) {
+            console.warn(`Skipping event without a summary (User ${userId}).`);
+            continue;
+        }
+
+        const summary = event.summary || '';
+        const [taskName, subjectName] = summary.split(' [');
+        const subjectCleaned = subjectName ? subjectName.replace(']', '') : 'None';
+
+        function formatDescription(description) {
+            description = description.replace(/\[[^\[\]]*?\.\w{2,4}\]/g, '');
+            description = description.replace(/\(\s*https?:\/\/[^\s()]+?\s*\)/g, '');
+            return description;
+        }
+
+        const startDate = event.startDate.toJSDate();
+        const formattedDate = startDate.toISOString().split('T')[0];
+        let formattedTime = startDate.toTimeString().slice(0, 5);
+        if (formattedTime === '00:00') formattedTime = '23:59';
+
+        const task = {
+            taskName: taskName.trim(),
+            taskDescription: event.description ? formatDescription(event.description) : "",
+            dueDateInput: formattedDate,
+            dueTimeInput: formattedTime,
+            taskLMSDetails: {
+                LMS: "Canvas",
+                LMS_UID: event.uid,
+            },
+            taskPriority: "Medium",
+            taskStatus: "Not Started",
+            taskSubject: subjectCleaned,
+            taskProject: "None"
+        };
+
+        const subject = {
+            subjectName: subjectCleaned,
+            subjectLMSDetails: {
+                LMS: "Canvas",
+                LMS_UID: subjectCleaned,
+            },
+            subjectStatus: "Active",
+            subjectSemester: "",
+            subjectColor: "black",
+            subjectDescription: ""
+        };
+
+        const subjectRef = firestore.collection(`users/${userId}/subjects`).doc(subject.subjectLMSDetails.LMS_UID);
+        const subjectDoc = await subjectRef.get();
+
+        if (!subjectDoc.exists) {
+            console.log(`Adding new subject: ${subjectCleaned} (User ${userId})`);
+            await subjectRef.set(subject);
+            subjects.add(subjectCleaned);
+        }
+
+        if (!subjectDoc.exists || subjectDoc.data().subjectStatus !== "Blocked") {
+            console.log(`Processing task for subject: ${subjectCleaned} (User ${userId})`);
+
+            const taskRef = firestore.collection(`users/${userId}/tasks`).doc(task.taskLMSDetails.LMS_UID);
+            const existingTask = await taskRef.get();
+
+            if (!existingTask.exists) {
+                console.log(`Adding new task: ${task.taskName} (User ${userId})`);
+                await taskRef.set(task);
+            } else {
+                const existingDueDate = new Date(existingTask.data().taskDueDate);
+                if (existingDueDate.getTime() !== new Date(task.dueDateInput).getTime()) {
+                    console.log(`Updating due date for task: ${task.taskName} (User ${userId})`);
+                    await taskRef.update({
+                        taskDueDate: task.dueDateInput,
+                        taskDueTime: task.dueTimeInput
+                    });
+                }
+            }
+        } else {
+            console.log(`Skipping task for blocked subject: ${subjectCleaned} (User ${userId})`);
+        }
+    }
+
+    console.log(`Processed ${tasks.length} tasks and ${subjects.size} subjects for user ${userId}`);
+}
+
+exports.processICalFromPopup = functions.https.onCall(async (data, context) => {
+    const { userId, icalUrl } = data;
+
+    if (!userId || !icalUrl) {
+        throw new functions.https.HttpsError('invalid-argument', 'User ID and iCal URL are required.');
+    }
+
+    const flaskServer = 'https://learnleaf-organizer.onrender.com/fetch_ical';
+    const firestore = admin.firestore();
+
+    try {
+        console.log(`Fetching iCal for user ${userId} from ${icalUrl}`);
+
+        // Fetch the iCal data from the Flask backend
+        const response = await axios.get(`${flaskServer}?ical_url=${encodeURIComponent(icalUrl)}`);
+        const icalData = response.data;
+
+        if (!icalData) {
+            throw new functions.https.HttpsError('not-found', 'No iCal data received.');
+        }
+
+        console.log(`Fetched iCal Data for user ${userId}:`, icalData.slice(0, 500));
+
+        await processICalData(userId, icalData, firestore);
+
+        return { success: true, message: "iCal data processed successfully." };
+
+    } catch (error) {
+        console.error(`Error processing iCal for user ${userId}:`, error);
+        throw new functions.https.HttpsError('internal', `Failed to process iCal: ${error.message}`);
+    }
+});
+
+exports.keepRenderAlive = functions.pubsub
+    .schedule('every 5 minutes')  // Runs every 5 minutes
+    .timeZone('America/Chicago')
+    .onRun(async (context) => {
+        const flaskServer = 'https://learnleaf-organizer.onrender.com/fetch_ical'; // Your Render backend
+
+        try {
+            await axios.get(`${flaskServer}?ical_url=dummy`);
+            console.log("Pinged Render server to keep it alive.");
+        } catch (error) {
+            console.error("Error pinging Render server:", error);
+        }
+    });
