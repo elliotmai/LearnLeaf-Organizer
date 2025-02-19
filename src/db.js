@@ -45,13 +45,44 @@ export async function clearFirebaseStores() {
 // Helper functions to interact with IndexedDB
 export async function saveToStore(storeName, data) {
     const db = await initDB();
-    const tx = db.transaction(storeName, 'readwrite');
+    const tx = db.transaction(storeName, "readwrite");
     const store = tx.objectStore(storeName);
+
     for (const item of data) {
-        await store.put(item);
+        let newItem = { ...item }; // Clone the object to modify safely
+
+        // Ensure correct key is set for IndexedDB
+        if (storeName === TASKS_STORE && !newItem.taskId) {
+            newItem.taskId = newItem.id || `${Date.now()}`;
+        }
+        if (storeName === SUBJECTS_STORE && !newItem.subjectId) {
+            newItem.subjectId = newItem.id || `${Date.now()}`;
+        }
+        if (storeName === PROJECTS_STORE && !newItem.projectId) {
+            newItem.projectId = newItem.id || `${Date.now()}`;
+        }
+
+        // 🔥 Fix: Remove any unserializable fields
+        newItem = JSON.parse(JSON.stringify(newItem)); // Converts to serializable data
+
+        if (
+            (storeName === TASKS_STORE && !newItem.taskId) ||
+            (storeName === SUBJECTS_STORE && !newItem.subjectId) ||
+            (storeName === PROJECTS_STORE && !newItem.projectId)
+        ) {
+            console.error(`Error: Missing key in ${storeName} entry:`, newItem);
+            continue; // Skip this entry instead of crashing
+        }
+
+        try {
+            await store.put(newItem);
+        } catch (error) {
+            console.error(`Failed to save ${storeName} entry in IndexedDB:`, error, newItem);
+        }
     }
     await tx.done;
 }
+
 
 export async function getFromStore(storeName, key) {
     const db = await initDB();
@@ -64,12 +95,25 @@ export async function getAllFromStore(storeName) {
 }
 
 export async function deleteFromStore(storeName, key) {
+    if (!key) {
+        console.error(`Error: Attempted to delete from ${storeName} with an invalid key:`, key);
+        return; // Prevent IndexedDB error
+    }
+
     const db = await initDB();
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
-    await store.delete(key);
+
+    try {
+        await store.delete(key);
+        console.log(`Deleted ${key} from ${storeName}`);
+    } catch (error) {
+        console.error(`Failed to delete ${key} from ${storeName}:`, error);
+    }
+
     await tx.done;
 }
+
 
 export async function clearStore(storeName) {
     const db = await initDB();

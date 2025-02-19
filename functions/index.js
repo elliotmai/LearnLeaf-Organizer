@@ -22,7 +22,7 @@ async function queryTasks(userId, endDate) {
     console.log('Querying tasks');
     const userDocRef = admin.firestore().collection('users').doc(userId);
     const tasksRef = userDocRef.collection('tasks');
-    
+
     let tasks = [];
     const taskQuerySnapshot = await tasksRef
         .where('taskDueDate', '<=', endDate)
@@ -86,7 +86,7 @@ async function createNotificationDocument(userId, userEmail, tasks, notification
 async function sendNotificationEmailFromNotificationDoc(notificationDocId, notificationType) {
     const notificationsRef = admin.firestore().collection('notifications');
     const notificationDoc = await notificationsRef.doc(notificationDocId).get();
-    
+
     if (!notificationDoc.exists) {
         console.error(`Notification document with ID ${notificationDocId} does not exist.`);
         return;
@@ -141,7 +141,7 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
     const now = admin.firestore.Timestamp.now();
     const tomorrow = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 1)));
     const nextWeek = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 7)));
-    
+
     console.log('Querying users with notifications enabled...');
     const usersSnapshot = await usersRef.where('notifications', '==', true).get();
 
@@ -151,17 +151,17 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
         console.log('No users with notifications enabled.');
         return;
     }
-    
+
     for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
         const userData = userDoc.data();
         console.log(`User Data: ${JSON.stringify(userData)}`);
         const userEmail = userData.email;
         const notificationsFrequency = userData.notificationsFrequency;
-    
+
         let tasks = [];
         let notificationType = '';
-    
+
         if (notificationsFrequency[1] && new Date().getDay() === 1) {
             tasks = await queryTasks(userId, nextWeek);
             notificationType = 'Weekly';
@@ -172,15 +172,15 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
             tasks = await queryTasks(userId, now);
             notificationType = 'Urgent';
         }
-    
+
         if (notificationType === 'Urgent' && tasks.length === 0) {
             console.log(`No urgent tasks for ${userEmail}, skipping email.`);
             continue;
         }
-    
+
         const notificationDocId = await createNotificationDocument(userId, userEmail, tasks, notificationType);
         await sendNotificationEmailFromNotificationDoc(notificationDocId, notificationType);
-    }    
+    }
 });
 
 exports.fetchAndProcessCanvasData = functions.pubsub
@@ -252,24 +252,39 @@ async function processICalData(userId, icalData, firestore) {
             return description;
         }
 
+        // Helper function to create a local date object
+        function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
+            const [year, month, day] = dateString.split('-').map(Number);
+            return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+        }
+
         const startDate = event.startDate.toJSDate();
         const formattedDate = startDate.toISOString().split('T')[0];
+        const dueDate = createLocalDate(formattedDate, 23, 59, 59, 999);
+        const taskDueDate = Timestamp.fromDate(dueDate);
+
         let formattedTime = startDate.toTimeString().slice(0, 5);
         if (formattedTime === '00:00') formattedTime = '23:59';
+        const [hours, minutes] = formattedTime.split(':').map(Number);
+        const dueDateTime = createLocalDate(formattedTime, hours, minutes, 0, 0);
+        const taskDueTime = Timestamp.fromDate(dueDateTime);
+
+        const cleanedSubjectRef = firestore.collection('firestore', `users/${userId}/subjects/{subjectCleaned}`)
+        const noneProjectRef = firestore.collection(`noneProject/None`)
 
         const task = {
             taskName: taskName.trim(),
             taskDescription: event.description ? formatDescription(event.description) : "",
-            dueDateInput: formattedDate,
-            dueTimeInput: formattedTime,
+            taskDueDate: taskDueDate,
+            taskDueTime: taskDueTime,
             taskLMSDetails: {
                 LMS: "Canvas",
                 LMS_UID: event.uid,
             },
             taskPriority: "Medium",
             taskStatus: "Not Started",
-            taskSubject: subjectCleaned,
-            taskProject: "None"
+            taskSubject: cleanedSubjectRef,
+            taskProject: noneProjectRef
         };
 
         const subject = {
@@ -304,11 +319,11 @@ async function processICalData(userId, icalData, firestore) {
                 await taskRef.set(task);
             } else {
                 const existingDueDate = new Date(existingTask.data().taskDueDate);
-                if (existingDueDate.getTime() !== new Date(task.dueDateInput).getTime()) {
+                if (existingDueDate.getTime() !== new Date(task.taskDueDate).getTime()) {
                     console.log(`Updating due date for task: ${task.taskName} (User ${userId})`);
                     await taskRef.update({
-                        taskDueDate: task.dueDateInput,
-                        taskDueTime: task.dueTimeInput
+                        taskDueDate: task.taskDueDate,
+                        taskDueTime: task.taskDueTime
                     });
                 }
             }
