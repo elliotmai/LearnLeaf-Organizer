@@ -1,19 +1,23 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const sgMail = require('@sendgrid/mail');
-const logger = require('firebase-functions/logger');
 require('dotenv').config();
 const axios = require('axios');
 const ICAL = require('ical.js');
 
-admin.initializeApp();
+const { addTask, addSubject, editTask } = require("./LearnLeaf_Functions.cjs");
+
+// Initialize Firebase Admin (Ensures only one instance)
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 
 if (process.env.FUNCTIONS_EMULATOR) {
     const functionsConfig = require('./.runtimeconfig.json');
     process.env.SENDGRID_KEY = functionsConfig.sendgrid.key;
 }
 
-console.log("Firebase Config SendGrid Key:", functions.config().sendgrid?.key);
+// console.log("Firebase Config SendGrid Key:", functions.config().sendgrid?.key);
 sgMail.setApiKey(functions.config().sendgrid.key);
 
 
@@ -36,11 +40,11 @@ async function queryTasks(userId, endDate) {
 
         // Fetch and populate subject and project information if available
         if (task.taskSubject) {
-            const subjectDoc = await userDocRef.collection('subjects').doc(task.taskSubject.id).get();
+            const subjectDoc = await userDocRef.collection(`users/${userId}/subjects`).doc(task.taskSubject.id).get();
             task.taskSubject = subjectDoc.exists ? subjectDoc.data().subjectName : 'None';
         }
         if (task.taskProject) {
-            const projectDoc = await userDocRef.collection('projects').doc(task.taskProject.id).get();
+            const projectDoc = await userDocRef.collection(`users/${userId}/projects`).doc(task.taskProject.id).get();
             task.taskProject = projectDoc.exists ? projectDoc.data().projectName : 'None';
         }
 
@@ -197,15 +201,15 @@ exports.fetchAndProcessCanvasData = functions.pubsub
             const userData = userDoc.data();
 
             if (!userData.icsURLs || !userData.icsURLs.Canvas) {
-                console.log(`No Canvas iCal URLs found for user ${userId}, skipping.`);
+                // console.log(`No Canvas iCal URLs found for user ${userId}, skipping.`);
                 continue;
             }
-            console.log(`Processing Canvas iCal URLs for user ${userId}`);
+            // console.log(`Processing Canvas iCal URLs for user ${userId}`);
 
 
             for (const [name, url] of Object.entries(userData.icsURLs.Canvas)) {
                 try {
-                    console.log(`Fetching iCal for ${name} (User ${userId}) from ${url}`);
+                    // console.log(`Fetching iCal for ${name} (User ${userId}) from ${url}`);
 
                     const response = await axios.get(`${flaskServer}?ical_url=${encodeURIComponent(url)}`);
                     const icalData = response.data;
@@ -215,7 +219,7 @@ exports.fetchAndProcessCanvasData = functions.pubsub
                         continue;
                     }
 
-                    console.log(`Fetched iCal Data (Snippet) for ${name} (User ${userId}):`, icalData.slice(0, 50));
+                    // console.log(`Fetched iCal Data (Snippet) for ${name} (User ${userId}):`, icalData.slice(0, 50));
 
                     await processICalData(userId, icalData, firestore);
 
@@ -232,14 +236,39 @@ async function processICalData(userId, icalData, firestore) {
     const vevents = component.getAllSubcomponents('vevent');
 
     const tasks = [];
+    const edits = [];
     const subjects = new Set();
 
-    for (const vevent of vevents) {
+    async function processTask(task, tasks) {
+        let existingTask = null;
+    
+        const taskRef = firestore.doc(`users/${userId}/tasks/${task.taskLMSDetails.LMS_UID}`);
+        const taskDoc = await taskRef.get();
+    
+        if (taskDoc.exists) {
+            existingTask = { taskId: taskDoc.id, ...taskDoc.data() };
+    
+            console.log(`Editing existing task: ${task.taskName} (User ${userId})`);
+            const editingTask = {
+                ...existingTask,
+                taskDueDate: task.dueDateInput,
+                taskDueTime: task.dueTimeInput
+            };
+            await editTask(editingTask, userId);
+            edits.push(editingTask);
+        } else {
+            console.log(`Adding new task: ${task.taskName} (User ${userId})`);
+            await addTask(task, userId);
+            tasks.push(task);
+        }
+    }    
+
+    await Promise.all(vevents.map(async (vevent) => {
         const event = new ICAL.Event(vevent);
 
         if (!event.summary) {
-            console.warn(`Skipping event without a summary (User ${userId}).`);
-            continue;
+            console.warn("Skipping event without a summary:", event);
+            return;
         }
 
         const summary = event.summary || '';
@@ -252,39 +281,31 @@ async function processICalData(userId, icalData, firestore) {
             return description;
         }
 
-        // Helper function to create a local date object
-        function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
-            const [year, month, day] = dateString.split('-').map(Number);
-            return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
-        }
-
         const startDate = event.startDate.toJSDate();
-        const formattedDate = startDate.toISOString().split('T')[0];
-        const dueDate = createLocalDate(formattedDate, 23, 59, 59, 999);
-        const taskDueDate = Timestamp.fromDate(dueDate);
+        const formattedDate = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
 
-        let formattedTime = startDate.toTimeString().slice(0, 5);
-        if (formattedTime === '00:00') formattedTime = '23:59';
-        const [hours, minutes] = formattedTime.split(':').map(Number);
-        const dueDateTime = createLocalDate(formattedTime, hours, minutes, 0, 0);
-        const taskDueTime = Timestamp.fromDate(dueDateTime);
+        const hasTime = !event.startDate.isDate;
+        let formattedTime = hasTime
+            ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
+            : "23:59";
 
-        const cleanedSubjectRef = firestore.collection('firestore', `users/${userId}/subjects/{subjectCleaned}`)
-        const noneProjectRef = firestore.collection(`noneProject/None`)
+        if (formattedTime === "00:00") {
+            formattedTime = "23:59";
+        }
 
         const task = {
             taskName: taskName.trim(),
             taskDescription: event.description ? formatDescription(event.description) : "",
-            taskDueDate: taskDueDate,
-            taskDueTime: taskDueTime,
+            dueDateInput: formattedDate,
+            dueTimeInput: formattedTime,
             taskLMSDetails: {
                 LMS: "Canvas",
                 LMS_UID: event.uid,
             },
             taskPriority: "Medium",
             taskStatus: "Not Started",
-            taskSubject: cleanedSubjectRef,
-            taskProject: noneProjectRef
+            taskSubject: subjectCleaned,
+            taskProject: "None"
         };
 
         const subject = {
@@ -299,40 +320,28 @@ async function processICalData(userId, icalData, firestore) {
             subjectDescription: ""
         };
 
-        const subjectRef = firestore.collection(`users/${userId}/subjects`).doc(subject.subjectLMSDetails.LMS_UID);
+        // Ensure `existingSubject` is reinitialized for each subject
+        let existingSubject = null;
+
+        const subjectRef = firestore.doc(`users/${userId}/subjects/${subject.subjectLMSDetails.LMS_UID}`);
         const subjectDoc = await subjectRef.get();
 
-        if (!subjectDoc.exists) {
-            console.log(`Adding new subject: ${subjectCleaned} (User ${userId})`);
-            await subjectRef.set(subject);
+        if (subjectDoc.exists) {
+            existingSubject = { subjectId: subjectDoc.id, ...subjectDoc.data() };
+        }
+
+        if (!existingSubject) {
+            await addSubject(subject, userId);
             subjects.add(subjectCleaned);
-        }
-
-        if (!subjectDoc.exists || subjectDoc.data().subjectStatus !== "Blocked") {
-            console.log(`Processing task for subject: ${subjectCleaned} (User ${userId})`);
-
-            const taskRef = firestore.collection(`users/${userId}/tasks`).doc(task.taskLMSDetails.LMS_UID);
-            const existingTask = await taskRef.get();
-
-            if (!existingTask.exists) {
-                console.log(`Adding new task: ${task.taskName} (User ${userId})`);
-                await taskRef.set(task);
-            } else {
-                const existingDueDate = new Date(existingTask.data().taskDueDate);
-                if (existingDueDate.getTime() !== new Date(task.taskDueDate).getTime()) {
-                    console.log(`Updating due date for task: ${task.taskName} (User ${userId})`);
-                    await taskRef.update({
-                        taskDueDate: task.taskDueDate,
-                        taskDueTime: task.taskDueTime
-                    });
-                }
-            }
+            await processTask(task, tasks);
+        } else if (existingSubject.subjectStatus !== "Blocked") {
+            await processTask(task, tasks);
         } else {
-            console.log(`Skipping task for blocked subject: ${subjectCleaned} (User ${userId})`);
         }
-    }
+    }));
 
-    console.log(`Processed ${tasks.length} tasks and ${subjects.size} subjects for user ${userId}`);
+    // Log result only after all tasks and subjects are processed
+    console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length, "\nNumber of edits made:", edits.length);
 }
 
 exports.processICalFromPopup = functions.https.onCall(async (data, context) => {
@@ -346,7 +355,7 @@ exports.processICalFromPopup = functions.https.onCall(async (data, context) => {
     const firestore = admin.firestore();
 
     try {
-        console.log(`Fetching iCal for user ${userId} from ${icalUrl}`);
+        // console.log(`Fetching iCal for user ${userId} from ${icalUrl}`);
 
         // Fetch the iCal data from the Flask backend
         const response = await axios.get(`${flaskServer}?ical_url=${encodeURIComponent(icalUrl)}`);
@@ -356,7 +365,7 @@ exports.processICalFromPopup = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError('not-found', 'No iCal data received.');
         }
 
-        console.log(`Fetched iCal Data for user ${userId}:`, icalData.slice(0, 500));
+        // console.log(`Fetched iCal Data for user ${userId}:`, icalData.slice(0, 500));
 
         await processICalData(userId, icalData, firestore);
 

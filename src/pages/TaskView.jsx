@@ -48,10 +48,13 @@ const TaskList = () => {
                 });
 
                 const sortedTasks = sortTasks(tasksWithDetails);
+                console.log('Sorted Tasks:', sortedTasks);
 
                 const sortedSubjects = activeSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+                console.log('Sorted Subjects:', sortedSubjects);
 
                 const sortedProjects = activeProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+                console.log('Sorted Projects:', sortedProjects);
 
                 setTasks(sortedTasks);
                 setSubjects(sortedSubjects);

@@ -211,7 +211,7 @@ export function formatDate(input) {
     }
 
     // Format the date in ISO format (YYYY-MM-DD)
-    return date.toISOString().split("T")[0];
+    return date.toLocaleDateString('en-CA');
 }
 
 /**
@@ -364,34 +364,58 @@ export async function fetchAllData() {
         console.log("Attempting to load data from IndexedDB...");
 
         // Use IndexedDB first before fetching from Firestore
-        const cachedTasks = await fetchDataWithIndexedDBFallback(taskCollection, "tasks");
-        const cachedProjects = await fetchDataWithIndexedDBFallback(projectCollection, "projects");
-        const cachedSubjects = await fetchDataWithIndexedDBFallback(subjectCollection, "subjects");
+        const cachedTasks = await fetchDataWithIndexedDBFallback(taskCollection, "tasks", "");
+        const cachedProjects = await fetchDataWithIndexedDBFallback(projectCollection, "projects", doc(firestore, 'noneProject', 'None'));
+        const cachedSubjects = await fetchDataWithIndexedDBFallback(subjectCollection, "subjects", doc(firestore, 'noneSubject', 'None'));
 
         if (cachedTasks && cachedProjects && cachedSubjects) {
+            console.log("Data found in IndexedDB.");
             return { tasks: cachedTasks, projects: cachedProjects, subjects: cachedSubjects };
         }
+        console.log("Data not found in IndexedDB. Fetching from Firestore...");
 
+        // Fetch Firestore data
         const noneProjectDoc = await getDoc(doc(firestore, 'noneProject', 'None'));
-        const noneProject = {
-            projectId: noneProjectDoc.id,
-            ...noneProjectDoc.data()
-        };
-
         const noneSubjectDoc = await getDoc(doc(firestore, 'noneSubject', 'None'));
-        const noneSubject = {
-            subjectId: noneSubjectDoc.id,
-            ...noneSubjectDoc.data()
-        };
+
+        let noneProject = { projectId: 'None', projectName: 'None' };
+        let noneSubject = { subjectId: 'None', subjectName: 'None' };
+
+        if (noneProjectDoc.exists()) {
+            noneProject = {
+                projectId: noneProjectDoc.id,
+                ...noneProjectDoc.data()
+            };
+        } else {
+            console.warn("'noneProject/None' not found in Firestore. Using default object.");
+        }
+
+        if (noneSubjectDoc.exists()) {
+            noneSubject = {
+                subjectId: noneSubjectDoc.id,
+                ...noneSubjectDoc.data()
+            };
+        } else {
+            console.warn("'noneSubject/None' not found in Firestore. Using default object.");
+        }
 
         // Fetch and format data
         const tasks = await fetchDataWithIndexedDBFallback(taskCollection, "tasks");
-        const projects = await fetchDataWithIndexedDBFallback(projectCollection, "projects");
-        const subjects = await fetchDataWithIndexedDBFallback(subjectCollection, "subjects");
+        const projects = await fetchDataWithIndexedDBFallback(projectCollection, "projects", doc(firestore, 'noneProject', 'None'));
+        const subjects = await fetchDataWithIndexedDBFallback(subjectCollection, "subjects", doc(firestore, 'noneSubject', 'None'));
 
         // Ensure "None" objects exist in IndexedDB
-        projects.push(noneProject);
-        subjects.push(noneSubject);
+        if (!projects.some(proj => proj.projectId === 'None')) {
+            projects.push(noneProject);
+            await saveDataToIndexedDB("projects", projects);
+            console.log('Added "None" project to IndexedDB.');
+        }
+
+        if (!subjects.some(sub => sub.subjectId === 'None')) {
+            subjects.push(noneSubject);
+            await saveDataToIndexedDB("subjects", subjects);
+            console.log('Added "None" subject to IndexedDB.');
+        }
 
         return { tasks, projects, subjects };
     } catch (error) {
@@ -404,33 +428,48 @@ export async function fetchAllData() {
 // Offline Access
 //------------------------------------
 
-async function syncIndexedDBToFirestore(collectionRef, storeName) {
-    const localData = await getAllFromStore(storeName);
+// async function syncIndexedDBToFirestore(collectionRef, storeName) {
+//     const localData = await getAllFromStore(storeName);
 
-    localData.forEach(async (item) => {
-        try {
-            console.log(`Syncing IndexedDB -> Firestore (${storeName})`);
-            await setDoc(doc(collectionRef, item.id), item, { merge: true });
-        } catch (error) {
-            console.error(`Error syncing IndexedDB data (${storeName}) to Firestore:`, error);
-        }
-    });
-}
+//     localData.forEach(async (item) => {
+//         try {
+//             console.log(`Syncing IndexedDB -> Firestore (${storeName})`);
+//             await setDoc(doc(collectionRef, item.id), item, { merge: true });
+//         } catch (error) {
+//             console.error(`Error syncing IndexedDB data (${storeName}) to Firestore:`, error);
+//         }
+//     });
+// }
 
-// When the user comes back online, sync local IndexedDB to Firestore
-window.addEventListener("online", () => {
-    if (userId) {
-        syncIndexedDBToFirestore(taskCollection, "tasks");
-        syncIndexedDBToFirestore(subjectCollection, "subjects");
-        syncIndexedDBToFirestore(projectCollection, "projects");
-    }
-});
+// // When the user comes back online, sync local IndexedDB to Firestore
+// window.addEventListener("online", () => {
+//     if (userId) {
+//         syncIndexedDBToFirestore(taskCollection, "tasks");
+//         syncIndexedDBToFirestore(subjectCollection, "subjects");
+//         syncIndexedDBToFirestore(projectCollection, "projects");
+//     }
+// });
 
-async function fetchDataWithIndexedDBFallback(collectionRef, storeName) {
+async function fetchDataWithIndexedDBFallback(collectionRef, storeName, noneDocRef = null) {
     let localData = await getAllFromStore(storeName);
 
     if (localData.length > 0) {
         console.log(`Using IndexedDB cache for ${storeName}`);
+
+        // Ensure "None" entry exists in IndexedDB cache
+        if (noneDocRef && !localData.some(item => item.id === 'None')) {
+            console.log(`Adding missing "None" entry to IndexedDB cache for ${storeName}`);
+            const noneDoc = await getDoc(noneDocRef);
+
+            let noneData = { id: 'None', name: 'None' };
+            if (noneDoc.exists()) {
+                noneData = { id: noneDoc.id, ...noneDoc.data() };
+            }
+
+            localData.push(noneData);
+            await saveToStore(storeName, localData);
+        }
+
         return localData;
     } else {
         console.log(`Fetching from Firestore since IndexedDB is empty (${storeName})`);
@@ -438,10 +477,24 @@ async function fetchDataWithIndexedDBFallback(collectionRef, storeName) {
         return new Promise((resolve, reject) => {
             onSnapshot(collectionRef, async (snapshot) => {
                 try {
-                    const fetchedData = snapshot.docs.map(doc => formatFirestoreData(doc, storeName));
+                    let fetchedData = snapshot.docs.map(doc => formatFirestoreData(doc, storeName));
+
+                    // Only add "None" if applicable (not for tasks)
+                    if (noneDocRef) {
+                        const noneDoc = await getDoc(noneDocRef);
+                        let noneData = { id: 'None', name: 'None' };
+
+                        if (noneDoc.exists()) {
+                            noneData = { id: noneDoc.id, ...noneDoc.data() };
+                        }
+
+                        if (!fetchedData.some(item => item.id === 'None')) {
+                            console.log(`Adding missing "None" entry to Firestore data for ${storeName}`);
+                            fetchedData.push(noneData);
+                        }
+                    }
 
                     await saveToStore(storeName, fetchedData);
-
                     resolve(fetchedData);
                 } catch (error) {
                     console.error(`Error formatting ${storeName} data:`, error);
