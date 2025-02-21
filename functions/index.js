@@ -305,7 +305,6 @@ async function processICalData(userId, icalData, firestore) {
             taskPriority: "Medium",
             taskStatus: "Not Started",
             taskSubject: subjectCleaned,
-            taskProject: "None"
         };
 
         const subject = {
