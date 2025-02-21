@@ -1,4 +1,3 @@
-// LMSConnectPopup.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -13,21 +12,40 @@ import {
   Box,
   CircularProgress,
   Alert,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Tooltip,
+  Dialog as ConfirmationDialog,
+  DialogContentText
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import CanvasParse from '/src/Components/LMSHandling/CanvasParse'; // Static import of CanvasParse
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { updateUserDetails } from '/src/LearnLeaf_Functions.jsx';
 import { getFunctions, httpsCallable } from "firebase/functions";
 
 const LMSConnectPopup = ({ isOpen, onClose }) => {
   const [selectedLMS, setSelectedLMS] = useState('Canvas');
   const [icalLink, setIcalLink] = useState('');
+  const [entryName, setEntryName] = useState('');
+  const [newEntryName, setNewEntryName] = useState('');
+  const [newIcalLink, setNewIcalLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [existingURLs, setExistingURLs] = useState([]);
-  const [isNewEntry, setIsNewEntry] = useState(false);
-  const [entryName, setEntryName] = useState('');
+  const [manageCalendarsOpen, setManageCalendarsOpen] = useState(false);
+  const [editMode, setEditMode] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [refreshing, setRefreshing] = useState({});
 
   const instructions = {
     Canvas: `To get your iCal link from Canvas:\n
@@ -37,59 +55,31 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
   };
 
   useEffect(() => {
-    // Retrieve user data from localStorage
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
       setUser(storedUser);
-      // Extract existing iCal URLs for the selected LMS
-      setExistingURLs(storedUser.icsURLs?.[selectedLMS] ? Object.entries(storedUser.icsURLs[selectedLMS]) : []);
+      setExistingURLs(Object.entries(storedUser.icsURLs?.[selectedLMS] || {}));
     }
   }, [selectedLMS]);
 
-  const handleLMSChange = (event) => {
-    setSelectedLMS(event.target.value);
-    setError(null);
-    setIsNewEntry(false);
-    setExistingURLs(user?.icsURLs?.[event.target.value] ? Object.entries(user.icsURLs[event.target.value]) : []);
+  const validateURL = (url) => {
+    return /^(https?:\/\/)?([\w.-]+)\.([a-z.]{2,6})(\/[\w.-]*)*\/?.ics$/i.test(url);
   };
 
-  const handleNewEntry = () => {
-    setIsNewEntry(true);
-    // setIcalLink(''); // Ensure the iCal link is empty until the user inputs one
-  };
+  const handleNewAccountSubmit = async () => {
+    if (!newEntryName.trim() || !validateURL(newIcalLink)) {
+      setError('Invalid name or URL. Ensure it ends in .ics.');
+      return;
+    }
 
-  const handleFormSubmit = async (event) => {
-    event.preventDefault();
     setLoading(true);
-    setError(null); // Reset any previous error
+    setError(null);
 
-    // Ensure user selects an existing URL or enters a new one
-    if (!isNewEntry && !icalLink) {
-      setError('Please select an existing URL or add a new one.');
-      setLoading(false);
-      return;
-    }
-
-    // Regex for basic URL validation with common domains (e.g., .com, .org, etc.)
-    const urlPattern = /^(https?:\/\/)?([\w.-]+)\.([a-z.]{2,6})(\/[\w.-]*)*\/?.ics$/i;
-
-    if (isNewEntry && (!urlPattern.test(icalLink) || !entryName.trim())) {
-      setError('Invalid entry. Ensure name and a valid iCal URL ending in .ics are provided.');
-      setLoading(false);
-      return;
-    }
-    else if ((!urlPattern.test(icalLink))) {
-      setError('Invalid URL. Please enter a valid iCal URL ending in .ics');
-      setLoading(false);
-      return;
-    }
-
-    // Prepare updated iCal URLs by merging new data
     const updatedICSURLs = {
       ...user.icsURLs,
       [selectedLMS]: {
         ...user.icsURLs?.[selectedLMS],
-        ...(isNewEntry ? { [entryName]: icalLink } : {}),
+        [newEntryName]: newIcalLink,
       },
     };
 
@@ -97,58 +87,114 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
       await updateUserDetails(user.id, { icsURLs: updatedICSURLs });
       setUser({ ...user, icsURLs: updatedICSURLs });
       localStorage.setItem('user', JSON.stringify({ ...user, icsURLs: updatedICSURLs }));
+      setExistingURLs(Object.entries(updatedICSURLs[selectedLMS]));
 
       const functions = getFunctions();
       const processICalFromPopup = httpsCallable(functions, "processICalFromPopup");
+      await processICalFromPopup({ userId: user.id, icalUrl: newIcalLink });
 
-      await processICalFromPopup({ userId: user.id, icalUrl: icalLink });
-
-      onClose();
-      window.location.reload();
-  } catch (error) {
-      console.error('Operation failed:', error);
-      setError('An error occurred while saving or processing the iCal link. Please try again.');
-  } finally {
+      setNewEntryName('');
+      setNewIcalLink('');
+    } catch (error) {
+      console.error('Failed to update:', error);
+      setError('Error saving the iCal link. Please try again.');
+    } finally {
       setLoading(false);
-  }
-};
+    }
+  };
+
+  const handleEditSave = async (oldName, newName, newUrl) => {
+    if (!newName.trim() || !validateURL(newUrl)) {
+      setError('Invalid name or URL. Ensure it ends in .ics.');
+      return;
+    }
+
+    setLoading(true);
+    const updatedICSURLs = { ...user.icsURLs };
+    delete updatedICSURLs[selectedLMS][oldName];
+    updatedICSURLs[selectedLMS][newName] = newUrl;
+
+    try {
+      await updateUserDetails(user.id, { icsURLs: updatedICSURLs });
+      setUser({ ...user, icsURLs: updatedICSURLs });
+      localStorage.setItem('user', JSON.stringify({ ...user, icsURLs: updatedICSURLs }));
+      setExistingURLs(Object.entries(updatedICSURLs[selectedLMS]));
+      setEditMode(null);
+    } catch (error) {
+      console.error('Failed to update:', error);
+      setError('Error saving changes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async (name, url) => {
+    setRefreshing((prev) => ({ ...prev, [name]: true }));
+
+    try {
+      const functions = getFunctions();
+      const processICalFromPopup = httpsCallable(functions, "processICalFromPopup");
+      await processICalFromPopup({ userId: user.id, icalUrl: url });
+    } catch (error) {
+      console.error('Failed to refresh:', error);
+      setError('Error refreshing the calendar.');
+    } finally {
+      setRefreshing((prev) => ({ ...prev, [name]: false }));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+
+    setLoading(true);
+    const updatedICSURLs = { ...user.icsURLs };
+    delete updatedICSURLs[selectedLMS][deleteTarget];
+
+    try {
+      await updateUserDetails(user.id, { icsURLs: updatedICSURLs });
+      setUser({ ...user, icsURLs: updatedICSURLs });
+      localStorage.setItem('user', JSON.stringify({ ...user, icsURLs: updatedICSURLs }));
+      setExistingURLs(Object.entries(updatedICSURLs[selectedLMS]));
+    } catch (error) {
+      console.error('Deletion failed:', error);
+      setError('Error deleting the iCal link.');
+    } finally {
+      setLoading(false);
+      setDeleteTarget(null);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          color: '#8E5B9F',
-          fontWeight: 'bold',
-          fontSize: '1.5rem',
-        }}
-      >
-        Connect LMS Calendar
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{ color: 'grey.600' }}
-          disabled={loading} // Prevent closing the dialog while loading
+      {loading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
         >
+          <CircularProgress />
+        </Box>
+      )}
+      <DialogTitle sx={{ color: "#8E5B9F", fontWeight: 'bold' }}>
+        Connect LMS Calendar
+        <IconButton onClick={onClose} disabled={loading} sx={{ float: 'right' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <DialogContent>
-        <TextField
-          select
-          label="Select LMS"
-          value={selectedLMS}
-          onChange={handleLMSChange}
-          fullWidth
-          margin="normal"
-        >
+        <TextField select label="Select LMS" value={selectedLMS} onChange={(e) => setSelectedLMS(e.target.value)} fullWidth margin="normal">
           <MenuItem value="Canvas">Canvas</MenuItem>
-          {/* Add more LMS options here */}
         </TextField>
-
         <Typography variant="body1" color="textSecondary" sx={{ mt: 2, mb: 2 }}>
           {instructions[selectedLMS]
             .split('\n')
@@ -160,110 +206,107 @@ const LMSConnectPopup = ({ isOpen, onClose }) => {
             ))}
         </Typography>
 
-        <TextField
-          select
-          label="Select an existing iCal URL or add new"
-          value={isNewEntry ? 'new' : icalLink}
-          onChange={(e) => {
-            if (e.target.value === 'new') {
-              handleNewEntry();
-            } else {
-              setIsNewEntry(false);
-              setIcalLink(e.target.value);
-            }
-          }}
-          fullWidth margin="normal"
-        >
-          {existingURLs.map(([key, url]) => (
-            <MenuItem key={key} value={url}>{key}</MenuItem>
-          ))}
-          <MenuItem
-            value="new"
-          >
-            Add New
-          </MenuItem>
-        </TextField>
+        <TextField label="Name" value={newEntryName} onChange={(e) => setNewEntryName(e.target.value)} fullWidth margin="normal" required />
+        <TextField label="iCal URL" value={newIcalLink} onChange={(e) => setNewIcalLink(e.target.value)} fullWidth margin="normal" required />
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
-        {isNewEntry && (
-          <>
-            <TextField
-              label="Name"
-              value={entryName}
-              onChange={(e) => setEntryName(e.target.value)}
-              placeholder='e.g., UTA Canvas'
-              fullWidth
-              margin="normal"
-              required />
-            <TextField
-              label="Paste your iCal link here"
-              value={icalLink}
-              onChange={(e) => {
-                const newUrl = e.target.value;
-                setIcalLink(newUrl);
-                if (existingURLs.some(([_, url]) => url === newUrl)) {
-                  setError('This iCal link has already been added.');
-                } else {
-                  setError(null);
-                }
-              }} 
-              placeholder="https://your-calendar-link.ics"
-              fullWidth margin="normal"
-              required
-            />
-          </>
-        )}
+        <Button variant="contained" fullWidth sx={{
+          mt: 2, backgroundColor: '#B6CDC8',
+          color: '#355147',
+          '&:hover': {
+            backgroundColor: '#B6CDC8',
+            transform: 'scale(1.03)',
+          },
+        }} onClick={handleNewAccountSubmit}>
+          Connect Account
+        </Button>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
+        <Button fullWidth onClick={() => setManageCalendarsOpen(!manageCalendarsOpen)} sx={{ mt: 2, color: '#355147' }}>
+          {manageCalendarsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />} Manage Calendars
+        </Button>
 
-        {/* Show loading indicator */}
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <CircularProgress color="secondary" />
-            <Typography sx={{ ml: 2 }}>Loading data...</Typography>
-          </Box>
-        )}
+        <Collapse in={manageCalendarsOpen}>
+          <List>
+            {existingURLs.length > 0 ? (
+              existingURLs.map(([name, url]) => (
+                <ListItem key={name}>
+                  {editMode === name ? (
+                    <>
+                      <TextField
+                        value={entryName}
+                        onChange={(e) => setEntryName(e.target.value)}
+                        margin="normal"
+                      />
+                      <TextField
+                        value={icalLink}
+                        onChange={(e) => setIcalLink(e.target.value)}
+                        margin="normal"
+                      />
+                      <IconButton onClick={() => handleEditSave(name, entryName, icalLink)}>
+                        <SaveIcon />
+                      </IconButton>
+                      <IconButton onClick={() => setEditMode(null)}>
+                        <CancelIcon />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <>
+                      <ListItemText
+                        primary={name}
+                        secondary={
+                          <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block'
+                            }}
+                          >
+                            {url}
+                          </Typography>
+                        }
+                      />
+
+                      <ListItemSecondaryAction>
+                        <Tooltip title="Refresh">
+                          <IconButton onClick={() => handleRefresh(name, url)} disabled={refreshing[name]}>
+                            {refreshing[name] ? <CircularProgress size={20} /> : <RefreshIcon  color='secondary'/>}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                          <IconButton onClick={() => { setEditMode(name); setEntryName(name); setIcalLink(url); }}>
+                            <EditIcon color='9F6C5B'/>
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton onClick={() => setDeleteTarget(name)}>
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
+                      </ListItemSecondaryAction>
+                    </>
+                  )}
+                </ListItem>
+              ))
+            ) : (
+              <Typography sx={{ p: 2, textAlign: 'center' }}>No calendars added yet.</Typography>
+            )}
+          </List>
+        </Collapse>
       </DialogContent>
-
-      <DialogActions>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <Button
-            onClick={onClose}
-            sx={{
-              color: '#F3161E',
-              '&:hover': {
-                backgroundColor: '#F3161E',
-                color: '#fff',
-                transform: 'scale(1.03)',
-              },
-              mt: 1,
-            }}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleFormSubmit}
-            variant="contained"
-            sx={{
-              backgroundColor: '#B6CDC8',
-              color: '#355147',
-              '&:hover': {
-                backgroundColor: '#8E5B9F',
-                color: '#fff',
-                transform: 'scale(1.03)',
-              },
-              mt: 1,
-            }}
-            disabled={loading || !icalLink || error} // Prevent submission if loading or no link is provided
-          >
-            Submit
-          </Button>
-        </Box>
-      </DialogActions>
+      {/* Delete Confirmation */}
+      <ConfirmationDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogContentText>Are you sure you want to delete "{deleteTarget}"?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error">Delete</Button>
+        </DialogActions>
+      </ConfirmationDialog>
     </Dialog>
   );
 };
