@@ -16,7 +16,8 @@ import {
     DialogContent,
     IconButton,
     Tooltip,
-    Divider
+    Divider,
+    Checkbox
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -26,8 +27,9 @@ import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/s
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
 import TaskInfoWindow from '/src/Components/TaskView/TaskInfoWindow.jsx';
 import './TaskView.css';
+import { Box } from '@mui/system';
 
-const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask, onSelectTask,isSelected }) => {
     const [formValues, setFormValues] = useState({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
     const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
@@ -187,6 +189,13 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                     padding: '16px'
                 }}
             >
+                <Box position="absolute" top={10} left={10}>
+                    <Checkbox
+                        checked={isSelected}
+                        onChange={() => onSelectTask(task.taskId)}
+                        color="primary"
+                    />
+                </Box>
                 <IconButton
                     onClick={() => setInfoOpen(true)}
                     sx={{

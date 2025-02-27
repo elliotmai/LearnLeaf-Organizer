@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
-import { sortSubjects } from '/src/LearnLeaf_Functions.jsx';
+import { sortSubjects, archiveSubject, deleteSubject } from '/src/LearnLeaf_Functions.jsx';
 import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import SubjectFilterBar from './SubjectFilterBar';
-import { Grid, Typography, CircularProgress, Box, Button, Paper, useTheme, useMediaQuery } from '@mui/material';
+import { Grid, Typography, CircularProgress,Menu, MenuItem, Box, Button, Paper, useTheme, useMediaQuery, Checkbox, FormControlLabel } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { FixedSizeList as List } from 'react-window';
-
-const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow }) => {
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow, selectedSubjects, toggleSubjectSelection }) => {
     const startIndex = index * itemsPerRow;
     return (
         <Box sx={{ ...style, width: '100%', display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
@@ -19,7 +19,8 @@ const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow }
                     const subjectIndex = startIndex + i;
                     return subjectIndex < subjects.length ? (
                         <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={subjects[subjectIndex].subjectId}>
-                            <SubjectWidget subject={subjects[subjectIndex]} refreshSubjects={refreshSubjects} />
+                           
+                                    <SubjectWidget subject={subjects[subjectIndex]}  refreshSubjects={refreshSubjects} selectedSubjects={selectedSubjects} toggleSubjectSelection={toggleSubjectSelection} subjectIndex={subjectIndex} subjects={subjects}  />
                         </Grid>
                     ) : null;
                 })}
@@ -38,6 +39,18 @@ const SubjectsDashboard = () => {
         searchSemester: '',
         searchDescription: ''
     });
+    const [selectedSubjects, setSelectedSubjects] = useState([]);
+    const [anchorEl, setAnchorEl] = useState(null); // State to manage the dropdown anchor
+
+    // Open the dropdown menu
+    const handleMenuOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    // Close the dropdown menu
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
 
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -53,30 +66,34 @@ const SubjectsDashboard = () => {
         return 3;
     }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
 
-    // Fetch active subjects from IndexedDB
-    const loadFromIndexedDB = async () => {
-        try {
-            const allSubjects = await getAllFromStore('subjects');
-            const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
-            if (activeSubjects.length > 0) {
-                setSubjects(sortSubjects(activeSubjects));
-                setIsLoading(false);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error("Error loading subjects from IndexedDB:", error);
-            return false;
+   // Fetch active subjects from IndexedDB
+   const loadFromIndexedDB = async () => {
+    try {
+        const allSubjects = await getAllFromStore('subjects');
+        const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
+        console.log({activeSubjects});
+        if (activeSubjects.length > 0) {
+            setSubjects(sortSubjects(activeSubjects));
+            setIsLoading(false);
+            return true;
         }
-    };
+        
+        setSubjects(sortSubjects(activeSubjects));
+        setIsLoading(false);
+        return false;
+    } catch (error) {
+        console.error("Error loading subjects from IndexedDB:", error);
+        return false;
+    }
+};
 
-    const updateState = async () => {
-        setIsLoading(true);
-        const isLoadedFromIndexedDB = await loadFromIndexedDB();
-        if (!isLoadedFromIndexedDB) {
-            console.log("No subjects data found in IndexedDB.");
-        }
-    };
+const updateState = async () => {
+    setIsLoading(true);
+    const isLoadedFromIndexedDB = await loadFromIndexedDB();
+    if (!isLoadedFromIndexedDB) {
+        console.log("No subjects data found in IndexedDB.");
+    }
+};
 
     useEffect(() => {
         if (user?.id) {
@@ -107,6 +124,50 @@ const SubjectsDashboard = () => {
 
     const handleSubject = () => {
         updateState();
+    };
+
+    const toggleSubjectSelection = (subjectId) => {
+        setSelectedSubjects(prevSelected =>
+            prevSelected.includes(subjectId)
+                ? prevSelected.filter(id => id !== subjectId)
+                : [...prevSelected, subjectId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedSubjects.length === filteredSubjects.length) {
+            setSelectedSubjects([]);
+        } else {
+            setSelectedSubjects(filteredSubjects.map(subject => subject.subjectId));
+        }
+    };
+
+    const handleBulkArchive = async () => {
+        const confirmation = window.confirm("Archive all selected subjects?\nThis will not delete any associated tasks.");
+        if (confirmation) {
+            try {
+                await Promise.all(selectedSubjects.map(subjectId => archiveSubject(subjectId)));
+                console.log("Subjects archived successfully.");
+                updateState();
+                setSelectedSubjects([]);
+            } catch (error) {
+                console.error("Error archiving subjects:", error);
+            }
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const confirmation = window.confirm("Delete all selected subjects?\nAssociated tasks won’t be grouped under these subjects anymore.");
+        if (confirmation) {
+            try {
+                await Promise.all(selectedSubjects.map(subjectId => deleteSubject(subjectId)));
+                console.log("Subjects deleted successfully.");
+                updateState();
+                setSelectedSubjects([]);
+            } catch (error) {
+                console.error("Error deleting subjects:", error);
+            }
+        }
     };
 
     const itemsPerRow = getItemsPerRow();
@@ -159,6 +220,65 @@ const SubjectsDashboard = () => {
                     >
                         Add New Subject
                     </Button>
+                    <div style={{display:"flex",justifyContent:"space-between",width:"100%"}}>
+
+                        <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={selectedSubjects.length === filteredSubjects.length ? true : false}
+                            onChange={toggleSelectAll}
+                            color="primary"
+                        />
+                    }
+                    label="Select All"
+                />
+
+<Box display="flex" justifyContent="space-between" gap={2}>
+            <Button
+                variant="outlined"
+                onClick={handleMenuOpen}
+                endIcon={<ArrowDropDownIcon />}
+                disabled={selectedSubjects.length === 0}
+                sx={{
+                    color: '#355147',
+                    borderColor: '#355147',
+                    '&:hover': {
+                        backgroundColor: '#355147',
+                        color: '#fff',
+                    },
+                }}
+            >
+                Actions
+            </Button>
+
+            {/* Dropdown Menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem
+                    onClick={() => {
+                        handleBulkArchive();
+                        handleMenuClose();
+                    }}
+                    sx={{ color: '#355147' }}
+                >
+                    Archive Selected
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        handleBulkDelete();
+                        handleMenuClose();
+                    }}
+                    sx={{ color: '#F3161E' }}
+                >
+                    Delete Selected
+                </MenuItem>
+            </Menu>
+        </Box>
+                        </div>
+
                 </Grid>
             </Grid>
             <Grid container style={{ flexGrow: 1, overflowY: 'auto', width: '100%' }} justifyContent="center">
@@ -170,7 +290,15 @@ const SubjectsDashboard = () => {
                     ) : filteredSubjects.length > 0 ? (
                         <List height={600} itemCount={totalRows} itemSize={rowHeight} width="100%">
                             {({ index, style }) => (
-                                <Row index={index} style={style} subjects={filteredSubjects} refreshSubjects={updateState} itemsPerRow={itemsPerRow} />
+                                <Row
+                                    index={index}
+                                    style={style}
+                                    subjects={filteredSubjects}
+                                    refreshSubjects={updateState}
+                                    itemsPerRow={itemsPerRow}
+                                    selectedSubjects={selectedSubjects}
+                                    toggleSubjectSelection={toggleSubjectSelection}
+                                />
                             )}
                         </List>
                     ) : (

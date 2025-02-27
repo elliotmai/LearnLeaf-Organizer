@@ -7,13 +7,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
-import { Card, CardContent, Typography, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Card, CardContent, Typography,FormControlLabel,Checkbox, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
 import { useUser } from '/src/UserState.jsx';
 
-const ProjectWidget = ({ project, subjects, refreshProjects }) => {
+const ProjectWidget = ({ project, subjects, refreshProjects,selectedProjects,projectIndex,toggleProjectSelection,filteredProjects }) => {
     const [editedProject, setEditedProject] = useState({
         ...project,
     });
@@ -82,6 +82,18 @@ const ProjectWidget = ({ project, subjects, refreshProjects }) => {
                     transition: 'transform 0.2s ease-in-out',
                 }}
             >
+
+<Box display={"flex"}>
+                 <FormControlLabel
+                                control={
+                                    <Checkbox
+                                    checked={selectedProjects.includes(filteredProjects[projectIndex].projectId)}
+                                    onChange={() => toggleProjectSelection(filteredProjects[projectIndex].projectId)}
+                                />
+                                }
+                        
+                            />
+                             </Box> 
                 <CardContent>
                     <Tooltip title="View Associated Tasks">
                         <Link
