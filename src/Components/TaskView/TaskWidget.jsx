@@ -16,16 +16,20 @@ import {
     DialogContent,
     IconButton,
     Tooltip,
-    Divider
+    Divider,
+    Checkbox
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import { editTask, addSubject, addProject, sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
 import { TaskEditForm } from '/src/Components/TaskView/EditForm.jsx';
+import TaskInfoWindow from '/src/Components/TaskView/TaskInfoWindow.jsx';
 import './TaskView.css';
+import { Box } from '@mui/system';
 
-const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask }) => {
+const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask, onSelectTask,isSelected }) => {
     const [formValues, setFormValues] = useState({ ...task, taskSubject: task.taskSubject || 'None', taskProject: task.taskProject || 'None' });
     const [originalValues, setOriginalValues] = useState({ ...task });
     const [editedTask, setEditedTask] = useState({});
@@ -37,6 +41,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
     const [newProjectName, setNewProjectName] = useState('');
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [isInfoOpen, setInfoOpen] = useState(false);
 
     const isFieldUnsaved = (fieldName) => formValues[fieldName] !== originalValues[fieldName];
 
@@ -168,6 +173,13 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                 onClose={() => setEditModalOpen(false)}
                 onSave={onUpdateTask}
             />
+            <TaskInfoWindow
+                task={task}
+                open={isInfoOpen}
+                onClose={() => setInfoOpen(false)}
+                onEdit={handleEditClick}
+                onDelete={onDelete}
+            />
             <Card
                 sx={{
                     minWidth: 275,
@@ -177,6 +189,27 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                     padding: '16px'
                 }}
             >
+                <Box position="absolute" top={10} left={10}>
+                    <Checkbox
+                        checked={isSelected}
+                        onChange={() => onSelectTask(task.taskId)}
+                        color="primary"
+                    />
+                </Box>
+                <IconButton
+                    onClick={() => setInfoOpen(true)}
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: '#355147',
+                        '&:hover': { color: '#5B8E9F' },
+                    }}
+                >
+                    <Tooltip title="View Info">
+                        <SearchIcon />
+                    </Tooltip>
+                </IconButton>
                 <CardContent>
                     {/* Task Name */}
                     <Typography
@@ -233,7 +266,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                         </Tooltip>
                     }
 
-                    {/* Full Description Dialog */}
+                    {/* Full Description Dialog
                     <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
                         <DialogTitle
                             sx={{
@@ -269,7 +302,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                             </Typography>
                         </DialogContent>
 
-                    </Dialog>
+                    </Dialog> */}
 
                     <Divider sx={{ marginY: 2 }} />
 

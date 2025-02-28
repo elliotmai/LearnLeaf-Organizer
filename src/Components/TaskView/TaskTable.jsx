@@ -4,17 +4,33 @@ import debounce from 'lodash.debounce';
 import { getAllFromStore } from '/src/db.js';
 import { useUser } from '/src/UserState.jsx';
 import Grid from '@mui/material/Grid';
-import { useTheme, useMediaQuery, Paper, Typography, Button, Box } from '@mui/material';
+import { useTheme, useMediaQuery, Paper, Menu, MenuItem, Typography, Button, Box, FormControlLabel, Checkbox } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import TaskWidget from '/src/Components/TaskView/TaskWidget.jsx';
 import TaskFilterBar from '../../pages/TaskFilterBar';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import { archiveTask } from '/src/LearnLeaf_Functions.jsx';
+import { deleteAllProjects } from '../../LearnLeaf_Functions';
 
-const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTask, initialSubject, initialProject }) => {
+
+const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTask, initialSubject, initialProject, updateState }) => {
     const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
     const [listHeight, setListHeight] = useState(window.innerHeight - 200); // Default initial height
+    const [selectedTasks, setSelectedTasks] = useState(new Set()); // Store selected task IDs
+    const [isAllSelected, setIsAllSelected] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null); // State to manage the dropdown anchor
 
+    // Open the dropdown menu
+    const handleMenuOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    // Close the dropdown menu
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
     useEffect(() => {
         // Update list height on window resize
         const updateListHeight = () => {
@@ -150,6 +166,53 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
     const filteredTasks = getFilteredTasks(tasks, filterCriteria);
     const totalRows = Math.ceil(filteredTasks.length / itemsPerRow);
 
+    const toggleTaskSelection = (taskId) => {
+        setSelectedTasks(prev => {
+            const newSelected = new Set(prev);
+            if (newSelected.has(taskId)) {
+                newSelected.delete(taskId);
+            } else {
+                newSelected.add(taskId);
+            }
+
+            // If all tasks are selected, update the "Select All" state
+            setIsAllSelected(newSelected.size === filteredTasks.length);
+
+            return newSelected;
+        });
+    };
+
+
+    const handleDeleteSelected = () => {
+        const confirmation = window.confirm("Are you sure you want to permanently delete these tasks?");
+        if (confirmation) {
+            // Convert the Set to an array before iterating
+            [...selectedTasks].forEach(taskId => onDelete(taskId, true)); // Call `onDelete` for each selected task
+            setSelectedTasks(new Set()); // Clear selection after deletion
+        }
+    };
+
+    const handleArchiveSelected = () => {
+        selectedTasks.forEach(taskId => onUpdateTask(taskId, { taskStatus: 'Archived' })); // Update status
+        setSelectedTasks(new Set());
+    };
+
+
+    const toggleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedTasks(new Set()); // Clear all selections
+        } else {
+            setSelectedTasks(new Set(filteredTasks.map(task => task.taskId))); // Select all filtered tasks
+        }
+        setIsAllSelected(!isAllSelected);
+    };
+
+
+    // useEffect(() => {
+    //     deleteAllProjects();
+    // }, []);
+
+
     // Render each row of tasks
     const Row = React.memo(({ index, style }) => {
         const startIndex = index * itemsPerRow;
@@ -175,6 +238,8 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
                                     subjects={subjects}
                                     projects={projects}
                                     onUpdateTask={onUpdateTask}
+                                    isSelected={selectedTasks.has(filteredTasks[taskIndex].taskId)}
+                                    onSelectTask={toggleTaskSelection}
                                 />
                             </Grid>
                         ) : null;
@@ -185,8 +250,27 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
     });
 
 
+
+
+    const handleBulkArchive = async () => {
+        const confirmation = window.confirm("Archive all selected tasks?\nThis will not delete any associated tasks.");
+        if (confirmation) {
+            try {
+                // Convert the Set to an array before using map
+                await Promise.all([...selectedTasks].map(taskId => archiveTask(taskId)));
+                console.log("Tasks archived successfully.");
+                updateState();
+                setSelectedTasks(new Set()); // Clear the selection
+            } catch (error) {
+                console.error("Error archiving tasks:", error);
+            }
+        }
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+
+
             {isAddTaskFormOpen && (
                 <AddTaskForm
                     isOpen={isAddTaskFormOpen}
@@ -240,7 +324,67 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
                 >
                     Add New Task
                 </Button>
+                <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={isAllSelected}
+                                onChange={toggleSelectAll}
+                                color="primary"
+                            />
+                        }
+                        label="Select All"
+                    />
+
+                    <Box display="flex" gap={2}>
+                        <Button
+                            onClick={handleMenuOpen}
+                            endIcon={<ArrowDropDownIcon />}
+                            variant="outlined"
+                            disabled={selectedTasks.size === 0}
+                            sx={{
+                                color: '#355147',
+                                borderColor: '#355147',
+                                '&:hover': {
+                                    backgroundColor: '#355147',
+                                    color: '#fff',
+                                },
+                            }}
+                        >
+                            Actions
+                        </Button>
+
+                        {/* Dropdown Menu */}
+                        <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl)}
+                            onClose={handleMenuClose}
+                        >
+                            <MenuItem
+                                onClick={() => {
+                                    handleBulkArchive();
+                                    handleMenuClose();
+                                }}
+                                sx={{ color: '#355147' }}
+
+                            >
+                                Archive Selected
+                            </MenuItem>
+                            <MenuItem
+                                onClick={() => {
+                                    handleDeleteSelected();
+                                    handleMenuClose();
+                                }}
+                                sx={{ color: '#F3161E' }}
+                            >
+                                Delete Selected
+                            </MenuItem>
+                        </Menu>
+                    </Box>
+                </div>
+
             </Grid>
+
 
             <div style={{ flex: 1, overflow: 'hidden' }}>
                 <Box sx={{ marginLeft: '20px', marginRight: '20px' }}> {/* Adjust margin as needed */}
