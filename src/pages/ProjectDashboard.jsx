@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { useNavigate } from 'react-router-dom';
-import { sortSubjects, sortProjects } from '/src/LearnLeaf_Functions.jsx';
+import { sortSubjects, sortProjects,archiveProject, deleteProject, } from '/src/LearnLeaf_Functions.jsx';
 import debounce from 'lodash.debounce';
 import { useUser } from '/src/UserState.jsx';
 import { getAllFromStore } from '/src/db.js';
@@ -9,9 +9,10 @@ import { AddProjectForm } from '/src/Components/ProjectView/AddProjectForm.jsx';
 import ProjectWidget from '/src/Components/ProjectView/ProjectWidget.jsx';
 import ProjectFilterBar from './ProjectFilterBar.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import { Grid, CircularProgress, Paper, Typography, Box, Button, useTheme, useMediaQuery } from '@mui/material';
+import { Grid, CircularProgress, Paper, Typography,Menu,MenuItem, Box, Button, useTheme, useMediaQuery, Checkbox, FormControlLabel } from '@mui/material';
 import EmojiNatureIcon from '@mui/icons-material/EmojiNature';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 const ProjectsDashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -20,6 +21,7 @@ const ProjectsDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const { user } = useUser();
     const navigate = useNavigate();
+    const [selectedProjects, setSelectedProjects] = useState([]);
 
     const [filterCriteria, setFilterCriteria] = useState({
         searchProject: '',
@@ -32,6 +34,19 @@ const ProjectsDashboard = () => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const isMediumScreen = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
+
+    const [anchorEl, setAnchorEl] = useState(null); // State to manage the dropdown anchor
+
+    // Open the dropdown menu
+    const handleMenuOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    // Close the dropdown menu
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
 
     const getItemsPerRow = () => {
         return isSmallScreen ? 1 : isMediumScreen ? 2 : 3;
@@ -135,6 +150,50 @@ const ProjectsDashboard = () => {
         setFilterCriteria({ searchProject: '', searchSubject: '', searchDescription: '', dueDate: '', dueDateComparison: '' });
     };
 
+    const toggleProjectSelection = (projectId) => {
+        setSelectedProjects(prevSelected =>
+            prevSelected.includes(projectId)
+                ? prevSelected.filter(id => id !== projectId)
+                : [...prevSelected, projectId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedProjects.length === filteredProjects.length) {
+            setSelectedProjects([]);
+        } else {
+            setSelectedProjects(filteredProjects.map(project => project.projectId));
+        }
+    };
+
+    const handleBulkArchive = async () => {
+        const confirmation = window.confirm("Archive all selected projects?\nThis will not delete any associated tasks.");
+        if (confirmation) {
+            try {
+                await Promise.all(selectedProjects.map(projectId => archiveProject(projectId)));
+                console.log("Projects archived successfully.");
+                updateState();
+                setSelectedProjects([]);
+            } catch (error) {
+                console.error("Error archiving projects:", error);
+            }
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const confirmation = window.confirm("Delete all selected projects?\nAssociated tasks won’t be grouped under these projects anymore.");
+        if (confirmation) {
+            try {
+                await Promise.all(selectedProjects.map(projectId => deleteProject(projectId)));
+                console.log("Projects deleted successfully.");
+                updateState();
+                setSelectedProjects([]);
+            } catch (error) {
+                console.error("Error deleting projects:", error);
+            }
+        }
+    };
+
     const itemsPerRow = getItemsPerRow();
     const rowHeight = 600;
     const filteredProjects = getFilteredProjects();
@@ -149,11 +208,16 @@ const ProjectsDashboard = () => {
                         const projectIndex = startIndex + i;
                         return projectIndex < filteredProjects.length ? (
                             <Grid item xs={12} sm={6} md={4} key={filteredProjects[projectIndex].projectId}>
-                                <ProjectWidget
-                                    project={filteredProjects[projectIndex]}
-                                    subjects={subjects}
-                                    refreshProjects={loadFromIndexedDB}
-                                />
+                             
+                                   <ProjectWidget
+                                            project={filteredProjects[projectIndex]}
+                                            subjects={subjects}
+                                            refreshProjects={loadFromIndexedDB}
+                                            selectedProjects={selectedProjects}
+                                            projectIndex={projectIndex}
+                                            toggleProjectSelection={toggleProjectSelection}
+                                            filteredProjects={filteredProjects}
+                                        />
                             </Grid>
                         ) : null;
                     })}
@@ -185,7 +249,6 @@ const ProjectsDashboard = () => {
                         flexDirection: "column",
                     }}
                 >
-
                     <Box display="flex" justifyContent="center">
                         <ProjectFilterBar
                             filterCriteria={filterCriteria}
@@ -209,6 +272,66 @@ const ProjectsDashboard = () => {
                     >
                         Add New Project
                     </Button>
+                    <div style={{display:"flex",justifyContent:"space-between",width:"100%"}}>
+                    <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={selectedProjects.length === filteredProjects.length ? true : false}
+                            onChange={toggleSelectAll}
+                            color="primary"
+                        />
+                    }
+                    label="Select All"
+                />
+                        
+                        <Box display="flex" justifyContent="space-between" gap={2}>
+            <Button
+                variant="outlined"
+                onClick={handleMenuOpen}
+                endIcon={<ArrowDropDownIcon />}
+                disabled={selectedProjects.length === 0}
+                sx={{
+                    color: '#355147',
+                    borderColor: '#355147',
+                    '&:hover': {
+                        backgroundColor: '#355147',
+                        color: '#fff',
+                    },
+                }}
+            >
+                Actions
+            </Button>
+
+            {/* Dropdown Menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+              
+            >
+                <MenuItem
+                  
+                    onClick={() => {
+                        handleBulkArchive();
+                        handleMenuClose();
+                    }}
+                    sx={{ color: '#355147' }}
+                >
+                    Archive Selected
+                </MenuItem>
+                <MenuItem
+                    disabled={selectedProjects.length === 0}
+                    onClick={() => {
+                        handleBulkDelete();
+                        handleMenuClose();
+                    }}
+                    sx={{ color: '#F3161E' }}
+                >
+                    Delete Selected
+                </MenuItem>
+            </Menu>
+        </Box>
+                    </div>
                 </Grid>
             </Grid>
             <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>

@@ -584,6 +584,26 @@ export function sortTasks(tasks) {
     });
 };
 
+export async function archiveTask(taskId) {
+    const taskRef = doc(taskCollection, taskId); // Reference to the task in Firestore
+
+    try {
+        // Update the task status in Firestore
+        await updateDoc(taskRef, { taskStatus: 'Completed' });
+
+        // Update the task status in IndexedDB
+        const storedTasks = await getAllFromStore('tasks'); // Get all tasks from IndexedDB
+        const updatedTasks = storedTasks.map(task => 
+            task.taskId === taskId ? { ...task, taskStatus: 'Completed' } : task
+        );
+        await saveToStore('tasks', updatedTasks); // Save the updated tasks back to IndexedDB
+
+        console.log("Task archived successfully.");
+    } catch (error) {
+        console.error("Error archiving task:", error);
+    }
+}
+
 // Subject Functions: addSubject, editSubject, deleteSubject, archiveSubject, reactivateSubject
 
 export async function addSubject({ subjectName, subjectDescription, subjectSemester, subjectColor }) {
@@ -815,6 +835,39 @@ export async function deleteProject(projectId) {
     }
 }
 
+
+export async function deleteAllProjects() {
+    try {
+        // Fetch all projects from IndexedDB
+        const allProjects = await getAllFromStore('projects');
+
+        // Iterate over each project
+        for (const project of allProjects) {
+            const projectId = project.projectId;
+
+            // Fetch all tasks associated with this project
+            const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
+
+            // Update each task to remove the project reference
+            for (const task of allTasks) {
+                task.taskProject = 'None'; // Set taskProject to 'None'
+                await editTask(task); // Update the task
+            }
+
+            // Delete the project from Firestore
+            const projectRef = doc(projectCollection, projectId);
+            await deleteDoc(projectRef);
+
+            // Delete the project from IndexedDB
+            await deleteFromStore('projects', projectId);
+        }
+
+        console.log("All projects deleted successfully.");
+    } catch (error) {
+        console.error("Error deleting all projects:", error);
+    }
+}
+
 export async function archiveProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
 
@@ -867,4 +920,4 @@ export function sortProjects(projects) {
         // Sort by projectName
         return a.projectName.localeCompare(b.projectName);
     });
-}
+}   

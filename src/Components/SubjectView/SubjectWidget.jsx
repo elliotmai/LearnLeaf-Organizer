@@ -7,9 +7,9 @@ import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions, Card, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Box, Typography, CardActions,FormControlLabel, Card,Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 
-const SubjectWidget = ({ subject, refreshSubjects }) => {
+const SubjectWidget = ({ subject, refreshSubjects ,selectedSubjects,toggleSubjectSelection,subjectIndex ,subjects}) => {
     const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
@@ -72,7 +72,20 @@ const SubjectWidget = ({ subject, refreshSubjects }) => {
                     border: `3px solid ${subject.subjectColor || '#355147'}`,
                 }}
             >
+                 
+                <Box display={"flex"}>
+                 <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={selectedSubjects.includes(subjects[subjectIndex].subjectId)}
+                                        onChange={() => toggleSubjectSelection(subjects[subjectIndex].subjectId)}
+                                    />
+                                }
+                        
+                            />
+                             </Box> 
                 <CardContent>
+                    
                     <Tooltip title="View Associated Tasks">
                         <Link
                             href={`/subjects/${subject.subjectId}`}
