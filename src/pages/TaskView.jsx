@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { deleteTask, sortTasks,archiveTask } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks, archuiveTask, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
@@ -32,22 +32,34 @@ const TaskList = () => {
             if (activeSubjects.length > 0 && activeProjects.length > 0 && filteredTasks.length > 0) {
                 // Add subject and project info into tasks
                 const tasksWithDetails = filteredTasks.map(task => {
-                    const taskSubject = activeSubjects.find(subject => subject.subjectId === task.taskSubject); // Use activeSubjects, including 'None'
+                    const taskSubject = activeSubjects.find(subject => subject.subjectId === task.taskSubject);
                     const taskProject = activeProjects.find(project => project.projectId === task.taskProject);
+                    const formattedDueDate = task.taskDueDate ? formatDate(task.taskDueDate) : '';
+                    const formattedDueTime = task.taskDueTime ? formatTime(task.taskDueTime) : '';
+                    const formattedStartDate = task.taskStartDate ? formatDate(task.taskStartDate) : '';
+
 
                     return {
                         ...task,
-                        taskSubject, // Attach full subject details, including 'None'
-                        taskProject  // Attach full project details
+                        taskSubject,
+                        taskProject,
+                        taskDate: formattedDueDate,
+                        taskTime: formattedDueTime,
+                        taskStartDate: formattedStartDate
                     };
                 });
 
                 const sortedTasks = sortTasks(tasksWithDetails);
+                console.log('Sorted Tasks:', sortedTasks);
+
                 const sortedSubjects = activeSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+                console.log('Sorted Subjects:', sortedSubjects);
+
                 const sortedProjects = activeProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
+                console.log('Sorted Projects:', sortedProjects);
 
                 setTasks(sortedTasks);
-                setSubjects(sortedSubjects); // Excludes 'None' subject
+                setSubjects(sortedSubjects);
                 setProjects(sortedProjects);
                 setIsLoading(false);
                 return true;
@@ -65,7 +77,7 @@ const TaskList = () => {
         const isLoadedFromIndexedDB = await loadFromIndexedDB();
         if (!isLoadedFromIndexedDB) {
             setTasks([]);
-            console.log("No subjects data found in IndexedDB.");
+            console.log("No tasks data found in IndexedDB.");
         }
     };
 

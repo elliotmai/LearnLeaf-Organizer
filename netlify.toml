@@ -1,8 +1,36 @@
-[build]
-  command = "npm install && npm run build"  # This ensures npm install is run before building
-  publish = "dist"  # Adjust this if your built files are in a different directory, e.g., dist for some frameworks
+# Netlify configuration file
 
+[build]
+  command = "npm install && npm run build"  # Ensure npm install runs before build
+  publish = "dist"  # Publish directory for built files
+
+# Redirect for SPA (Single Page Application) support
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/index.js"
   status = 200
+
+# Redirect /proxy/* to the ICS proxy function with CORS handling
+[[redirects]]
+  from = "/proxy/*"
+  to = "/.netlify/functions/icsProxy?url=:splat"
+  status = 200
+  force = true  # Forces this redirect to take precedence over others
+
+# CORS headers for /proxy/* endpoint
+[[headers]]
+  for = "/proxy/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+
+# Additional security headers (optional, remove if not needed)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-XSS-Protection = "1; mode=block"

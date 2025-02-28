@@ -15,12 +15,16 @@ function ResetPassword() {
 
         resetPassword(email)
             .then(() => {
-                // Navigate to the login page after successful reset
+                // Show a popup to inform the user
+                alert('A reset password link has been sent to your email. Please check your inbox.');
+
+                // Navigate to the login page after showing the alert
                 navigate('/');
             })
             .catch((error) => {
                 // Handle the error, possibly by showing a message to the user
                 console.error('Error resetting password:', error);
+                alert('Failed to send the reset password link. Please try again.');
             });
 
         // Clear the input field

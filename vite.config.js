@@ -2,20 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Custom plugin to remove "use client" directives in MUI files
-function removeUseClientDirective() {
-  return {
-    name: 'remove-use-client-directive',
-    transform(code, id) {
-      if (id.includes('node_modules/@mui')) {
-        return code.replace(/"use client";?/g, '')
-      }
-      return code
-    },
-  }
-}
-// base: "/LearnLeaf-Organizer"
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -52,9 +38,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // Set cache limit to 5 MB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
-    removeUseClientDirective() // Add the custom plugin here without changing the existing structure
   ],
+  server: {
+    proxy: {
+      '/proxy': {
+        target: 'https://uta.instructure.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/, '$2'),
+        router: (req) => {
+          const matches = req.url.match(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/);
+          return matches ? matches[1] : 'https://uta.instructure.com';
+        },
+      },
+    },
+  },
 })

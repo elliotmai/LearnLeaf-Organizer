@@ -159,6 +159,8 @@ const TaskImportPopup = ({ isOpen, onClose }) => {
 
             onClose();
             window.location.reload();
+
+            
         }
     };
 

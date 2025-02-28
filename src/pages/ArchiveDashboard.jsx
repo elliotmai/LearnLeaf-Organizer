@@ -24,6 +24,7 @@ const ArchivePage = () => {
     const [completedTasks, setCompletedTasks] = useState([]);
     const [archivedSubjects, setArchivedSubjects] = useState([]);
     const [archivedProjects, setArchivedProjects] = useState([]);
+    const [blockedSubjects, setBlockedSubjects] = useState([]); // State for blocked subjects
     const [isLoading, setIsLoading] = useState(true);
 
     // Search states
@@ -63,7 +64,11 @@ const ArchivePage = () => {
                     return { ...task, taskSubject, taskProject };
                 });
 
+            // Filter blocked subjects
+            const blocked = allSubjects.filter(subject => subject.subjectStatus === 'Blocked');
+
             setArchivedSubjects(sortSubjects(allSubjects.filter(subject => subject.subjectStatus === 'Archived')));
+            setBlockedSubjects(sortSubjects(blocked)); // Set blocked subjects
             setArchivedProjects(sortProjects(archivedProjectsWithDetails));
             setCompletedTasks(sortTasks(completedTasksWithDetails));
         } catch (error) {
@@ -139,6 +144,11 @@ const ArchivePage = () => {
         setArchivedSubjects(prevSubjects => prevSubjects.filter(s => s.subjectId !== subjectId));
     };
 
+    const handleUnblockSubject = async (subjectId) => {
+        await reactivateSubject(subjectId); // Assuming reactivateSubject also unblocks
+        setBlockedSubjects(prevSubjects => prevSubjects.filter(s => s.subjectId !== subjectId));
+    };
+
     const handleReactivateProject = async (projectId) => {
         await reactivateProject(projectId);
         setArchivedProjects(prevProjects => prevProjects.filter(p => p.projectId !== projectId));
@@ -162,6 +172,7 @@ const ArchivePage = () => {
             try {
                 await deleteSubject(subjectId);
                 setArchivedSubjects(prevSubjects => prevSubjects.filter(subject => subject.subjectId !== subjectId));
+                setBlockedSubjects(prevSubjects => prevSubjects.filter(subject => subject.subjectId !== subjectId)); // Remove from blocked list if applicable
             } catch (error) {
                 console.error("Error deleting subject:", error);
             }
@@ -184,7 +195,7 @@ const ArchivePage = () => {
         <Box style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <TopBar />
             <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
-                {user?.name}'s Archive
+                {user?.name}'s Archives
             </Typography>
 
             {/* Global Search Bar */}
@@ -359,6 +370,74 @@ const ArchivePage = () => {
                                     <Typography variant="body2" color="textSecondary" textAlign="center">
                                         No archived subjects found.
                                     </Typography>
+                                )}
+                            </Grid>
+                        </AccordionDetails>
+                    </Accordion>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Blocked Subjects Section */}
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', color: '#d32f2f' }}>
+                                <RemoveDoneIcon sx={{ mr: 1 }} />
+                                Blocked Subjects
+                            </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Grid container spacing={2}>
+                                {blockedSubjects.length > 0 ? blockedSubjects.map(subject => (
+                                    <Grid item xs={12} sm={6} md={4} key={subject.subjectId}>
+                                        <Card variant="outlined">
+                                            <CardContent>
+                                                <Typography variant="h6">{subject.subjectName}</Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    Semester: {subject.subjectSemester || 'N/A'}
+                                                </Typography>
+                                                <Typography variant="body2" color="textSecondary" paddingBottom="5px">
+                                                    {subject.subjectDescription || 'No description provided.'}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        color="primary"
+                                                        onClick={() => handleUnblockSubject(subject.subjectId)}
+                                                        startIcon={<UnarchiveIcon />}
+                                                    >
+                                                        Unblock
+                                                    </Button>
+                                                    <Tooltip title="Delete Subject">
+                                                        <Button
+                                                            color="error"
+                                                            onClick={() => handleDeleteSubject(subject.subjectId)}
+                                                            sx={{
+                                                                color: '#d1566e',
+                                                                minWidth: '40px',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                p: '6px',
+                                                                borderRadius: '50%',
+                                                                '&:hover': {
+                                                                    transform: 'scale(1.05)',
+                                                                    backgroundColor: '#d1566e',
+                                                                    color: '#fff',
+                                                                },
+                                                            }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </Button>
+                                                    </Tooltip>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                )) : (
+                                    <Grid item xs={12} display="flex" justifyContent="center" alignItems="center">
+                                        <Typography variant="body2" color="textSecondary" textAlign="center">
+                                            No blocked subjects found.
+                                        </Typography>
+                                    </Grid>
                                 )}
                             </Grid>
                         </AccordionDetails>

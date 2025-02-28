@@ -4,19 +4,32 @@ import { useMediaQuery, useTheme, MenuItem, IconButton, Box, Typography, Grid, P
 import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
-import TaskImportPopup from '/src/Components/TaskView/TaskImportPopup'; // Assuming TaskImportPopup is the import popup component
+import TaskImportPopup from '/src/Components/TaskView/TaskImportPopup';
+import LMSConnectPopup from '/src/Components/LMSConnectPopup';
 
 const TopBar = () => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
 
+    const [menuOpen, setMenuOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
-    const [isTaskImportOpen, setIsTaskImportOpen] = useState(false); // For the Task Import popup
-    const open = Boolean(anchorEl);
+    const [isTaskImportOpen, setIsTaskImportOpen] = useState(false);
+    const [isLMSConnectOpen, setIsLMSConnectOpen] = useState(false);
 
-    const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-    const handleMenuClose = () => setAnchorEl(null);
+    const handleMenuToggle = (event) => {
+        if (menuOpen) {
+            setAnchorEl(null);
+        } else {
+            setAnchorEl(event.currentTarget);
+        }
+        setMenuOpen(!menuOpen);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setMenuOpen(false);
+    };
 
     const handleLogout = async () => {
         try {
@@ -45,8 +58,8 @@ const TopBar = () => {
                         position: 'absolute',
                         left: '5%',
                     }}
-                    onMouseEnter={handleMenuOpen}
-                    onMouseLeave={handleMenuClose}
+                    onClick={handleMenuToggle}
+
                 >
                     {/* Menu Icon */}
                     <IconButton
@@ -62,7 +75,7 @@ const TopBar = () => {
 
                     {/* Popover Menu */}
                     <Popover
-                        open={Boolean(anchorEl)}
+                        open={menuOpen}
                         anchorEl={anchorEl}
                         onClose={handleMenuClose}
                         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
@@ -93,6 +106,25 @@ const TopBar = () => {
                                 </Button>
                             }
 
+                            {!isSmallScreen &&
+                                <Button
+                                    onClick={() => { setIsLMSConnectOpen(true); handleMenuClose(); }}
+                                    sx={{
+                                        color: 'text.primary',
+                                        textTransform: 'none',
+                                        fontSize: '0.875rem',
+                                        textAlign: 'left',
+                                        pl: 4, // Indentation effect
+                                        width: '100%',
+                                        justifyContent: 'flex-start',
+                                        backgroundColor: 'transparent',
+                                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+                                    }}
+                                >
+                                    Connect Account
+                                </Button>
+                            }
+
                             {!isSmallScreen && <MenuItem onClick={() => { navigate('/calendar'); handleMenuClose(); }}>Calendar</MenuItem>}
                             <MenuItem onClick={() => { navigate('/subjects'); handleMenuClose(); }}>Subjects</MenuItem>
                             <MenuItem onClick={() => { navigate('/projects'); handleMenuClose(); }}>Projects</MenuItem>
@@ -113,6 +145,9 @@ const TopBar = () => {
 
             {/* Task Import Popup */}
             {isTaskImportOpen && <TaskImportPopup isOpen={isTaskImportOpen} onClose={() => setIsTaskImportOpen(false)} />}
+
+            {/* LMS Connect Popup */}
+            {isLMSConnectOpen && <LMSConnectPopup isOpen={isLMSConnectOpen} onClose={() => setIsLMSConnectOpen(false)} />}
         </Box>
     );
 };
