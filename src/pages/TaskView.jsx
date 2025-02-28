@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { deleteTask, sortTasks, archuiveTask, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
+import { deleteTask, sortTasks, archiveTask, formatDate, formatTime } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { useUser } from '/src/UserState.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';

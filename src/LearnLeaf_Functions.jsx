@@ -643,321 +643,321 @@ export async function loginUser(email, password) {
  * @returns {Promise<void>} - Resolves when the email is sent.
  */
 export function resetPassword(email) {
-        return sendPasswordResetEmail(auth, email)
-            .then(() => {
-                // No additional actions needed for successful reset
-            })
-            .catch((error) => {
-                alert(`Error code: ${error.code}\n${error.message}`);
-                throw error;
-            });
-    }
-
-    /**
-     * Logs out the currently signed-in user.
-     * Clears localStorage and IndexedDB stores to reset the application state.
-     *
-     * @returns {Promise<void>} - Resolves when logout is complete.
-     */
-    export async function logoutUser() {
-        try {
-            await signOut(auth); // Ensure Firebase logs out first
-            setUserIdAndCollections(null); // Reset Firestore references
-
-            console.log("User signed out. Clearing IndexedDB, Firestore cache, and localStorage...");
-
-            // Step 2: Delete IndexedDB database
-            await deleteIndexedDBDatabase();
-
-            // Step 3: Clear all local storage and session storage
-            localStorage.clear();
-            sessionStorage.clear();
-
-            console.log('All Clear!');
-
-        } catch (error) {
-            console.error("Error logging out:", error);
+    return sendPasswordResetEmail(auth, email)
+        .then(() => {
+            // No additional actions needed for successful reset
+        })
+        .catch((error) => {
+            alert(`Error code: ${error.code}\n${error.message}`);
             throw error;
-        }
-    }
-
-    /**
-     * Deletes the entire IndexedDB database to prevent conflicts.
-     */
-    async function deleteIndexedDBDatabase() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.deleteDatabase("learnleaf-db");
-            request.onsuccess = () => {
-                console.log("IndexedDB deleted successfully.");
-                resolve();
-            };
-            request.onerror = (error) => {
-                console.error("Error deleting IndexedDB:", error);
-                reject(error);
-            };
         });
+}
+
+/**
+ * Logs out the currently signed-in user.
+ * Clears localStorage and IndexedDB stores to reset the application state.
+ *
+ * @returns {Promise<void>} - Resolves when logout is complete.
+ */
+export async function logoutUser() {
+    try {
+        await signOut(auth); // Ensure Firebase logs out first
+        setUserIdAndCollections(null); // Reset Firestore references
+
+        console.log("User signed out. Clearing IndexedDB, Firestore cache, and localStorage...");
+
+        // Step 2: Delete IndexedDB database
+        await deleteIndexedDBDatabase();
+
+        // Step 3: Clear all local storage and session storage
+        localStorage.clear();
+        sessionStorage.clear();
+
+        console.log('All Clear!');
+
+    } catch (error) {
+        console.error("Error logging out:", error);
+        throw error;
     }
+}
 
-    /**
-     * Updates user details in Firestore and localStorage.
-     *
-     * @param {string} userId - The ID of the user to update.
-     * @param {Object} userDetails - The details to update (e.g., name, preferences).
-     * @returns {Promise<void>} - Resolves when the update is complete.
-     */
-    export async function updateUserDetails(userId, userDetails) {
-        const userDocRef = doc(firestore, "users", userId);
+/**
+ * Deletes the entire IndexedDB database to prevent conflicts.
+ */
+async function deleteIndexedDBDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("learnleaf-db");
+        request.onsuccess = () => {
+            console.log("IndexedDB deleted successfully.");
+            resolve();
+        };
+        request.onerror = (error) => {
+            console.error("Error deleting IndexedDB:", error);
+            reject(error);
+        };
+    });
+}
 
-        try {
-            // Fetch existing user data to merge with provided details
-            const existingUserDoc = await getDoc(userDocRef);
-            const existingData = existingUserDoc.exists() ? existingUserDoc.data() : {};
+/**
+ * Updates user details in Firestore and localStorage.
+ *
+ * @param {string} userId - The ID of the user to update.
+ * @param {Object} userDetails - The details to update (e.g., name, preferences).
+ * @returns {Promise<void>} - Resolves when the update is complete.
+ */
+export async function updateUserDetails(userId, userDetails) {
+    const userDocRef = doc(firestore, "users", userId);
 
-            const updatedData = {
-                ...existingData, // Keep existing fields
-                ...userDetails,  // Overwrite only the provided fields
-            };
+    try {
+        // Fetch existing user data to merge with provided details
+        const existingUserDoc = await getDoc(userDocRef);
+        const existingData = existingUserDoc.exists() ? existingUserDoc.data() : {};
 
-            await updateDoc(userDocRef, updatedData);
-            localStorage.setItem('user', JSON.stringify({ userId, ...updatedData })); // Save merged data
-            fetchAllData();
-        } catch (error) {
-            console.error("Error updating user details:", error);
-            throw error;
-        }
-    }
-
-
-    /**
-     * Deletes a user from Firestore and Firebase Authentication.
-     * Clears all local data related to the user after deletion.
-     *
-     * @param {string} userId - The ID of the user to delete.
-     * @returns {Promise<void>} - Resolves when the deletion is complete.
-     */
-    export async function deleteUser(userId) {
-        const batch = writeBatch(firestore);
-
-        try {
-            // Add user document deletion to the batch
-            const userDocRef = doc(firestore, "users", userId);
-            batch.delete(userDocRef);
-
-            // Commit the batch deletion
-            await batch.commit();
-
-            // Delete the user from Firebase Authentication
-            const user = auth.currentUser;
-            if (user && user.uid === userId) {
-                await deleteFirebaseUser(user);
-            }
-
-            // Clear local storage and IndexedDB stores
-            localStorage.clear();
-            await Promise.all([
-                deleteFromStore('tasks', userId),
-                deleteFromStore('projects', userId),
-                deleteFromStore('subjects', userId)
-            ]);
-        } catch (error) {
-            console.error("Error deleting user:", error);
-            throw error;
-        }
-    }
-
-    //------------------------------------
-    // CRUD Operations
-    //------------------------------------
-
-    /** Task functions: 
-     * addTask, 
-     * editTask, 
-     * deleteTask, 
-     * sortTasks 
-     */
-
-    /**
-     * Adds a new task to Firestore and updates IndexedDB with the task details.
-     *
-     * @param {Object} taskDetails - The details of the task to be added.
-     * @returns {Promise<Object>} - The added task data.
-     */
-    export async function addTask(taskDetails) {
-        const taskId = taskDetails.taskLMSDetails?.LMS_UID || `${Date.now()}`;
-
-        // Resolve the subject reference
-        const taskSubjectRef = taskDetails.taskSubject
-            ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
-                ? doc(subjectCollection, taskDetails.taskSubject)
-                : taskDetails.taskSubject?.subjectId
-                    ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
-                    : doc(firestore, "noneSubject", "None"))
-            : doc(firestore, "noneSubject", "None");
-
-        // Resolve the project reference
-        const taskProjectRef = taskDetails.taskProject
-            ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
-                ? doc(projectCollection, taskDetails.taskProject)
-                : taskDetails.taskProject?.projectId
-                    ? doc(projectCollection, taskDetails.taskProject.projectId)
-                    : doc(firestore, "noneProject", "None"))
-            : doc(firestore, "noneProject", "None");
-
-        const taskData = {
-            taskSubject: taskSubjectRef,
-            taskProject: taskProjectRef,
-            taskName: taskDetails.taskName,
-            taskDescription: taskDetails.taskDescription,
-            taskPriority: taskDetails.taskPriority,
-            taskStatus: taskDetails.taskStatus,
-            taskLMSDetails: taskDetails.taskLMSDetails || [],
+        const updatedData = {
+            ...existingData, // Keep existing fields
+            ...userDetails,  // Overwrite only the provided fields
         };
 
-        // Helper function to create a local date object
-        function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
-            const [year, month, day] = dateString.split('-').map(Number);
-            return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+        await updateDoc(userDocRef, updatedData);
+        localStorage.setItem('user', JSON.stringify({ userId, ...updatedData })); // Save merged data
+        fetchAllData();
+    } catch (error) {
+        console.error("Error updating user details:", error);
+        throw error;
+    }
+}
+
+
+/**
+ * Deletes a user from Firestore and Firebase Authentication.
+ * Clears all local data related to the user after deletion.
+ *
+ * @param {string} userId - The ID of the user to delete.
+ * @returns {Promise<void>} - Resolves when the deletion is complete.
+ */
+export async function deleteUser(userId) {
+    const batch = writeBatch(firestore);
+
+    try {
+        // Add user document deletion to the batch
+        const userDocRef = doc(firestore, "users", userId);
+        batch.delete(userDocRef);
+
+        // Commit the batch deletion
+        await batch.commit();
+
+        // Delete the user from Firebase Authentication
+        const user = auth.currentUser;
+        if (user && user.uid === userId) {
+            await deleteFirebaseUser(user);
         }
 
-        // Set task start date
-        if (taskDetails.startDateInput) {
-            const startDate = createLocalDate(taskDetails.startDateInput, 0, 0, 0, 0);
-            taskData.taskStartDate = Timestamp.fromDate(startDate);
-        }
+        // Clear local storage and IndexedDB stores
+        localStorage.clear();
+        await Promise.all([
+            deleteFromStore('tasks', userId),
+            deleteFromStore('projects', userId),
+            deleteFromStore('subjects', userId)
+        ]);
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        throw error;
+    }
+}
 
-        // Set task due date
-        if (taskDetails.dueDateInput) {
-            const dueDate = createLocalDate(taskDetails.dueDateInput, 23, 59, 59, 999);
-            taskData.taskDueDate = Timestamp.fromDate(dueDate);
-        }
+//------------------------------------
+// CRUD Operations
+//------------------------------------
 
-        // Set task due time
-        if (taskDetails.dueDateInput && taskDetails.dueTimeInput) {
-            const [hours, minutes] = taskDetails.dueTimeInput.split(':').map(Number);
-            const dueDateTime = createLocalDate(taskDetails.dueDateInput, hours, minutes, 0, 0);
-            taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
-        }
+/** Task functions: 
+ * addTask, 
+ * editTask, 
+ * deleteTask, 
+ * sortTasks 
+ */
 
-        const taskRef = doc(taskCollection, taskId);
+/**
+ * Adds a new task to Firestore and updates IndexedDB with the task details.
+ *
+ * @param {Object} taskDetails - The details of the task to be added.
+ * @returns {Promise<Object>} - The added task data.
+ */
+export async function addTask(taskDetails) {
+    const taskId = taskDetails.taskLMSDetails?.LMS_UID || `${Date.now()}`;
+
+    // Resolve the subject reference
+    const taskSubjectRef = taskDetails.taskSubject
+        ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
+            ? doc(subjectCollection, taskDetails.taskSubject)
+            : taskDetails.taskSubject?.subjectId
+                ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
+                : doc(firestore, "noneSubject", "None"))
+        : doc(firestore, "noneSubject", "None");
+
+    // Resolve the project reference
+    const taskProjectRef = taskDetails.taskProject
+        ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
+            ? doc(projectCollection, taskDetails.taskProject)
+            : taskDetails.taskProject?.projectId
+                ? doc(projectCollection, taskDetails.taskProject.projectId)
+                : doc(firestore, "noneProject", "None"))
+        : doc(firestore, "noneProject", "None");
+
+    const taskData = {
+        taskSubject: taskSubjectRef,
+        taskProject: taskProjectRef,
+        taskName: taskDetails.taskName,
+        taskDescription: taskDetails.taskDescription,
+        taskPriority: taskDetails.taskPriority,
+        taskStatus: taskDetails.taskStatus,
+        taskLMSDetails: taskDetails.taskLMSDetails || [],
+    };
+
+    // Helper function to create a local date object
+    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+    }
+
+    // Set task start date
+    if (taskDetails.startDateInput) {
+        const startDate = createLocalDate(taskDetails.startDateInput, 0, 0, 0, 0);
+        taskData.taskStartDate = Timestamp.fromDate(startDate);
+    }
+
+    // Set task due date
+    if (taskDetails.dueDateInput) {
+        const dueDate = createLocalDate(taskDetails.dueDateInput, 23, 59, 59, 999);
+        taskData.taskDueDate = Timestamp.fromDate(dueDate);
+    }
+
+    // Set task due time
+    if (taskDetails.dueDateInput && taskDetails.dueTimeInput) {
+        const [hours, minutes] = taskDetails.dueTimeInput.split(':').map(Number);
+        const dueDateTime = createLocalDate(taskDetails.dueDateInput, hours, minutes, 0, 0);
+        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+    }
+
+    const taskRef = doc(taskCollection, taskId);
+
+    // Prepare local IndexedDB data
+    const localTaskData = {
+        ...taskData,
+        taskId,
+        taskDueDate: taskDetails?.dueDateInput || '',
+        taskDueTime: taskDetails?.dueTimeInput || '',
+        taskStartDate: taskDetails?.startDateInput || '',
+        taskSubject: taskData.taskSubject.id,
+        taskProject: taskData.taskProject.id,
+    };
+
+    try {
+        await setDoc(taskRef, taskData, { merge: true });
+        await saveToStore('tasks', [localTaskData]); // Update IndexedDB
+    } catch (error) {
+        console.error("Error adding task:", error);
+    }
+
+    return localTaskData;
+}
+
+/**
+ * Edits an existing task in Firestore and updates IndexedDB.
+ *
+ * @param {Object} taskDetails - The details of the task to be updated.
+ * @returns {Promise<Object>} - The updated task data.
+ */
+export async function editTask(taskDetails) {
+    const taskId = taskDetails.taskId;
+
+    // Resolve the subject reference
+    const taskSubjectRef = taskDetails.taskSubject
+        ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
+            ? doc(subjectCollection, taskDetails.taskSubject)
+            : taskDetails.taskSubject?.subjectId
+                ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
+                : doc(firestore, "noneSubject", "None"))
+        : doc(firestore, "noneSubject", "None");
+
+    // Resolve the project reference
+    const taskProjectRef = taskDetails.taskProject
+        ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
+            ? doc(projectCollection, taskDetails.taskProject)
+            : taskDetails.taskProject?.projectId
+                ? doc(projectCollection, taskDetails.taskProject.projectId)
+                : doc(firestore, "noneProject", "None"))
+        : doc(firestore, "noneProject", "None");
+
+    const taskData = {
+        taskSubject: taskSubjectRef,
+        taskProject: taskProjectRef,
+        taskName: taskDetails.taskName,
+        taskDescription: taskDetails.taskDescription,
+        taskPriority: taskDetails.taskPriority,
+        taskStatus: taskDetails.taskStatus,
+    };
+
+    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+    }
+
+    // Set start date
+    if (taskDetails.taskStartDate) {
+        const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100);
+        taskData.taskStartDate = Timestamp.fromDate(startDate);
+    }
+
+    // Set due date
+    if (taskDetails.taskDueDate) {
+        const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900);
+        taskData.taskDueDate = Timestamp.fromDate(dueDate);
+    }
+
+    // Set due time
+    if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
+        const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
+        const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0);
+        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+    }
+
+    const taskRef = doc(taskCollection, taskId);
+
+    try {
+        await updateDoc(taskRef, taskData);
 
         // Prepare local IndexedDB data
         const localTaskData = {
             ...taskData,
             taskId,
-            taskDueDate: taskDetails?.dueDateInput || '',
-            taskDueTime: taskDetails?.dueTimeInput || '',
-            taskStartDate: taskDetails?.startDateInput || '',
+            taskDueDate: taskDetails.taskDueDate,
+            taskDueTime: taskDetails.taskDueTime,
+            taskStartDate: taskDetails.taskStartDate,
             taskSubject: taskData.taskSubject.id,
             taskProject: taskData.taskProject.id,
         };
 
-        try {
-            await setDoc(taskRef, taskData, { merge: true });
-            await saveToStore('tasks', [localTaskData]); // Update IndexedDB
-        } catch (error) {
-            console.error("Error adding task:", error);
-        }
-
+        await saveToStore('tasks', [localTaskData]); // Update IndexedDB
         return localTaskData;
+    } catch (error) {
+        console.error("Error updating task:", error);
     }
+}
 
-    /**
-     * Edits an existing task in Firestore and updates IndexedDB.
-     *
-     * @param {Object} taskDetails - The details of the task to be updated.
-     * @returns {Promise<Object>} - The updated task data.
-     */
-    export async function editTask(taskDetails) {
-        const taskId = taskDetails.taskId;
-
-        // Resolve the subject reference
-        const taskSubjectRef = taskDetails.taskSubject
-            ? (typeof taskDetails.taskSubject === 'string' && taskDetails.taskSubject !== 'None'
-                ? doc(subjectCollection, taskDetails.taskSubject)
-                : taskDetails.taskSubject?.subjectId
-                    ? doc(subjectCollection, taskDetails.taskSubject.subjectId)
-                    : doc(firestore, "noneSubject", "None"))
-            : doc(firestore, "noneSubject", "None");
-
-        // Resolve the project reference
-        const taskProjectRef = taskDetails.taskProject
-            ? (typeof taskDetails.taskProject === 'string' && taskDetails.taskProject !== 'None'
-                ? doc(projectCollection, taskDetails.taskProject)
-                : taskDetails.taskProject?.projectId
-                    ? doc(projectCollection, taskDetails.taskProject.projectId)
-                    : doc(firestore, "noneProject", "None"))
-            : doc(firestore, "noneProject", "None");
-
-        const taskData = {
-            taskSubject: taskSubjectRef,
-            taskProject: taskProjectRef,
-            taskName: taskDetails.taskName,
-            taskDescription: taskDetails.taskDescription,
-            taskPriority: taskDetails.taskPriority,
-            taskStatus: taskDetails.taskStatus,
-        };
-
-        function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
-            const [year, month, day] = dateString.split('-').map(Number);
-            return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
-        }
-
-        // Set start date
-        if (taskDetails.taskStartDate) {
-            const startDate = createLocalDate(taskDetails.taskStartDate, 0, 0, 0, 100);
-            taskData.taskStartDate = Timestamp.fromDate(startDate);
-        }
-
-        // Set due date
-        if (taskDetails.taskDueDate) {
-            const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900);
-            taskData.taskDueDate = Timestamp.fromDate(dueDate);
-        }
-      
-        // Set due time
-        if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
-            const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
-            const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0);
-            taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
-        }
-
-        const taskRef = doc(taskCollection, taskId);
-
-        try {
-            await updateDoc(taskRef, taskData);
-
-            // Prepare local IndexedDB data
-            const localTaskData = {
-                ...taskData,
-                taskId,
-                taskDueDate: taskDetails.taskDueDate,
-                taskDueTime: taskDetails.taskDueTime,
-                taskStartDate: taskDetails.taskStartDate,
-                taskSubject: taskData.taskSubject.id,
-                taskProject: taskData.taskProject.id,
-            };
-
-            await saveToStore('tasks', [localTaskData]); // Update IndexedDB
-            return localTaskData;
-        } catch (error) {
-            console.error("Error updating task:", error);
-        }
+/**
+ * Deletes a task from Firestore and IndexedDB.
+ *
+ * @param {string} taskId - The ID of the task to delete.
+ */
+export async function deleteTask(taskId) {
+    const taskRef = doc(taskCollection, taskId);
+    try {
+        await deleteDoc(taskRef); // Delete task from Firestore
+        await deleteFromStore('tasks', taskId); // Remove task from IndexedDB
+    } catch (error) {
+        console.error("Error deleting task:", error);
     }
-
-    /**
-     * Deletes a task from Firestore and IndexedDB.
-     *
-     * @param {string} taskId - The ID of the task to delete.
-     */
-    export async function deleteTask(taskId) {
-        const taskRef = doc(taskCollection, taskId);
-        try {
-            await deleteDoc(taskRef); // Delete task from Firestore
-            await deleteFromStore('tasks', taskId); // Remove task from IndexedDB
-        } catch (error) {
-            console.error("Error deleting task:", error);
-        }
-    }
+}
 
 export async function archiveTask(taskId) {
     const taskRef = doc(taskCollection, taskId); // Reference to the task in Firestore
@@ -968,7 +968,7 @@ export async function archiveTask(taskId) {
 
         // Update the task status in IndexedDB
         const storedTasks = await getAllFromStore('tasks'); // Get all tasks from IndexedDB
-        const updatedTasks = storedTasks.map(task => 
+        const updatedTasks = storedTasks.map(task =>
             task.taskId === taskId ? { ...task, taskStatus: 'Completed' } : task
         );
         await saveToStore('tasks', updatedTasks); // Save the updated tasks back to IndexedDB
@@ -979,226 +979,227 @@ export async function archiveTask(taskId) {
     }
 }
 
-    /**
-     * Sorts tasks based on due date, time, and name.
-     *
-     * @param {Array} tasks - The array of task objects to sort.
-     * @returns {Array} - The sorted array of tasks.
-     */
-    export function sortTasks(tasks) {
-        return tasks.sort((a, b) => {
-            const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
-            const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
+/**
+ * Sorts tasks based on due date, time, and name.
+ *
+ * @param {Array} tasks - The array of task objects to sort.
+ * @returns {Array} - The sorted array of tasks.
+ */
+export function sortTasks(tasks) {
+    return tasks.sort((a, b) => {
+        const dateA = a.taskDueDate ? new Date(a.taskDueDate) : new Date('9999-12-31');
+        const dateB = b.taskDueDate ? new Date(b.taskDueDate) : new Date('9999-12-31');
 
-            if (dateA < dateB) return -1;
-            if (dateA > dateB) return 1;
+        if (dateA < dateB) return -1;
+        if (dateA > dateB) return 1;
 
-            const timeA = a.taskDueTime || '23:59';
-            const timeB = b.taskDueTime || '23:59';
+        const timeA = a.taskDueTime || '23:59';
+        const timeB = b.taskDueTime || '23:59';
 
-            if (timeA < timeB) return -1;
-            if (timeA > timeB) return 1;
+        if (timeA < timeB) return -1;
+        if (timeA > timeB) return 1;
 
-            return a.taskName.localeCompare(b.taskName);
-        });
+        return a.taskName.localeCompare(b.taskName);
+    });
+}
+
+/**
+ * Subject Functions: 
+ * addSubject, 
+ * editSubject, 
+ * deleteSubject, 
+ * archiveSubject, 
+ * blockSubject, 
+ * reactivateSubject, 
+ * sortSubjects
+ */
+
+/**
+ * Adds a new subject to Firestore and updates IndexedDB.
+ *
+ * @param {Object} subjectDetails - The details of the subject to add.
+ * @returns {Promise<Object>} - The added subject data.
+ */
+export async function addSubject(subjectDetails) {
+    const subjectId = subjectDetails.subjectLMSDetails?.LMS_UID || `${Date.now()}`;
+
+    const subjectData = {
+        subjectName: subjectDetails.subjectName,
+        subjectStatus: subjectDetails.subjectStatus || "Active",
+        subjectSemester: subjectDetails.subjectSemester || "",
+        subjectColor: subjectDetails.subjectColor || "black",
+        subjectLMSDetails: subjectDetails.subjectLMSDetails || [],
+    };
+
+    const subjectRef = doc(subjectCollection, subjectId);
+
+    try {
+        // Save to Firestore and IndexedDB
+        await setDoc(subjectRef, subjectData, { merge: true });
+        await saveToStore('subjects', [{ ...subjectData, subjectId }]);
+        return { ...subjectData, subjectId };
+    } catch (error) {
+        console.error("Error adding subject:", error);
     }
+}
 
-    /**
-     * Subject Functions: 
-     * addSubject, 
-     * editSubject, 
-     * deleteSubject, 
-     * archiveSubject, 
-     * blockSubject, 
-     * reactivateSubject, 
-     * sortSubjects
-     */
+/**
+ * Edits an existing subject in Firestore and updates IndexedDB.
+ *
+ * @param {Object} subjectDetails - The details of the subject to edit.
+ */
+export async function editSubject(subjectDetails) {
+    const subjectId = subjectDetails.subjectId;
 
-    /**
-     * Adds a new subject to Firestore and updates IndexedDB.
-     *
-     * @param {Object} subjectDetails - The details of the subject to add.
-     * @returns {Promise<Object>} - The added subject data.
-     */
-    export async function addSubject(subjectDetails) {
-        const subjectId = subjectDetails.subjectLMSDetails?.LMS_UID || `${Date.now()}`;
+    const subjectData = {
+        subjectName: subjectDetails.subjectName,
+        subjectSemester: subjectDetails.subjectSemester,
+        subjectDescription: subjectDetails.subjectDescription || "",
+        subjectColor: subjectDetails.subjectColor,
+        subjectStatus: subjectDetails.subjectStatus,
+    };
 
-        const subjectData = {
-            subjectName: subjectDetails.subjectName,
-            subjectStatus: subjectDetails.subjectStatus || "Active",
-            subjectSemester: subjectDetails.subjectSemester || "",
-            subjectColor: subjectDetails.subjectColor || "black",
-            subjectLMSDetails: subjectDetails.subjectLMSDetails || [],
-        };
+    try {
+        // Update Firestore and IndexedDB
+        await updateDoc(doc(subjectCollection, subjectId), subjectData);
+        await saveToStore('subjects', [{ ...subjectData, subjectId }]);
+    } catch (error) {
+        console.error("Error updating subject:", error);
+    }
+}
 
-        const subjectRef = doc(subjectCollection, subjectId);
+/**
+ * Deletes a subject and updates tasks and projects that reference it.
+ *
+ * @param {string} subjectId - The ID of the subject to delete.
+ */
+export async function deleteSubject(subjectId) {
+    const subjectRef = doc(subjectCollection, subjectId);
 
-        try {
-            // Save to Firestore and IndexedDB
-            await setDoc(subjectRef, subjectData, { merge: true });
-            await saveToStore('subjects', [{ ...subjectData, subjectId }]);
-            return { ...subjectData, subjectId };
-        } catch (error) {
-            console.error("Error adding subject:", error);
+    try {
+        // Delete the subject from Firestore and IndexedDB
+        await deleteDoc(subjectRef);
+        await deleteFromStore('subjects', subjectId);
+
+        // Update tasks that referenced the deleted subject
+        const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskSubject === subjectId);
+        for (const task of allTasks) {
+            task.taskSubject = 'None'; // Change subject to 'None'
+            await editTask(task); // Update the task
         }
-    }
 
-    /**
-     * Edits an existing subject in Firestore and updates IndexedDB.
-     *
-     * @param {Object} subjectDetails - The details of the subject to edit.
-     */
-    export async function editSubject(subjectDetails) {
-        const subjectId = subjectDetails.subjectId;
+        // Update projects that referenced the deleted subject
+        const allProjects = await getAllFromStore('projects');
+        for (const project of allProjects) {
+            if (project.projectSubjects.includes(subjectId)) {
+                const updatedProject = { ...project };
 
-        const subjectData = {
-            subjectName: subjectDetails.subjectName,
-            subjectSemester: subjectDetails.subjectSemester,
-            subjectDescription: subjectDetails.subjectDescription || "",
-            subjectColor: subjectDetails.subjectColor,
-            subjectStatus: subjectDetails.subjectStatus,
-        };
+                // Remove the subject ID or set to 'None' if it was the only one
+                updatedProject.projectSubjects = project.projectSubjects.length > 1
+                    ? project.projectSubjects.filter(subj => subj !== subjectId)
+                    : ['None'];
 
-        try {
-            // Update Firestore and IndexedDB
-            await updateDoc(doc(subjectCollection, subjectId), subjectData);
-            await saveToStore('subjects', [{ ...subjectData, subjectId }]);
-        } catch (error) {
-            console.error("Error updating subject:", error);
-        }
-    }
-
-    /**
-     * Deletes a subject and updates tasks and projects that reference it.
-     *
-     * @param {string} subjectId - The ID of the subject to delete.
-     */
-    export async function deleteSubject(subjectId) {
-        const subjectRef = doc(subjectCollection, subjectId);
-
-        try {
-            // Delete the subject from Firestore and IndexedDB
-            await deleteDoc(subjectRef);
-            await deleteFromStore('subjects', subjectId);
-
-            // Update tasks that referenced the deleted subject
-            const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskSubject === subjectId);
-            for (const task of allTasks) {
-                task.taskSubject = 'None'; // Change subject to 'None'
-                await editTask(task); // Update the task
+                await editProject(updatedProject); // Update the project
             }
-
-            // Update projects that referenced the deleted subject
-            const allProjects = await getAllFromStore('projects');
-            for (const project of allProjects) {
-                if (project.projectSubjects.includes(subjectId)) {
-                    const updatedProject = { ...project };
-
-                    // Remove the subject ID or set to 'None' if it was the only one
-                    updatedProject.projectSubjects = project.projectSubjects.length > 1
-                        ? project.projectSubjects.filter(subj => subj !== subjectId)
-                        : ['None'];
-
-                    await editProject(updatedProject); // Update the project
-                }
-            }
-        } catch (error) {
-            console.error("Error deleting subject or updating tasks and projects:", error);
         }
+    } catch (error) {
+        console.error("Error deleting subject or updating tasks and projects:", error);
     }
+}
 
-    /**
-     * Archives a subject by updating its status to 'Archived'.
-     *
-     * @param {string} subjectId - The ID of the subject to archive.
-     */
-    export async function archiveSubject(subjectId) {
-        const subjectRef = doc(subjectCollection, subjectId);
+/**
+ * Archives a subject by updating its status to 'Archived'.
+ *
+ * @param {string} subjectId - The ID of the subject to archive.
+ */
+export async function archiveSubject(subjectId) {
+    const subjectRef = doc(subjectCollection, subjectId);
 
-        try {
-            // Update Firestore and IndexedDB
-            await updateDoc(subjectRef, { subjectStatus: 'Archived' });
+    try {
+        // Update Firestore and IndexedDB
+        await updateDoc(subjectRef, { subjectStatus: 'Archived' });
 
-            const storedSubjects = await getAllFromStore('subjects');
-            const updatedSubjects = storedSubjects.map(subject =>
-                subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject
-            );
-            await saveToStore('subjects', updatedSubjects);
-        } catch (error) {
-            console.error("Error archiving subject:", error);
-        }
+        const storedSubjects = await getAllFromStore('subjects');
+        const updatedSubjects = storedSubjects.map(subject =>
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject
+        );
+        await saveToStore('subjects', updatedSubjects);
+    } catch (error) {
+        console.error("Error archiving subject:", error);
     }
+}
 
-    /**
-     * Blocks a subject by updating its status to 'Blocked'.
-     *
-     * @param {string} subjectId - The ID of the subject to block.
-     */
-    export async function blockSubject(subjectId) {
-        const subjectRef = doc(subjectCollection, subjectId);
+/**
+ * Blocks a subject by updating its status to 'Blocked'.
+ *
+ * @param {string} subjectId - The ID of the subject to block.
+ */
+export async function blockSubject(subjectId) {
+    const subjectRef = doc(subjectCollection, subjectId);
 
-        try {
-            // Update Firestore and IndexedDB
-            await updateDoc(subjectRef, { subjectStatus: 'Blocked' });
+    try {
+        // Update Firestore and IndexedDB
+        await updateDoc(subjectRef, { subjectStatus: 'Blocked' });
 
-            const storedSubjects = await getAllFromStore('subjects');
-            const updatedSubjects = storedSubjects.map(subject =>
-                subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Blocked' } : subject
-            );
-            await saveToStore('subjects', updatedSubjects);
-        } catch (error) {
-            console.error("Error blocking subject:", error);
-        }
+        const storedSubjects = await getAllFromStore('subjects');
+        const updatedSubjects = storedSubjects.map(subject =>
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Blocked' } : subject
+        );
+        await saveToStore('subjects', updatedSubjects);
+    } catch (error) {
+        console.error("Error blocking subject:", error);
     }
+}
 
-    /**
-     * Reactivates a subject by updating its status to 'Active'.
-     *
-     * @param {string} subjectId - The ID of the subject to reactivate.
-     */
-    export async function reactivateSubject(subjectId) {
-        const subjectRef = doc(subjectCollection, subjectId);
+/**
+ * Reactivates a subject by updating its status to 'Active'.
+ *
+ * @param {string} subjectId - The ID of the subject to reactivate.
+ */
+export async function reactivateSubject(subjectId) {
+    const subjectRef = doc(subjectCollection, subjectId);
 
-        try {
-            // Update Firestore and IndexedDB
-            await updateDoc(subjectRef, { subjectStatus: 'Active' });
+    try {
+        // Update Firestore and IndexedDB
+        await updateDoc(subjectRef, { subjectStatus: 'Active' });
 
-            const storedSubjects = await getAllFromStore('subjects');
-            const updatedSubjects = storedSubjects.map(subject =>
-                subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Active' } : subject
-            );
-            await saveToStore('subjects', updatedSubjects);
-        } catch (error) {
-            console.error("Error reactivating subject:", error);
-        }
+        const storedSubjects = await getAllFromStore('subjects');
+        const updatedSubjects = storedSubjects.map(subject =>
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Active' } : subject
+        );
+        await saveToStore('subjects', updatedSubjects);
+    } catch (error) {
+        console.error("Error reactivating subject:", error);
     }
+}
 
-    /**
-     * Sorts subjects alphabetically by their name.
-     *
-     * @param {Array} subjects - The array of subject objects to sort.
-     * @returns {Array} - The sorted array of subjects.
-     */
-    export function sortSubjects(subjects) {
-        return subjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
-    }
+/**
+ * Sorts subjects alphabetically by their name.
+ *
+ * @param {Array} subjects - The array of subject objects to sort.
+ * @returns {Array} - The sorted array of subjects.
+ */
+export function sortSubjects(subjects) {
+    return subjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+}
 
-    /** Project Functions: 
-     * addProject, 
-     * editProject, 
-     * deleteProject, 
-     * archiveProject, 
-     * reactivateProject, 
-     * sortProjects
-     */
+/** Project Functions: 
+ * addProject, 
+ * editProject, 
+ * deleteProject, 
+ * archiveProject, 
+ * reactivateProject, 
+ * sortProjects
+ */
 
-    /**
-     * Adds a new project to Firestore and updates IndexedDB.
-     *
-     * @param {Object} projectDetails - The details of the project to add.
-     * @returns {Promise<Object>} - The added project data.
-     */
-    export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
+/**
+ * Adds a new project to Firestore and updates IndexedDB.
+ *
+ * @param {Object} projectDetails - The details of the project to add.
+ * @returns {Promise<Object>} - The added project data.
+ */
+export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
+    try {
         const projectId = `${Date.now()}`;
         const projectData = {
             projectName,
@@ -1218,16 +1219,7 @@ export async function archiveTask(taskId) {
             projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDueDateInput}T${projectDueTimeInput}`));
         }
 
-        // Prepare data for IndexedDB with only subject IDs
-        const localProjectData = {
-            ...projectData,
-            projectId,
-            projectSubjects,
-            projectDueDate: projectDueDateInput || '',
-            projectDueTime: projectDueTimeInput || '',
-        };
-
-      // Delete the project from Firestore and IndexedDB
+        // Delete the project from Firestore and IndexedDB
         await deleteDoc(projectRef);
         await deleteFromStore('projects', projectId);
     } catch (error) {
@@ -1270,174 +1262,150 @@ export async function deleteAllProjects() {
 
 export async function archiveProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
+    await updateDoc(projectRef, { projectStatus: 'Archived' });
+
+    const storedProjects = await getAllFromStore('projects');
+    const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project);
+    await saveToStore('projects', updatedProjects);
 
     try {
-        await updateDoc(projectRef, { projectStatus: 'Archived' });
+        // Save project data to Firestore and IndexedDB
+        await setDoc(doc(projectCollection, projectId), projectData);
+        await saveToStore('projects', [localProjectData]);
+        return localProjectData;
+    } catch (error) {
+        console.error("Error adding project:", error);
+    }
+}
+
+/**
+ * Edits an existing project in Firestore and updates IndexedDB.
+ *
+ * @param {Object} projectDetails - The details of the project to edit.
+ * @returns {Promise<Object>} - The updated project data.
+ */
+export async function editProject(projectDetails) {
+    // Convert subject IDs to Firestore references
+    const subjectRefs = projectDetails.projectSubjects.map(subject => {
+        const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
+        return doc(subjectCollection, subjectId);
+    }).filter(ref => ref);
+
+    // Prepare data for Firestore
+    const projectData = {
+        projectName: projectDetails.projectName,
+        projectStatus: projectDetails.projectStatus,
+        projectDescription: projectDetails.projectDescription,
+        projectSubjects: subjectRefs,
+    };
+
+    // Prepare data for IndexedDB
+    const localProjectData = {
+        projectId: projectDetails.projectId,
+        projectName: projectDetails.projectName,
+        projectStatus: projectDetails.projectStatus,
+        projectDescription: projectDetails.projectDescription,
+        projectSubjects: subjectRefs.map(ref => ref.id),
+        projectDueDate: projectDetails.projectDueDate || '',
+        projectDueTime: projectDetails.projectDueTime || '',
+    };
+
+    // Handle optional due date and time
+    if (projectDetails.projectDueDate) {
+        projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T23:59:59.999`));
+        localProjectData.projectDueDate = projectDetails.projectDueDate;
+    } else {
+        projectData.projectDueDate = deleteField();
+    }
+
+    if (projectDetails.projectDueTime) {
+        projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T${projectDetails.projectDueTime}`));
+        localProjectData.projectDueTime = projectDetails.projectDueTime;
+    } else {
+        projectData.projectDueTime = deleteField();
+    }
+
+    try {
+        // Update project in Firestore and IndexedDB
+        await updateDoc(doc(projectCollection, projectDetails.projectId), projectData);
+        await saveToStore('projects', [localProjectData]);
+        return localProjectData;
+    } catch (error) {
+        console.error("Error updating project:", error);
+    }
+}
+
+/**
+ * Deletes a project and updates tasks that reference it.
+ *
+ * @param {string} projectId - The ID of the project to delete.
+ */
+export async function deleteProject(projectId) {
+    const projectRef = doc(projectCollection, projectId);
+
+    try {
+        // Update tasks that referenced the deleted project
+        const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
+        for (const task of allTasks) {
+            task.taskProject = 'None'; // Change project to 'None'
+            await editTask(task); // Update the task
+        }
+
+        // Delete the project from Firestore and IndexedDB
+        await deleteDoc(projectRef);
+        await deleteFromStore('projects', projectId);
+    } catch (error) {
+        console.error("Error deleting project:", error);
+    }
+}
+
+/**
+ * Reactivates a project by updating its status to 'Active'.
+ *
+ * @param {string} projectId - The ID of the project to reactivate.
+ */
+export async function reactivateProject(projectId) {
+    const projectRef = doc(projectCollection, projectId);
+
+    try {
+        // Update project status in Firestore and IndexedDB
+        await updateDoc(projectRef, { projectStatus: 'Active' });
 
         const storedProjects = await getAllFromStore('projects');
-        const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project);
+        const updatedProjects = storedProjects.map(project =>
+            project.projectId === projectId ? { ...project, projectStatus: 'Active' } : project
+        );
         await saveToStore('projects', updatedProjects);
-
-        try {
-            // Save project data to Firestore and IndexedDB
-            await setDoc(doc(projectCollection, projectId), projectData);
-            await saveToStore('projects', [localProjectData]);
-            return localProjectData;
-        } catch (error) {
-            console.error("Error adding project:", error);
-        }
+    } catch (error) {
+        console.error("Error reactivating project:", error);
     }
+}
 
-    /**
-     * Edits an existing project in Firestore and updates IndexedDB.
-     *
-     * @param {Object} projectDetails - The details of the project to edit.
-     * @returns {Promise<Object>} - The updated project data.
-     */
-    export async function editProject(projectDetails) {
-        // Convert subject IDs to Firestore references
-        const subjectRefs = projectDetails.projectSubjects.map(subject => {
-            const subjectId = typeof subject === 'string' ? subject : subject?.subjectId;
-            return doc(subjectCollection, subjectId);
-        }).filter(ref => ref);
+/**
+ * Sorts projects based on due dates, times, and names.
+ *
+ * @param {Array} projects - The array of project objects to sort.
+ * @returns {Array} - The sorted array of projects.
+ */
+export function sortProjects(projects) {
+    return projects.sort((a, b) => {
+        // Sort by nextTaskDueDate
+        const dateComparison = (a.nextTaskDueDate || '9999-12-31').localeCompare(b.nextTaskDueDate || '9999-12-31');
+        if (dateComparison !== 0) return dateComparison;
 
-        // Prepare data for Firestore
-        const projectData = {
-            projectName: projectDetails.projectName,
-            projectStatus: projectDetails.projectStatus,
-            projectDescription: projectDetails.projectDescription,
-            projectSubjects: subjectRefs,
-        };
+        // Sort by nextTaskDueTime
+        const timeComparison = (a.nextTaskDueTime || '23:59').localeCompare(b.nextTaskDueTime || '23:59');
+        if (timeComparison !== 0) return timeComparison;
 
-        // Prepare data for IndexedDB
-        const localProjectData = {
-            projectId: projectDetails.projectId,
-            projectName: projectDetails.projectName,
-            projectStatus: projectDetails.projectStatus,
-            projectDescription: projectDetails.projectDescription,
-            projectSubjects: subjectRefs.map(ref => ref.id),
-            projectDueDate: projectDetails.projectDueDate || '',
-            projectDueTime: projectDetails.projectDueTime || '',
-        };
+        // Sort by projectDueDate
+        const projectDateComparison = (a.projectDueDate || '9999-12-31').localeCompare(b.projectDueDate || '9999-12-31');
+        if (projectDateComparison !== 0) return projectDateComparison;
 
-        // Handle optional due date and time
-        if (projectDetails.projectDueDate) {
-            projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T23:59:59.999`));
-            localProjectData.projectDueDate = projectDetails.projectDueDate;
-        } else {
-            projectData.projectDueDate = deleteField();
-        }
+        // Sort by projectDueTime
+        const projectTimeComparison = (a.projectDueTime || '23:59').localeCompare(b.projectDueTime || '23:59');
+        if (projectTimeComparison !== 0) return projectTimeComparison;
 
-        if (projectDetails.projectDueTime) {
-            projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDetails.projectDueDate}T${projectDetails.projectDueTime}`));
-            localProjectData.projectDueTime = projectDetails.projectDueTime;
-        } else {
-            projectData.projectDueTime = deleteField();
-        }
-
-        try {
-            // Update project in Firestore and IndexedDB
-            await updateDoc(doc(projectCollection, projectDetails.projectId), projectData);
-            await saveToStore('projects', [localProjectData]);
-            return localProjectData;
-        } catch (error) {
-            console.error("Error updating project:", error);
-        }
-    }
-
-    /**
-     * Deletes a project and updates tasks that reference it.
-     *
-     * @param {string} projectId - The ID of the project to delete.
-     */
-    export async function deleteProject(projectId) {
-        const projectRef = doc(projectCollection, projectId);
-
-        try {
-            // Update tasks that referenced the deleted project
-            const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
-            for (const task of allTasks) {
-                task.taskProject = 'None'; // Change project to 'None'
-                await editTask(task); // Update the task
-            }
-
-            // Delete the project from Firestore and IndexedDB
-            await deleteDoc(projectRef);
-            await deleteFromStore('projects', projectId);
-        } catch (error) {
-            console.error("Error deleting project:", error);
-        }
-    }
-
-    /**
-     * Archives a project by updating its status to 'Archived'.
-     *
-     * @param {string} projectId - The ID of the project to archive.
-     */
-    export async function archiveProject(projectId) {
-        const projectRef = doc(projectCollection, projectId);
-
-        try {
-            // Update project status in Firestore and IndexedDB
-            await updateDoc(projectRef, { projectStatus: 'Archived' });
-
-            const storedProjects = await getAllFromStore('projects');
-            const updatedProjects = storedProjects.map(project =>
-                project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project
-            );
-            await saveToStore('projects', updatedProjects);
-        } catch (error) {
-            console.error("Error archiving project:", error);
-        }
-    }
-
-    /**
-     * Reactivates a project by updating its status to 'Active'.
-     *
-     * @param {string} projectId - The ID of the project to reactivate.
-     */
-    export async function reactivateProject(projectId) {
-        const projectRef = doc(projectCollection, projectId);
-
-        try {
-            // Update project status in Firestore and IndexedDB
-            await updateDoc(projectRef, { projectStatus: 'Active' });
-
-            const storedProjects = await getAllFromStore('projects');
-            const updatedProjects = storedProjects.map(project =>
-                project.projectId === projectId ? { ...project, projectStatus: 'Active' } : project
-            );
-            await saveToStore('projects', updatedProjects);
-        } catch (error) {
-            console.error("Error reactivating project:", error);
-        }
-    }
-
-    /**
-     * Sorts projects based on due dates, times, and names.
-     *
-     * @param {Array} projects - The array of project objects to sort.
-     * @returns {Array} - The sorted array of projects.
-     */
-    export function sortProjects(projects) {
-        return projects.sort((a, b) => {
-            // Sort by nextTaskDueDate
-            const dateComparison = (a.nextTaskDueDate || '9999-12-31').localeCompare(b.nextTaskDueDate || '9999-12-31');
-            if (dateComparison !== 0) return dateComparison;
-
-            // Sort by nextTaskDueTime
-            const timeComparison = (a.nextTaskDueTime || '23:59').localeCompare(b.nextTaskDueTime || '23:59');
-            if (timeComparison !== 0) return timeComparison;
-
-            // Sort by projectDueDate
-            const projectDateComparison = (a.projectDueDate || '9999-12-31').localeCompare(b.projectDueDate || '9999-12-31');
-            if (projectDateComparison !== 0) return projectDateComparison;
-
-            // Sort by projectDueTime
-            const projectTimeComparison = (a.projectDueTime || '23:59').localeCompare(b.projectDueTime || '23:59');
-            if (projectTimeComparison !== 0) return projectTimeComparison;
-
-            // Sort by projectName
-            return a.projectName.localeCompare(b.projectName);
-        });
-    }
+        // Sort by projectName
+        return a.projectName.localeCompare(b.projectName);
+    });
+}
