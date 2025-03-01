@@ -171,7 +171,7 @@ const updateState = async () => {
     };
 
     const itemsPerRow = getItemsPerRow();
-    const rowHeight = 280;
+    const rowHeight = 300;
     const filteredSubjects = getFilteredSubjects(subjects, filterCriteria);
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
