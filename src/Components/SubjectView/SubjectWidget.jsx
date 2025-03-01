@@ -7,7 +7,7 @@ import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions,FormControlLabel, Card,Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Box, Typography, CardActions,FormControlLabel, Card,Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip, DialogActions } from '@mui/material';
 
 const SubjectWidget = ({ subject, refreshSubjects ,selectedSubjects,toggleSubjectSelection,subjectIndex ,subjects}) => {
     const [editedSubject, setEditedSubject] = useState({ ...subject });
