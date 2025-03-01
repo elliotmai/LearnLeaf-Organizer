@@ -8,6 +8,16 @@ import {
     Box,
     Tooltip,
     DialogActions,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon,
+    ListItemButton,
+    ListItemAvatar,
+    Avatar,
+    Checkbox,
+    TextField,
+    Button,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -17,6 +27,48 @@ import { useUser } from '/src/UserState.jsx';
 
 const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
     const { user } = useUser();
+
+    const TaskList = () => {
+    const [tasks, setTasks] = useState(["Subtask 1", "Subtask 2"]); // Initial items
+    const [newTask, setNewTask] = useState(""); // Input field state
+
+    // Function to add a new task
+    const handleAddTask = () => {
+        if (newTask.trim() !== "") {
+            setTasks([...tasks, newTask]); // Add new task to list
+            setNewTask(""); // Clear input field
+        }
+    };
+
+    return (
+        <Box>
+            {/* Task List */}
+            <List sx={{ paddingLeft: 0 }}>
+                {tasks.map((task, index) => (
+                    <ListItem key={index}>
+                        <Checkbox
+                            edge="start"
+                            onChange={(event) => console.log(event.target.checked ? "complete" : "incomplete")}
+                        />
+                        <ListItemText primary={task} />
+                    </ListItem>
+                ))}
+            </List>
+
+            {/* Input Field + Add Button */}
+            <Box sx={{ display: "flex", gap: 1, marginTop: 2 }}>
+                <TextField
+                    label="New Task"
+                    variant="outlined"
+                    size="small"
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                />
+                <Button variant="contained" onClick={handleAddTask}>Add</Button>
+            </Box>
+        </Box>
+    );
+};
 
     return (
         <Dialog
@@ -83,6 +135,10 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                             value: task.taskSubject?.subjectName || 'No Subject',
                         },
                         {
+                            label: 'Subtasks',
+                            value: <SubtaskList />,
+                        },
+                        {
                             label: 'Project',
                             value: task.taskProject?.projectName || 'No Project',
                         },
@@ -128,32 +184,32 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                 }}
             >
                 {/* <Box sx={{ justifyContent: 'space-between', paddingX: 2 }}> */}
-                    <Tooltip title="Edit Task">
-                        <IconButton
-                            onClick={onEdit}
-                            sx={{
-                                color: '#9F6C5B', // Leather
-                                padding: '6px',
-                                borderRadius: '50%',
-                                '&:hover': { backgroundColor: '#9F6C5B', color: '#FFFFFF' },
-                            }}
-                        >
-                            <EditIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Task">
-                        <IconButton
-                            onClick={() => onDelete(task.taskId)}
-                            sx={{
-                                color: '#F3161E', // Scarlet
-                                padding: '6px',
-                                borderRadius: '50%',
-                                '&:hover': { backgroundColor: '#F3161E', color: '#FFFFFF' },
-                            }}
-                        >
-                            <DeleteIcon />
-                        </IconButton>
-                    </Tooltip>
+                <Tooltip title="Edit Task">
+                    <IconButton
+                        onClick={onEdit}
+                        sx={{
+                            color: '#9F6C5B', // Leather
+                            padding: '6px',
+                            borderRadius: '50%',
+                            '&:hover': { backgroundColor: '#9F6C5B', color: '#FFFFFF' },
+                        }}
+                    >
+                        <EditIcon />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Task">
+                    <IconButton
+                        onClick={() => onDelete(task.taskId)}
+                        sx={{
+                            color: '#F3161E', // Scarlet
+                            padding: '6px',
+                            borderRadius: '50%',
+                            '&:hover': { backgroundColor: '#F3161E', color: '#FFFFFF' },
+                        }}
+                    >
+                        <DeleteIcon />
+                    </IconButton>
+                </Tooltip>
                 {/* </Box> */}
 
             </DialogActions>
