@@ -39,6 +39,11 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                 setNewTask(""); // Clear input field
             }
         };
+
+        const handleRemoveTask = (index) => {
+            console.log("Removing task at index", index);
+            setTasks(tasks.filter((_, i) => i !== index)); // Remove task at the given index
+        };
     
         return (
             <Box sx={{ maxWidth: 400, margin: "auto", textAlign: "center" }}>
@@ -54,7 +59,8 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                                 padding: "8px",
                             }}
                         >
-                            <Checkbox edge="start" />
+                            {/* Checkbox with remove functionality */}
+                            <Checkbox edge="start" onChange={() => handleRemoveTask(index)} />
                             <ListItemText primary={task} />
                         </ListItem>
                     ))}
