@@ -11,11 +11,6 @@ import {
     List,
     ListItem,
     ListItemText,
-    ListItemIcon,
-    ListItemButton,
-    ListItemAvatar,
-    Avatar,
-    Checkbox,
     TextField,
     Button,
 } from '@mui/material';
@@ -60,7 +55,9 @@ const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
                             }}
                         >
                             {/* Checkbox with remove functionality */}
-                            <Checkbox edge="start" onChange={() => handleRemoveTask(index)} />
+                            <IconButton aria-label="delete" onClick={() => handleRemoveTask(index)}>
+                                <DeleteIcon />
+                            </IconButton>
                             <ListItemText primary={task} />
                         </ListItem>
                     ))}
