@@ -28,47 +28,55 @@ import { useUser } from '/src/UserState.jsx';
 const TaskInfoWindow = ({ task, open, onClose, onEdit, onDelete }) => {
     const { user } = useUser();
 
-    const TaskList = () => {
-    const [tasks, setTasks] = useState(["Subtask 1", "Subtask 2"]); // Initial items
-    const [newTask, setNewTask] = useState(""); // Input field state
-
-    // Function to add a new task
-    const handleAddTask = () => {
-        if (newTask.trim() !== "") {
-            setTasks([...tasks, newTask]); // Add new task to list
-            setNewTask(""); // Clear input field
-        }
-    };
-
-    return (
-        <Box>
-            {/* Task List */}
-            <List sx={{ paddingLeft: 0 }}>
-                {tasks.map((task, index) => (
-                    <ListItem key={index}>
-                        <Checkbox
-                            edge="start"
-                            onChange={(event) => console.log(event.target.checked ? "complete" : "incomplete")}
-                        />
-                        <ListItemText primary={task} />
-                    </ListItem>
-                ))}
-            </List>
-
-            {/* Input Field + Add Button */}
-            <Box sx={{ display: "flex", gap: 1, marginTop: 2 }}>
-                <TextField
-                    label="New Task"
-                    variant="outlined"
-                    size="small"
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                />
-                <Button variant="contained" onClick={handleAddTask}>Add</Button>
+    const SubtaskList = () => {
+        const [tasks, setTasks] = useState(["Subtask 1", "Subtask 2"]); // Initial items
+        const [newTask, setNewTask] = useState(""); // Input field state
+    
+        // Function to add a new task
+        const handleAddTask = () => {
+            if (newTask.trim() !== "") {
+                setTasks([...tasks, newTask]); // Add new task to list
+                setNewTask(""); // Clear input field
+            }
+        };
+    
+        return (
+            <Box sx={{ maxWidth: 400, margin: "auto", textAlign: "center" }}>
+                {/* List of Subtasks */}
+                <List sx={{ paddingLeft: 0 }}>
+                    {tasks.map((task, index) => (
+                        <ListItem
+                            key={index}
+                            sx={{
+                                border: "1px solid #ccc",
+                                borderRadius: "8px",
+                                marginBottom: "8px",
+                                padding: "8px",
+                            }}
+                        >
+                            <Checkbox edge="start" />
+                            <ListItemText primary={task} />
+                        </ListItem>
+                    ))}
+                </List>
+    
+                {/* Input Field & Add Button */}
+                <Box sx={{ display: "flex", gap: 1, marginTop: 2 }}>
+                    <TextField
+                        fullWidth
+                        label="New Subtask"
+                        variant="outlined"
+                        size="small"
+                        value={newTask}
+                        onChange={(e) => setNewTask(e.target.value)}
+                    />
+                    <Button variant="contained" onClick={handleAddTask}>
+                        Add
+                    </Button>
+                </Box>
             </Box>
-        </Box>
-    );
-};
+        );
+    };
 
     return (
         <Dialog
