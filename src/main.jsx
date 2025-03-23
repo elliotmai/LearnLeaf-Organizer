@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider, createBrowserRouter, Outlet, Navigate } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
+import SplashScreen from './SplashScreen.jsx';
 import App from './App.jsx';
 import LoginForm from './pages/LoginForm.jsx';
 import RegistrationForm from './pages/RegisterForm.jsx';
@@ -16,7 +17,49 @@ import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
 import Logo from './LearnLeaf_Logo_Circle.png';
 
-// Use the custom hook to check authentication
+// Global flag to control splash
+let forceSplash = false;
+
+// Check for updates only in standalone PWA mode
+if (
+  'serviceWorker' in navigator &&
+  window.matchMedia('(display-mode: standalone)').matches
+) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+      registration.onupdatefound = () => {
+        const newWorker = registration.installing;
+
+        newWorker.onstatechange = () => {
+          if (
+            newWorker.state === 'installed' &&
+            navigator.serviceWorker.controller
+          ) {
+            // Show splash while waiting for the new worker to take control
+            forceSplash = true;
+            renderApp(); // render splash
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              console.log('New service worker is controlling. Reloading...');
+              window.location.reload();
+            });
+          }
+        };
+      };
+    });
+  });
+}
+
+// Splash-screen-aware render function
+const renderApp = () => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      {forceSplash ? <SplashScreen /> : <RouterProvider router={router} />}
+    </React.StrictMode>
+  );
+};
+
+// Auth wrapper
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useUser();
 
@@ -24,7 +67,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div style={{
         height: '100vh',
-        backgroundColor: '#c1d4d2', // match your brand background
+        backgroundColor: '#c1d4d2',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -47,14 +90,11 @@ const ProtectedRoute = ({ children }) => {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,  // Common parent component, could be a layout component
+    element: <App />,
     children: [
-      // Public routes
       { path: "", element: <LoginForm /> },
       { path: "register", element: <RegistrationForm /> },
       { path: "resetPassword", element: <ResetPassword /> },
-
-      // Protected routes, wrapped in <ProtectedRoute>
       {
         path: "tasks",
         element: (
@@ -123,33 +163,5 @@ const router = createBrowserRouter([
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>
-);
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-      registration.onupdatefound = () => {
-        const newWorker = registration.installing;
-
-        newWorker.onstatechange = () => {
-          if (
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller
-          ) {
-            console.log('New service worker installed. Waiting for control...');
-
-            // Wait for it to take control before reloading
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-              console.log('New service worker now controlling. Reloading...');
-              window.location.reload();
-            });
-          }
-        };
-      };
-    });
-  });
-}
+// Initial render
+renderApp();
