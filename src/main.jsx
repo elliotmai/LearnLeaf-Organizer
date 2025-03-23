@@ -14,11 +14,33 @@ import ProjectTasks from './pages/ProjectTasks.jsx';
 import UserProfile from './pages/UserProfile.jsx';
 import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
+import Logo from './LearnLeaf_Logo_Circle.png';
 
 // Use the custom hook to check authentication
 const ProtectedRoute = ({ children }) => {
-  const { user } = useUser(); // Check if user is authenticated
-  return user ? children : <Navigate to="/" />; // If no user, redirect to login
+  const { user, loading } = useUser();
+
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh',
+        backgroundColor: '#c1d4d2', // match your brand background
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <img
+          src={Logo}
+          alt="LearnLeaf Organizer Logo"
+          style={{ width: '120px', height: '120px', marginBottom: '20px' }}
+        />
+        <p style={{ fontSize: '1.2rem', color: '#35584A' }}>Loading LearnLeaf...</p>
+      </div>
+    );
+  }
+
+  return user ? children : <Navigate to="/" />;
 };
 
 // Create your router
