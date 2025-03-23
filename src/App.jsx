@@ -9,18 +9,16 @@ function App() {
   const [showUpdateToast, setShowUpdateToast] = useState(false);
 
   useEffect(() => {
-    // Callback from main.jsx when update is ready
     window.onServiceWorkerUpdate = () => {
-      console.log('[Toast] Triggering update toast...');
       setShowUpdateToast(true);
     };
-
-    // If update happened before React was ready
+  
     if (window.__hasPendingUpdate) {
       setShowUpdateToast(true);
       delete window.__hasPendingUpdate;
     }
   }, []);
+  
 
   return (
     <UserProvider>
@@ -30,7 +28,10 @@ function App() {
             <Outlet />
           </main>
           {showUpdateToast && (
-            <ToastUpdateNotice onReload={() => window.location.reload()} />
+            <ToastUpdateNotice onReload={() => {
+              setShowUpdateToast(false); // ✅ clear before reload
+              window.location.reload();
+            }} />            
           )}
         </div>
       </PullToRefresh>
