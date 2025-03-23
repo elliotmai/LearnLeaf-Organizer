@@ -18,6 +18,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app)
 
-setPersistence(auth, indexedDBLocalPersistence); // session persistence
-
+setPersistence(auth, indexedDBLocalPersistence).catch((error) => {
+    console.error('Failed to set persistence:', error);
+  });
+  
 export { auth, firestore };

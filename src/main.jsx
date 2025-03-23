@@ -28,7 +28,8 @@ navigator.serviceWorker.register('/service-worker.js').then((registration) => {
     newWorker.onstatechange = () => {
       if (
         newWorker.state === 'installed' &&
-        navigator.serviceWorker.controller // only true if *replacing* an old one
+        navigator.serviceWorker.controller &&
+        registration.waiting
       ) {
         // ✅ Only notify if this is truly an *update*, not first install
         console.log('[SW] Update found, triggering toast');
