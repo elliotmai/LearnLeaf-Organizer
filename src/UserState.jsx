@@ -1,24 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  getAuth,
-  onAuthStateChanged,
-  setPersistence,
-  indexedDBLocalPersistence,
-} from 'firebase/auth';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import { onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase'; // Use centralized Firebase instance
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const auth = getAuth();
-  const db = getFirestore();
-
   const [user, setUser] = useState(() => {
-    const storedUserData = localStorage.getItem('user');
-    return storedUserData ? JSON.parse(storedUserData) : null;
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
   });
 
-  const [loading, setLoading] = useState(true); // Track auth loading
+  const [loading, setLoading] = useState(true);
 
   const updateUser = (newUserData) => {
     if (!newUserData) {
@@ -27,50 +20,44 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
-    const mergedData = {
+    const merged = {
       ...user,
       ...newUserData,
-      notifications: newUserData.notifications !== undefined
-        ? newUserData.notifications
-        : user?.notifications,
-      notificationsFrequency:
-        newUserData.notificationsFrequency || user?.notificationsFrequency,
+      notifications: newUserData.notifications ?? user?.notifications,
+      notificationsFrequency: newUserData.notificationsFrequency || user?.notificationsFrequency,
     };
 
-    if (JSON.stringify(user) !== JSON.stringify(mergedData)) {
-      setUser(mergedData);
-      localStorage.setItem('user', JSON.stringify(mergedData));
-      console.log('Updated User Data in localStorage:', mergedData);
+    if (JSON.stringify(user) !== JSON.stringify(merged)) {
+      setUser(merged);
+      localStorage.setItem('user', JSON.stringify(merged));
+      console.log('Updated User Data in localStorage:', merged);
     }
   };
 
   useEffect(() => {
     let isMounted = true;
-    let authListenerTriggered = false;
 
-    setPersistence(auth, indexedDBLocalPersistence)
-      .then(() => {
+    const initAuth = async () => {
+      try {
+        await setPersistence(auth, indexedDBLocalPersistence);
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (!isMounted || authListenerTriggered) return;
-          authListenerTriggered = true;
+          if (!isMounted) return;
 
           if (firebaseUser) {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
+            const ref = doc(db, 'users', firebaseUser.uid);
+            const snap = await getDoc(ref);
 
-            if (userDoc.exists()) {
+            if (snap.exists()) {
+              const data = snap.data();
               const userData = {
                 id: firebaseUser.uid,
-                name: userDoc.data().name,
-                email: userDoc.data().email,
-                timeFormat: userDoc.data().timeFormat || '12h',
-                dateFormat: userDoc.data().dateFormat || 'MM/DD/YYYY',
-                notifications:
-                  userDoc.data().notifications !== undefined
-                    ? userDoc.data().notifications
-                    : false,
-                notificationsFrequency:
-                  userDoc.data().notificationsFrequency || [true, false, false, false],
+                name: data.name,
+                email: data.email,
+                timeFormat: data.timeFormat || '12h',
+                dateFormat: data.dateFormat || 'MM/DD/YYYY',
+                notifications: data.notifications ?? false,
+                notificationsFrequency: data.notificationsFrequency || [true, false, false, false],
               };
               console.log('User Data Constructed:', userData);
               updateUser(userData);
@@ -82,21 +69,27 @@ export const UserProvider = ({ children }) => {
             updateUser(null);
           }
 
-          // Mark loading complete regardless of auth state
           setLoading(false);
         });
 
-        return () => unsubscribe();
-      })
-      .catch((error) => {
-        console.error('Error setting persistence:', error);
-        setLoading(false); // Prevent permanent loading state on error
-      });
+        // Save unsubscribe to cleanup later
+        return unsubscribe;
+      } catch (err) {
+        console.error('Auth init error:', err);
+        setLoading(false);
+      }
+    };
+
+    let unsubscribeRef;
+    initAuth().then((unsub) => {
+      unsubscribeRef = unsub;
+    });
 
     return () => {
       isMounted = false;
+      if (unsubscribeRef) unsubscribeRef();
     };
-  }, [auth, db]);
+  }, []);
 
   return (
     <UserContext.Provider value={{ user, updateUser, loading }}>

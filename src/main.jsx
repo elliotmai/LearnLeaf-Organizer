@@ -20,39 +20,28 @@ import Logo from './LearnLeaf_Logo_Circle.png';
 // Global flag to control splash
 let forceSplash = false;
 
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-const isLoginPage = window.location.pathname === '/';
-
 // Handle service worker update notifications
-if (
-  'serviceWorker' in navigator &&
-  window.matchMedia('(display-mode: standalone)').matches
-) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-      registration.onupdatefound = () => {
-        const newWorker = registration.installing;
+navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+  registration.onupdatefound = () => {
+    const newWorker = registration.installing;
 
-        newWorker.onstatechange = () => {
-          if (
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller
-          ) {
-            console.log('[Service Worker] Update available.');
+    newWorker.onstatechange = () => {
+      if (
+        newWorker.state === 'installed' &&
+        navigator.serviceWorker.controller // only true if *replacing* an old one
+      ) {
+        // ✅ Only notify if this is truly an *update*, not first install
+        console.log('[SW] Update found, triggering toast');
+        if (window.onServiceWorkerUpdate) {
+          window.onServiceWorkerUpdate();
+        } else {
+          window.__hasPendingUpdate = true;
+        }
+      }
+    };
+  };
+});
 
-            // Trigger a callback in React when it's ready
-            if (window.onServiceWorkerUpdate) {
-              window.onServiceWorkerUpdate();
-            } else {
-              // If React hasn't mounted yet, store for later
-              window.__hasPendingUpdate = true;
-            }
-          }
-        };
-      };
-    });
-  });
-}
 
 // Splash-screen-aware render function
 const renderApp = () => {
