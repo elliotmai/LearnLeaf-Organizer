@@ -8,9 +8,18 @@ import './App.css';
 function App() {
   const [showUpdateToast, setShowUpdateToast] = useState(false);
 
-  // Make it available to the window so main.jsx can trigger it
   useEffect(() => {
-    window.triggerAppUpdateToast = () => setShowUpdateToast(true);
+    // Callback from main.jsx when update is ready
+    window.onServiceWorkerUpdate = () => {
+      console.log('[Toast] Triggering update toast...');
+      setShowUpdateToast(true);
+    };
+
+    // If update happened before React was ready
+    if (window.__hasPendingUpdate) {
+      setShowUpdateToast(true);
+      delete window.__hasPendingUpdate;
+    }
   }, []);
 
   return (

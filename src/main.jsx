@@ -23,7 +23,11 @@ let forceSplash = false;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 const isLoginPage = window.location.pathname === '/';
 
-if ('serviceWorker' in navigator && isStandalone && !isLoginPage) {
+// Handle service worker update notifications
+if (
+  'serviceWorker' in navigator &&
+  window.matchMedia('(display-mode: standalone)').matches
+) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').then((registration) => {
       registration.onupdatefound = () => {
@@ -34,14 +38,14 @@ if ('serviceWorker' in navigator && isStandalone && !isLoginPage) {
             newWorker.state === 'installed' &&
             navigator.serviceWorker.controller
           ) {
-            // Instead of auto-reloading, show the toast
-            if (window.triggerAppUpdateToast) {
-              window.triggerAppUpdateToast();
+            console.log('[Service Worker] Update available.');
+
+            // Trigger a callback in React when it's ready
+            if (window.onServiceWorkerUpdate) {
+              window.onServiceWorkerUpdate();
             } else {
-              // Fallback: reload if toast isn't ready yet
-              navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-              });
+              // If React hasn't mounted yet, store for later
+              window.__hasPendingUpdate = true;
             }
           }
         };
