@@ -134,20 +134,19 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js').then((registration) => {
       registration.onupdatefound = () => {
         const newWorker = registration.installing;
+
         newWorker.onstatechange = () => {
           if (
             newWorker.state === 'installed' &&
             navigator.serviceWorker.controller
           ) {
-            const isLoginPage = window.location.pathname === '/';
+            console.log('New service worker installed. Waiting for control...');
 
-            if (!isLoginPage) {
-              console.log('New version available. Reloading...');
+            // Wait for it to take control before reloading
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              console.log('New service worker now controlling. Reloading...');
               window.location.reload();
-            } else {
-              console.log('New version available, but on login page — skipping auto reload.');
-              // Optionally show a message or toast for the user to reload manually
-            }
+            });
           }
         };
       };
