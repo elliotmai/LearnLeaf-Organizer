@@ -17,12 +17,19 @@ import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
 import Logo from './LearnLeaf_Logo_Circle.png';
 
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useUser();
+  if (loading) return null;
+  return user ? <Navigate to="/tasks" replace /> : children;
+};
+
 // Global flag to control splash
 let forceSplash = false;
 
 // Handle service worker update notifications
 navigator.serviceWorker.register('/service-worker.js').then((registration) => {
   registration.onupdatefound = () => {
+    console.log('[SW] Update found');
     const newWorker = registration.installing;
 
     newWorker.onstatechange = () => {
@@ -57,6 +64,8 @@ const renderApp = () => {
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useUser();
 
+  console.log('user:', user);
+
   if (loading) {
     return (
       <div style={{
@@ -86,9 +95,9 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { path: "", element: <LoginForm /> },
-      { path: "register", element: <RegistrationForm /> },
-      { path: "resetPassword", element: <ResetPassword /> },
+      { path: "register", element: <PublicRoute> <RegistrationForm /></PublicRoute> },
+      { path: "resetPassword", element: <PublicRoute> <ResetPassword /></PublicRoute> },
+      { path: "login", element: <PublicRoute> <LoginForm /></PublicRoute> },
       {
         path: "tasks",
         element: (

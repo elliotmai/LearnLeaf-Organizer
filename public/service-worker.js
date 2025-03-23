@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((name) => {
-                    if (name !== expectedCache) {
+                    if (name !== CACHE_NAME) {
                         console.log('[Service Worker] Deleting old cache:', name);
                         return caches.delete(name);
                     }
@@ -23,17 +23,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Only handle GET requests
+    if (event.request.method !== 'GET') return;
+  
     event.respondWith(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.match(event.request).then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                return fetch(event.request).then((networkResponse) => {
-                    cache.put(event.request, networkResponse.clone());
-                    return networkResponse;
-                });
-            });
-        })
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+  
+          return fetch(event.request).then((networkResponse) => {
+            // Only cache successful responses
+            if (networkResponse.status === 200) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          });
+        });
+      })
     );
-});
+  });
+  
