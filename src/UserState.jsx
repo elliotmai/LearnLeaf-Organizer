@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase'; // Use centralized Firebase instance
+import { auth, firestore } from './firebase'; // Use centralized Firebase instance
 
 const UserContext = createContext();
 
@@ -45,7 +45,7 @@ export const UserProvider = ({ children }) => {
           if (!isMounted) return;
 
           if (firebaseUser) {
-            const ref = doc(db, 'users', firebaseUser.uid);
+            const ref = doc(firestore, 'users', firebaseUser.uid);
             const snap = await getDoc(ref);
 
             if (snap.exists()) {
