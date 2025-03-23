@@ -19,7 +19,25 @@ import Logo from './LearnLeaf_Logo_Circle.png';
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useUser();
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh',
+        backgroundColor: '#c1d4d2',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <img
+          src={Logo}
+          alt="LearnLeaf Organizer Logo"
+          style={{ width: '120px', height: '120px', marginBottom: '20px' }}
+        />
+        <p style={{ fontSize: '1.2rem', color: '#35584A' }}>Loading LearnLeaf...</p>
+      </div>
+    );
+  }
   return user ? <Navigate to="/tasks" replace /> : children;
 };
 
@@ -97,7 +115,11 @@ const router = createBrowserRouter([
     children: [
       { path: "register", element: <PublicRoute> <RegistrationForm /></PublicRoute> },
       { path: "resetPassword", element: <PublicRoute> <ResetPassword /></PublicRoute> },
-      { path: "login", element: <PublicRoute> <LoginForm /></PublicRoute> },
+      { path: "", element: <PublicRoute> <LoginForm /></PublicRoute> },
+      {
+        index: true,
+        element: <Navigate to="/tasks" replace />
+      }
       {
         path: "tasks",
         element: (
