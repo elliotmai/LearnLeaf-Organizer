@@ -135,11 +135,22 @@ if ('serviceWorker' in navigator) {
       registration.onupdatefound = () => {
         const newWorker = registration.installing;
         newWorker.onstatechange = () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.location.reload(); // Reload the app
+          if (
+            newWorker.state === 'installed' &&
+            navigator.serviceWorker.controller
+          ) {
+            const isLoginPage = window.location.pathname === '/';
+
+            if (!isLoginPage) {
+              console.log('New version available. Reloading...');
+              window.location.reload();
+            } else {
+              console.log('New version available, but on login page — skipping auto reload.');
+              // Optionally show a message or toast for the user to reload manually
             }
           }
         };
+      };
     });
   });
 }
