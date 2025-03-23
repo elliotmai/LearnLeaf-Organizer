@@ -20,11 +20,10 @@ import Logo from './LearnLeaf_Logo_Circle.png';
 // Global flag to control splash
 let forceSplash = false;
 
-// Check for updates only in standalone PWA mode
-if (
-  'serviceWorker' in navigator &&
-  window.matchMedia('(display-mode: standalone)').matches
-) {
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+const isLoginPage = window.location.pathname === '/';
+
+if ('serviceWorker' in navigator && isStandalone && !isLoginPage) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').then((registration) => {
       registration.onupdatefound = () => {
@@ -35,14 +34,15 @@ if (
             newWorker.state === 'installed' &&
             navigator.serviceWorker.controller
           ) {
-            // Show splash while waiting for the new worker to take control
-            forceSplash = true;
-            renderApp(); // render splash
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-              console.log('New service worker is controlling. Reloading...');
-              window.location.reload();
-            });
+            // Instead of auto-reloading, show the toast
+            if (window.triggerAppUpdateToast) {
+              window.triggerAppUpdateToast();
+            } else {
+              // Fallback: reload if toast isn't ready yet
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+              });
+            }
           }
         };
       };

@@ -1,22 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { UserProvider } from './UserState.jsx';  // User context provider
-import { PullToRefresh } from './PullToRefresh.jsx'
-import './App.css';  // Assuming you have some global styles
+import { UserProvider } from './UserState.jsx';
+import { PullToRefresh } from './PullToRefresh.jsx';
+import ToastUpdateNotice from './ToastUpdateNotice.jsx';
+import './App.css';
 
 function App() {
-  return (
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
 
+  // Make it available to the window so main.jsx can trigger it
+  useEffect(() => {
+    window.triggerAppUpdateToast = () => setShowUpdateToast(true);
+  }, []);
+
+  return (
     <UserProvider>
       <PullToRefresh>
         <div className="app-container">
           <main className="main-content">
-            <Outlet /> {/* This will render the current route's component */}
+            <Outlet />
           </main>
+          {showUpdateToast && (
+            <ToastUpdateNotice onReload={() => window.location.reload()} />
+          )}
         </div>
       </PullToRefresh>
     </UserProvider>
-
   );
 }
 
