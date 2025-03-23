@@ -119,11 +119,11 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Navigate to="/tasks" replace />
-      }
+      },
       {
         path: "tasks",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute>,
             <TaskList />
           </ProtectedRoute>
         ),
