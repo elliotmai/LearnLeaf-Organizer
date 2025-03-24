@@ -14,7 +14,9 @@ export function PullToRefresh({ children }) {
   }, []);
 
   const handleTouchStart = (e) => {
-    if (!isStandalone) return; // Only handle if in standalone mode
+    if (!isStandalone) return;
+    const scrollTop = e.currentTarget.scrollTop;
+    if (scrollTop > 0) return;
     setStartY(e.touches[0].clientY);
   };
 
@@ -55,7 +57,7 @@ export function PullToRefresh({ children }) {
       style={{
         position: 'relative',
         height: '100%',
-        maxHeight: '-webkit-fill-available', 
+        // maxHeight: '-webkit-fill-available',
         width: '100vw', // Explicitly set width to 100vw to prevent adjustments
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
@@ -83,7 +85,11 @@ export function PullToRefresh({ children }) {
           <CircularProgress size={24} />
         </div>
       )}
-      {children}
+      <div style={{ transform: `translateY(${diff}px)`,
+                    transition: pulling ? 'none' : 'transform 0.2s ease' 
+                  }}>
+        {children}
+      </div>
     </div>
   );
 }
