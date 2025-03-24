@@ -82,6 +82,10 @@ const renderApp = () => {
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useUser();
 
+  useEffect(() => {
+    console.log('[ProtectedRoute] user:', user);
+  }, [user]);
+
   if (loading) {
     return (
       <div style={{
@@ -104,11 +108,6 @@ const ProtectedRoute = ({ children }) => {
 
   return user ? children : <Navigate to="/" />;
 };
-
-useEffect(() => {
-  console.log('[ProtectedRoute] user:', user);
-}, [user]);
-
 
 // Create your router
 const router = createBrowserRouter([
