@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import '/src/Components/Login_Register_Reset.css';
 import '/src/Components/PageFormat.css';
+import FocusInput from '../FocusInput';
 
 function LoginForm() {
     const [email, setEmail] = useState(''); // State for the email input
@@ -49,7 +50,7 @@ function LoginForm() {
             <h1 style={{ color: '#907474' }}>Streamlining success, one task at a time!</h1>
             <form className="form-group" onSubmit={handleSubmit}>
                 <div className="form-inputs">
-                    <input
+                    <FocusInput
                         type="email"
                         id="email"
                         name="email"
@@ -58,7 +59,7 @@ function LoginForm() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                     />
-                    <input
+                    <FocusInput
                         type="password"
                         id="password"
                         name="password"
