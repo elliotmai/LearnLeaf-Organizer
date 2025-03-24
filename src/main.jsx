@@ -20,13 +20,13 @@ import Logo from './LearnLeaf_Logo_Circle.png';
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useUser();
-  if (loading) {
-    return (
-      <SplashScreen
-        message={"Loading LearnLeaf..."}
-      />
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <SplashScreen
+  //       message={"Loading LearnLeaf WHYYYYYYYYYY..."}
+  //     />
+  //   );
+  // }
   return user ? <Navigate to="/tasks" replace /> : children;
 };
 
@@ -37,7 +37,7 @@ let forceSplash = false;
 const renderApp = () => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      {forceSplash ? <SplashScreen message={'Loading LearnLeaf...'}/> : <RouterProvider router={router} />}
+      {forceSplash ? <SplashScreen message={'Loading LearnLeaf AHHHHHHHHHH...'}/> : <RouterProvider router={router} />}
     </React.StrictMode>
   );
 };
@@ -53,7 +53,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <SplashScreen
-        message={'Loading LearnLeaf...'}
+        message={'Loading LearnLeaf GRRRRRRRRRRRRRRRRRRR...'}
       />
     );
   }
