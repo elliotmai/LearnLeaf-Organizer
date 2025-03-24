@@ -2,15 +2,26 @@
 import React, { useRef } from 'react';
 
 const FocusInput = (props) => {
-  const inputRef = useRef(null);
+  const ref = useRef(null);
 
   return (
     <input
       {...props}
-      ref={inputRef}
-      onTouchStart={() => {
+      ref={ref}
+      onFocus={(e) => {
+        // iOS sometimes ignores initial focus, delay and force it
         setTimeout(() => {
-          inputRef.current?.focus();
+          try {
+            ref.current?.focus();
+            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } catch (err) {
+            console.warn('Focus fail:', err);
+          }
+        }, 100);
+      }}
+      onTouchEnd={() => {
+        setTimeout(() => {
+          ref.current?.focus();
         }, 50);
       }}
     />

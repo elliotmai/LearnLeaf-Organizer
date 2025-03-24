@@ -13,10 +13,22 @@
   background-color: white;
 }
 
-html, body {
+html,
+body {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+}
+
+input, textarea, select {
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  -webkit-touch-callout: default;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .view-container {
@@ -84,9 +96,4 @@ html, body {
   33% { content: ".."; }
   66% { content: "..."; }
   100% { content: "."; }
-}
-
-input, textarea, select {
-  user-select: auto;
-  -webkit-user-select: auto;
 }
