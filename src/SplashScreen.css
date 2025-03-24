@@ -1,0 +1,11 @@
+.splash-screen {
+    height: 100vh;
+    max-height: -webkit-fill-available;
+    width: 100vw;
+    max-width: -webkit-fill-available;
+    background-color: #c1d4d2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
