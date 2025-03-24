@@ -16,26 +16,15 @@ import UserProfile from './pages/UserProfile.jsx';
 import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
 import Logo from './LearnLeaf_Logo_Circle.png';
+// import { m } from '@vite-pwa/assets-generator/dist/shared/assets-generator.5e51fd40.js';
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useUser();
   if (loading) {
     return (
-      <div style={{
-        height: '100vh',
-        backgroundColor: '#c1d4d2',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}>
-        <img
-          src={Logo}
-          alt="LearnLeaf Organizer Logo"
-          style={{ width: '120px', height: '120px', marginBottom: '20px' }}
-        />
-        <p style={{ fontSize: '1.2rem', color: '#35584A' }}>Loading LearnLeaf...</p>
-      </div>
+      <SplashScreen
+        message={"Loading LearnLeaf..."}
+      />
     );
   }
   return user ? <Navigate to="/tasks" replace /> : children;
@@ -45,23 +34,35 @@ const PublicRoute = ({ children }) => {
 let forceSplash = false;
 
 // Handle service worker update notifications
-if ('serviceWorker' in navigator && window.matchMedia('(display-mode: standalone)').matches) {
+if (
+  'serviceWorker' in navigator &&
+  window.matchMedia('(display-mode: standalone)').matches
+) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-      // ✅ Only show toast if there’s a real waiting service worker
-      if (registration.waiting) {
-        console.log('[SW] Real update waiting (registration.waiting)');
+      const isFirstVisit = !localStorage.getItem('hasVisited');
+      localStorage.setItem('hasVisited', 'true'); // ✅ set this immediately
+
+      // ✅ Show toast ONLY if:
+      // 1. It's not the first visit
+      // 2. A new service worker is waiting
+      if (!isFirstVisit && registration.waiting) {
+        console.log('[SW] Update waiting (on load)');
         window.onServiceWorkerUpdate?.();
+        return; // no need to continue
       }
 
+      // Listen for updates found after install
       registration.onupdatefound = () => {
         const newWorker = registration.installing;
         newWorker.onstatechange = () => {
-          if (
+          const isRealUpdate =
             newWorker.state === 'installed' &&
             navigator.serviceWorker.controller &&
-            registration.waiting
-          ) {
+            registration.waiting &&
+            localStorage.getItem('hasVisited') === 'true';
+
+          if (isRealUpdate) {
             console.log('[SW] Update installed and waiting');
             window.onServiceWorkerUpdate?.();
           }
@@ -90,21 +91,9 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div style={{
-        height: '100vh',
-        backgroundColor: '#c1d4d2',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}>
-        <img
-          src={Logo}
-          alt="LearnLeaf Organizer Logo"
-          style={{ width: '120px', height: '120px', marginBottom: '20px' }}
-        />
-        <p style={{ fontSize: '1.2rem', color: '#35584A' }}>Loading LearnLeaf...</p>
-      </div>
+      <SplashScreen
+        message={'Loading LearnLeaf...'}
+      />
     );
   }
 
@@ -193,3 +182,39 @@ const router = createBrowserRouter([
 
 // Initial render
 renderApp();
+
+let inactivityTimer;
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  // 10 minutes of inactivity = 120000ms
+  inactivityTimer = setTimeout(checkForServiceWorkerUpdate, 600000);
+}
+
+// Track activity
+['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach((event) =>
+  window.addEventListener(event, resetInactivityTimer)
+);
+
+// Start timer initially
+resetInactivityTimer();
+
+function checkForServiceWorkerUpdate() {
+  if (
+    'serviceWorker' in navigator &&
+    window.matchMedia('(display-mode: standalone)').matches
+  ) {
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      if (registration && registration.waiting) {
+        console.log('[SW] Update found while inactive. Reloading...');
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      } else {
+        console.log('[SW] No update found during inactivity check.');
+      }
+    });
+  }
+}
