@@ -8,6 +8,23 @@ if (!admin.apps.length) {
 const firestore = admin.firestore();
 const Timestamp = admin.firestore.Timestamp;
 
+function getCentralOffsetHours(date = new Date()) {
+    // Get the timezone offset for America/Chicago in minutes
+    const centralTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        timeZoneName: 'short',
+    }).formatToParts(date);
+
+    const tzAbbr = centralTime.find(part => part.type === 'timeZoneName')?.value;
+
+    // CDT (Central Daylight Time) = UTC-5
+    // CST (Central Standard Time) = UTC-6
+    if (tzAbbr === 'CDT') return 5;
+    if (tzAbbr === 'CST') return 6;
+
+    // Fallback
+    return 6;
+}
 
 /**
  * Adds a new task to Firestore and updates IndexedDB with the task details.
@@ -43,36 +60,26 @@ async function addTask(taskDetails, userId) {
         taskLMSDetails: taskDetails.taskLMSDetails || [],
     };
 
-    // Helper function to create a local date object
-    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        let date = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, milliseconds));
+    // Convert dueDateInput + dueTimeInput to a proper JS Date
+    if (taskDetails.dueDateInput) {
+        const [year, month, day] = taskDetails.dueDateInput.split('-').map(Number);
+        const [hours, minutes] = taskDetails.dueTimeInput
+            ? taskDetails.dueTimeInput.split(':').map(Number)
+            : [23, 59];
 
-        // Only adjust if the time is exactly 23:59 (UTC conversion issue)
-        if (hours === 23 && minutes === 59) {
-            date.setUTCHours(date.getUTCHours() + 6); // Convert to UTC-6 manually
+        const date = new Date(year, month - 1, day, hours, minutes);
+
+        // Adjust the time zone offset to match Central Time (CDT is UTC-5)
+        if (hours == 23 && minutes == 59) {
+            const offsetInHours = getCentralOffsetHours(); // or 6 if not daylight saving
+            console.log("Offset: ", offsetInHours);
+            date.setHours(date.getHours() + offsetInHours);
         }
 
-        return date;
-    }
-
-    // Set task start date
-    if (taskDetails.startDateInput) {
-        const startDate = createLocalDate(taskDetails.startDateInput, 0, 0, 0, 0);
-        taskData.taskStartDate = Timestamp.fromDate(startDate);
-    }
-
-    // Set task due date
-    if (taskDetails.dueDateInput) {
-        const dueDate = createLocalDate(taskDetails.dueDateInput, 23, 59, 59, 999);
-        taskData.taskDueDate = Timestamp.fromDate(dueDate);
-    }
-
-    // Set task due time
-    if (taskDetails.dueDateInput && taskDetails.dueTimeInput) {
-        const [hours, minutes] = taskDetails.dueTimeInput.split(':').map(Number);
-        const dueDateTime = createLocalDate(taskDetails.dueDateInput, hours, minutes, 0, 0);
-        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+        console.log("🔥 LOCAL DATE (what we made):", date.toString());
+        console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
+        taskData.taskDueDate = Timestamp.fromDate(date);
+        taskData.taskDueTime = Timestamp.fromDate(date);
     }
 
     const taskRef = taskCollection.doc(taskId);
@@ -92,6 +99,7 @@ async function addTask(taskDetails, userId) {
  * @returns {Promise<Object>} - The updated task data.
  */
 async function editTask(taskDetails, userId) {
+    console.log('Editing task:', [taskDetails.taskDueDate, taskDetails.taskDueTime]);
     const taskId = taskDetails.taskId;
     const taskCollection = firestore.collection(`users/${userId}/tasks`);
 
@@ -119,34 +127,29 @@ async function editTask(taskDetails, userId) {
         taskStatus: taskDetails.taskStatus,
     };
 
-    function createLocalDate(dateString, hours, minutes, seconds, milliseconds) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        let date = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, milliseconds));
+    // Handle due date and time
+    if (taskDetails.taskDueDate) {
+        const [year, month, day] = taskDetails.taskDueDate.split('-').map(Number);
+        const [hours, minutes] = taskDetails.taskDueTime
+            ? taskDetails.taskDueTime.split(':').map(Number)
+            : [23, 59];
 
-        // Only adjust if the time is exactly 23:59 (UTC conversion issue)
-        if (hours === 23 && minutes === 59) {
-            date.setUTCHours(date.getUTCHours() + 6); // Convert to UTC-6 manually
+        const date = new Date(year, month - 1, day, hours, minutes);
+
+        // Adjust the time zone offset to match Central Time (CDT is UTC-5)
+        if (hours == 23 && minutes == 59) {
+            const offsetInHours = getCentralOffsetHours(); // or 6 if not daylight saving
+            console.log("Offset: ", offsetInHours);
+            date.setHours(date.getHours() + offsetInHours);
         }
 
-        return date;
-    }
-
-
-    // Set due date
-    if (taskDetails.taskDueDate) {
-        const dueDate = createLocalDate(taskDetails.taskDueDate, 23, 59, 59, 900);
-        taskData.taskDueDate = Timestamp.fromDate(dueDate);
-    }
-
-    // Set due time
-    if (taskDetails.taskDueDate && taskDetails.taskDueTime) {
-        const [hours, minutes] = taskDetails.taskDueTime.split(':').map(Number);
-        const dueDateTime = createLocalDate(taskDetails.taskDueDate, hours, minutes, 0, 0);
-        taskData.taskDueTime = Timestamp.fromDate(dueDateTime);
+        console.log("🔥 LOCAL DATE (what we made):", date.toString());
+        console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
+        taskData.taskDueDate = Timestamp.fromDate(date);
+        taskData.taskDueTime = Timestamp.fromDate(date);
     }
 
     const taskRef = taskCollection.doc(taskId);
-
 
     try {
         await taskRef.update(taskData);
