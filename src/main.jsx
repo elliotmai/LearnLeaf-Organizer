@@ -146,8 +146,8 @@ let inactivityTimer;
 
 function resetInactivityTimer() {
   clearTimeout(inactivityTimer);
-  // 10 minutes of inactivity = 120000ms
-  inactivityTimer = setTimeout(checkForServiceWorkerUpdate, 600000);
+  // 5 minutes of inactivity
+  inactivityTimer = setTimeout(checkForServiceWorkerUpdate, 300000);
 }
 
 // Track activity
