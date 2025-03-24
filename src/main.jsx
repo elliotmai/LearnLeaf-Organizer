@@ -82,8 +82,6 @@ const renderApp = () => {
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useUser();
 
-  console.log('user:', user);
-
   if (loading) {
     return (
       <div style={{
@@ -107,19 +105,23 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/" />;
 };
 
+useEffect(() => {
+  console.log('[ProtectedRoute] user:', user);
+}, [user]);
+
+
 // Create your router
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
     children: [
-      { path: "register", element: <PublicRoute> <RegistrationForm /></PublicRoute> },
-      { path: "resetPassword", element: <PublicRoute> <ResetPassword /></PublicRoute> },
-      { path: "", element: <PublicRoute> <LoginForm /></PublicRoute> },
       {
         index: true,
-        element: <Navigate to="/tasks" replace />
+        element: <PublicRoute><LoginForm /></PublicRoute>
       },
+      { path: "register", element: <PublicRoute> <RegistrationForm /></PublicRoute> },
+      { path: "resetPassword", element: <PublicRoute> <ResetPassword /></PublicRoute> },
       {
         path: "tasks",
         element: (
