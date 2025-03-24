@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v1.1';
 const CACHE_NAME = `learnleaf-organizer-cache-${CACHE_VERSION}`;
 
 self.addEventListener('install', (event) => {
