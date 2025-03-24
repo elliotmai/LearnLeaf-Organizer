@@ -54,9 +54,11 @@ export function PullToRefresh({ children }) {
       onTouchEnd={handleTouchEnd}
       style={{
         position: 'relative',
-        height: '100vh',
+        height: '100%',
+        maxHeight: '-webkit-fill-available', 
         width: '100vw', // Explicitly set width to 100vw to prevent adjustments
-        overflow: 'hidden',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
         boxSizing: 'border-box', // Ensure padding and borders don’t affect width
       }}
@@ -65,7 +67,7 @@ export function PullToRefresh({ children }) {
       {pulling && (
         <div
           style={{
-            position: 'fixed', // Use fixed positioning for consistency
+            position: 'absolute', // Use fixed positioning for consistency
             top: '20px',
             left: '50%',
             transform: 'translateX(-50%)',

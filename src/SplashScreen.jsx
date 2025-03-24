@@ -4,7 +4,8 @@ import Logo from './LearnLeaf_Logo_Circle.png'; // adjust path as needed
 
 const SplashScreen = ({message}) => (
   <div style={{
-    height: '100vh',
+    height: '100%',
+    maxHeight: '-webkit-fill-available', 
     width: '100vw',
     backgroundColor: '#c1d4d2',
     display: 'flex',

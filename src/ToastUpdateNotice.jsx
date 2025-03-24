@@ -4,7 +4,7 @@ import React from 'react';
 const ToastUpdateNotice = ({ onReload }) => {
   return (
     <div style={{
-      position: 'fixed',
+      position: 'absolute',
       bottom: 20,
       left: '50%',
       transform: 'translateX(-50%)',

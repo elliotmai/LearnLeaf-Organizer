@@ -135,14 +135,16 @@ const SubjectTasks = () => {
     };
 
     return (
-        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '100%',maxHeight: '-webkit-fill-available',  overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
 
             <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
                     {pageSubject ? `Outstanding Tasks for ${pageSubject.subjectName}` : 'Loading...'}
                 </Typography>
-                <div style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                <div style={{ flexGrow: 1, overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch', width: '100%' }}>
                     {pageSubject ? (
                         <TasksTable
                             tasks={tasks}
