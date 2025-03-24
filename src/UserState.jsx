@@ -58,6 +58,7 @@ export const UserProvider = ({ children }) => {
                 dateFormat: data.dateFormat || 'MM/DD/YYYY',
                 notifications: data.notifications ?? false,
                 notificationsFrequency: data.notificationsFrequency || [true, false, false, false],
+                icsURLs: data.icsURLs || {}
               };
               console.log('User Data Constructed:', userData);
               updateUser(userData);
