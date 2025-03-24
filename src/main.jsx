@@ -33,50 +33,11 @@ const PublicRoute = ({ children }) => {
 // Global flag to control splash
 let forceSplash = false;
 
-// Handle service worker update notifications
-if (
-  'serviceWorker' in navigator &&
-  window.matchMedia('(display-mode: standalone)').matches
-) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-      const isFirstVisit = !localStorage.getItem('hasVisited');
-      localStorage.setItem('hasVisited', 'true'); // ✅ set this immediately
-
-      // ✅ Show toast ONLY if:
-      // 1. It's not the first visit
-      // 2. A new service worker is waiting
-      if (!isFirstVisit && registration.waiting) {
-        console.log('[SW] Update waiting (on load)');
-        window.onServiceWorkerUpdate?.();
-        return; // no need to continue
-      }
-
-      // Listen for updates found after install
-      registration.onupdatefound = () => {
-        const newWorker = registration.installing;
-        newWorker.onstatechange = () => {
-          const isRealUpdate =
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller &&
-            registration.waiting &&
-            localStorage.getItem('hasVisited') === 'true';
-
-          if (isRealUpdate) {
-            console.log('[SW] Update installed and waiting');
-            window.onServiceWorkerUpdate?.();
-          }
-        };
-      };
-    });
-  });
-}
-
 // Splash-screen-aware render function
 const renderApp = () => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      {forceSplash ? <SplashScreen /> : <RouterProvider router={router} />}
+      {forceSplash ? <SplashScreen message={'Loading LearnLeaf...'}/> : <RouterProvider router={router} />}
     </React.StrictMode>
   );
 };
