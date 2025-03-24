@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { version } from './package.json';
+
 
 export default defineConfig({
   plugins: [
@@ -42,17 +44,7 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    proxy: {
-      '/proxy': {
-        target: 'https://uta.instructure.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/, '$2'),
-        router: (req) => {
-          const matches = req.url.match(/^\/proxy\/(https?:\/\/[^\/]+)(\/.*)/);
-          return matches ? matches[1] : 'https://uta.instructure.com';
-        },
-      },
-    },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
   },
 })

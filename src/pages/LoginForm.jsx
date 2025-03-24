@@ -47,7 +47,6 @@ function LoginForm() {
             <div className="top-bar">
                 <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
             </div>
-            <p> TESTING 123</p>
             <h1 style={{ color: '#907474' }}>Streamlining success, one task at a time!</h1>
             <form className="form-group" onSubmit={handleSubmit}>
                 <div className="form-inputs">

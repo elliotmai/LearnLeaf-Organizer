@@ -166,6 +166,10 @@ function checkForServiceWorkerUpdate() {
     navigator.serviceWorker.getRegistration().then((registration) => {
       if (registration && registration.waiting) {
         console.log('[SW] Update found while inactive. Reloading...');
+
+        localStorage.setItem('appJustUpdated', 'true');
+        localStorage.setItem('appVersion', __APP_VERSION__);
+
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
 
         navigator.serviceWorker.addEventListener('controllerchange', () => {

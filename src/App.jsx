@@ -7,18 +7,24 @@ import './App.css';
 
 function App() {
   const [showUpdateToast, setShowUpdateToast] = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
 
   useEffect(() => {
-    window.onServiceWorkerUpdate = () => {
+    const updated = localStorage.getItem('appJustUpdated') === 'true';
+    const version = localStorage.getItem('appVersion');
+
+    if (updated) {
+      setAppVersion(version);
       setShowUpdateToast(true);
-    };
-  
-    if (window.__hasPendingUpdate) {
-      setShowUpdateToast(true);
-      window.__hasPendingUpdate = false;
+
+      localStorage.removeItem('appJustUpdated');
+      localStorage.removeItem('appVersion');
+
+      setTimeout(() => {
+        setShowUpdateToast(false);
+      }, 5000);
     }
   }, []);
-  
 
   return (
     <UserProvider>
@@ -28,15 +34,9 @@ function App() {
             <Outlet />
           </main>
           {showUpdateToast && (
-            <ToastUpdateNotice
-              onReload={() => {
-                setShowUpdateToast(false);
-                window.__hasPendingUpdate = false;
-                window.location.reload();
-              }}
-            />
-
+            <ToastUpdateNotice version={appVersion} onClose={() => setShowUpdateToast(false)} />
           )}
+
         </div>
       </PullToRefresh>
     </UserProvider>
