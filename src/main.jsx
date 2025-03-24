@@ -44,15 +44,11 @@ const renderApp = () => {
 
 // Auth wrapper
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useUser();
+  const { user, loading, dataLoading } = useUser();
 
-  useEffect(() => {
-    console.log('[ProtectedRoute] user:', user);
-  }, [user]);
-
-  if (loading) {
+  if (loading || dataLoading) {
     return (
-      null
+      <SplashScreen message="Loading LearnLeaf..." />
     );
   }
 

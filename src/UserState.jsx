@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, firestore } from './firebase'; // Use centralized Firebase instance
+import { auth, firestore } from './firebase';
+import { fetchAllData } from './LearnLeaf_Functions.jsx';
 
 const UserContext = createContext();
 
@@ -12,6 +13,7 @@ export const UserProvider = ({ children }) => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const updateUser = (newUserData) => {
     if (!newUserData) {
@@ -60,8 +62,12 @@ export const UserProvider = ({ children }) => {
                 notificationsFrequency: data.notificationsFrequency || [true, false, false, false],
                 icsURLs: data.icsURLs || {}
               };
-              console.log('User Data Constructed:', userData);
-              updateUser(userData);
+
+              // Load extra data (tasks, subjects, etc.)
+              const extraData = await fetchAllData();
+              console.log('Fetched extra data:', extraData);
+
+              updateUser({ ...userData, ...extraData });
             } else {
               console.error('No user document found!');
               updateUser(null);
@@ -71,6 +77,7 @@ export const UserProvider = ({ children }) => {
           }
 
           setLoading(false);
+          setDataLoading(false);
         });
 
         // Save unsubscribe to cleanup later
@@ -78,6 +85,7 @@ export const UserProvider = ({ children }) => {
       } catch (err) {
         console.error('Auth init error:', err);
         setLoading(false);
+        setDataLoading(false);
       }
     };
 
