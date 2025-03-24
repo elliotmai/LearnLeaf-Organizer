@@ -58,3 +58,22 @@
   background-color: white;
   padding: 0 4px; /* Optional: Adds padding to prevent text overlap */
 }
+
+@keyframes dot {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+  100% { content: "."; }
+}
+
+.dot-flash::after {
+  content: ".";
+  animation: dots 1s steps(3, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+  100% { content: "."; }
+}

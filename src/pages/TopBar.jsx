@@ -53,7 +53,7 @@ const TopBar = () => {
 
     return (
         <Box sx={{ width: '100%', backgroundColor: '#B6CDC8', paddingY: '8px', textAlign: 'center' }}>
-            {showSplashScreen && <SplashScreen />}
+            {/* {showSplashScreen && <SplashScreen />} */}
 
             <Grid container alignItems="center" justifyContent="center" sx={{ position: 'relative' }}>
                 <Box

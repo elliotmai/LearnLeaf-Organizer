@@ -44,7 +44,7 @@ function LoginForm() {
     return (
         <div className="login-form-container">
             <div className="top-bar">
-                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle}/>
+                <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle} />
             </div>
             <h1 style={{ color: '#907474' }}>Streamlining success, one task at a time!</h1>
             <form className="form-group" onSubmit={handleSubmit}>
@@ -69,7 +69,11 @@ function LoginForm() {
                     />
                 </div>
                 <button type="submit">Login</button> {/* Changed button text to Login */}
-                {isLoading && <p>Logging in...</p>}
+                {isLoading && (
+                    <p style={{ fontSize: '1.1rem', color: '#35584A' }}>
+                        Logging in<span className="dot-flash">.</span>
+                    </p>
+                )}
                 <i><p><Link to="/resetPassword">Reset Password</Link></p></i>
                 <p>Don't have an account? <Link to="/register">Register</Link></p>
             </form>

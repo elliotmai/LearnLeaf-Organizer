@@ -37,7 +37,7 @@ let forceSplash = false;
 const renderApp = () => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      {forceSplash ? <SplashScreen message={'Loading LearnLeaf AHHHHHHHHHH...'}/> : <RouterProvider router={router} />}
+      <RouterProvider router={router} />
     </React.StrictMode>
   );
 };
@@ -52,9 +52,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <SplashScreen
-        message={'Loading LearnLeaf GRRRRRRRRRRRRRRRRRRR...'}
-      />
+      null
     );
   }
 
