@@ -10,15 +10,15 @@ function App() {
 
   useEffect(() => {
     window.onServiceWorkerUpdate = () => {
+      console.log('[App] SW update handler fired');
       setShowUpdateToast(true);
     };
-  
+
     if (window.__hasPendingUpdate) {
       setShowUpdateToast(true);
-      delete window.__hasPendingUpdate;
+      window.__hasPendingUpdate = false; // ✅ kill it
     }
   }, []);
-  
 
   return (
     <UserProvider>
@@ -28,10 +28,14 @@ function App() {
             <Outlet />
           </main>
           {showUpdateToast && (
-            <ToastUpdateNotice onReload={() => {
-              setShowUpdateToast(false); // ✅ clear before reload
-              window.location.reload();
-            }} />            
+            <ToastUpdateNotice
+              onReload={() => {
+                localStorage.removeItem('hasPendingUpdate'); // optional fallback
+                window.__hasPendingUpdate = false; // ✅ clear the flag
+                setShowUpdateToast(false); // ✅ hide toast before reload
+                window.location.reload();
+              }}
+            />
           )}
         </div>
       </PullToRefresh>

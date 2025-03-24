@@ -45,29 +45,31 @@ const PublicRoute = ({ children }) => {
 let forceSplash = false;
 
 // Handle service worker update notifications
-navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-  registration.onupdatefound = () => {
-    console.log('[SW] Update found');
-    const newWorker = registration.installing;
-
-    newWorker.onstatechange = () => {
-      if (
-        newWorker.state === 'installed' &&
-        navigator.serviceWorker.controller &&
-        registration.waiting
-      ) {
-        // ✅ Only notify if this is truly an *update*, not first install
-        console.log('[SW] Update found, triggering toast');
-        if (window.onServiceWorkerUpdate) {
-          window.onServiceWorkerUpdate();
-        } else {
-          window.__hasPendingUpdate = true;
-        }
+if ('serviceWorker' in navigator && window.matchMedia('(display-mode: standalone)').matches) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+      // ✅ Only show toast if there’s a real waiting service worker
+      if (registration.waiting) {
+        console.log('[SW] Real update waiting (registration.waiting)');
+        window.onServiceWorkerUpdate?.();
       }
-    };
-  };
-});
 
+      registration.onupdatefound = () => {
+        const newWorker = registration.installing;
+        newWorker.onstatechange = () => {
+          if (
+            newWorker.state === 'installed' &&
+            navigator.serviceWorker.controller &&
+            registration.waiting
+          ) {
+            console.log('[SW] Update installed and waiting');
+            window.onServiceWorkerUpdate?.();
+          }
+        };
+      };
+    });
+  });
+}
 
 // Splash-screen-aware render function
 const renderApp = () => {
@@ -124,7 +126,7 @@ const router = createBrowserRouter([
       {
         path: "tasks",
         element: (
-          <ProtectedRoute>,
+          <ProtectedRoute>
             <TaskList />
           </ProtectedRoute>
         ),
