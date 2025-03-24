@@ -565,7 +565,8 @@ export function registerUser(email, password, name) {
                 timeFormat: '12h',
                 dateFormat: 'MM/DD/YYYY',
                 notifications: false,
-                notificationsFrequency: [true, false, false, false], // Default notification settings
+                notificationsFrequency: [true, false, false, false], // Default notification settings,
+                icsURLs: {}
             });
         })
         .catch((error) => {
