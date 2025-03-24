@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import '/src/Components/Login_Register_Reset.css';
 import '/src/Components/PageFormat.css';
+import SplashScreen from '../SplashScreen';
 
 
 function LoginForm() {
@@ -14,12 +15,14 @@ function LoginForm() {
     const [password, setPassword] = useState(''); // State for the password input
     const { updateUser } = useUser(); // Use the updateUser function from the context
     const navigate = useNavigate();
+    const [showSplashScreen, setShowSplashScreen] = useState(false);
 
     const handleSubmit = async (event) => {
         event.preventDefault(); // Prevent the default form submission
 
         try {
             // Use the email and password from the component's state
+            setShowSplashScreen(true);
             const userInfo = await loginUser(email, password);
             updateUser({ id: userInfo.id, name: userInfo.name, email: userInfo.email, password: userInfo.password, notifications: userInfo.notifcations, notificationFrequency: userInfo.notificationFrequency }); // Update global user state
             navigate('/tasks'); // Navigate to tasks page upon successful login
@@ -42,6 +45,7 @@ function LoginForm() {
 
     return (
         <div className="login-form-container">
+            {showSplashScreen && <SplashScreen message={'Logging in...'}/>}
             <div className="top-bar">
                 <img src={logo} alt="LearnLeaf_name_logo" style={logoStyle}/>
             </div>
