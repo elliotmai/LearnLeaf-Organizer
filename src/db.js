@@ -6,6 +6,8 @@ const DB_VERSION = 1;
 export const TASKS_STORE = 'tasks';
 export const SUBJECTS_STORE = 'subjects';
 export const PROJECTS_STORE = 'projects';
+export const DELETED_STORE = 'deletedItems';
+export const USER_STORE = 'userUpdates';
 
 export async function initDB() {
     return openDB(DB_NAME, DB_VERSION, {
@@ -18,6 +20,12 @@ export async function initDB() {
             }
             if (!db.objectStoreNames.contains(PROJECTS_STORE)) {
                 db.createObjectStore(PROJECTS_STORE, { keyPath: 'projectId' });
+            }
+            if (!db.objectStoreNames.contains(DELETED_STORE)) {
+                db.createObjectStore(DELETED_STORE, { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains(USER_STORE)) {
+                db.createObjectStore(USER_STORE, { keyPath: 'id' });
             }
         }
     });
@@ -122,3 +130,44 @@ export async function clearStore(storeName) {
     await store.clear();
     await tx.done;
 }
+
+export async function queueDelete(storeName, id) {
+    const db = await initDB();
+    const tx = db.transaction(DELETED_STORE, 'readwrite');
+    const store = tx.objectStore(DELETED_STORE);
+    await store.put({ id: `${storeName}:${id}`, store: storeName, itemId: id, deletedAt: Date.now() });
+    await tx.done;
+}
+
+export async function getDeleteQueue() {
+    const db = await initDB();
+    return db.getAll(DELETED_STORE);
+}
+
+export async function removeFromDeleteQueue(id) {
+    const db = await initDB();
+    const tx = db.transaction(DELETED_STORE, 'readwrite');
+    await tx.objectStore(DELETED_STORE).delete(id);
+    await tx.done;
+}
+
+export async function queueUserUpdate(userId, updates) {
+    const db = await initDB();
+    const tx = db.transaction(USER_STORE, 'readwrite');
+    const store = tx.objectStore(USER_STORE);
+    await store.put({ id: userId, updates, queuedAt: Date.now() });
+    await tx.done;
+}
+
+export async function getQueuedUserUpdates() {
+    const db = await initDB();
+    return db.getAll(USER_STORE);
+}
+
+export async function removeUserUpdate(userId) {
+    const db = await initDB();
+    const tx = db.transaction(USER_STORE, 'readwrite');
+    await tx.objectStore(USER_STORE).delete(userId);
+    await tx.done;
+}
+
