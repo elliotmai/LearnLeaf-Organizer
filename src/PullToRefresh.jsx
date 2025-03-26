@@ -35,15 +35,15 @@ export function PullToRefresh({ children }) {
     const screenHeight = window.innerHeight;
     const maxPull = screenHeight * 0.4;
 
-    if (newDiff >= maxPull) {
-      // Treat as end of gesture
-      setDiff(maxPull);
-      setPulling(true);
-      handleTouchEnd(); // Immediately handle as a full pull
-    } else {
+    // if (newDiff >= maxPull) {
+    //   // Treat as end of gesture
+    //   setDiff(maxPull);
+    //   setPulling(true);
+    //   handleTouchEnd(); // Immediately handle as a full pull
+    // } else {
       setDiff(newDiff);
       setPulling(newDiff > 30); // Show spinner after small threshold
-    }
+    // }
   };
 
   const handleTouchEnd = () => {
