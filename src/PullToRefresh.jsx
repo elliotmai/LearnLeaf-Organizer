@@ -26,25 +26,30 @@ export function PullToRefresh({ children }) {
 
   const handleTouchMove = (e) => {
     if (!isStandalone || startY === null) return;
-
+  
     const currentY = e.touches[0].clientY;
     const newDiff = currentY - startY;
-
-    if (newDiff <= 0) return; // Ignore upward swipes
-
+  
+    if (newDiff <= 0) return;
+  
     const screenHeight = window.innerHeight;
     const maxPull = screenHeight * 0.4;
-
-    // if (newDiff >= maxPull) {
-    //   // Treat as end of gesture
-    //   setDiff(maxPull);
-    //   setPulling(true);
-    //   handleTouchEnd(); // Immediately handle as a full pull
-    // } else {
-      setDiff(newDiff);
-      setPulling(newDiff > 30); // Show spinner after small threshold
-    // }
-  };
+  
+    if (newDiff >= maxPull) {
+      // Show spinner and reload immediately
+      setDiff(maxPull);
+      setPulling(true);
+  
+      // Give time for the spinner to render (optional: short delay)
+      setTimeout(() => {
+        window.location.reload();
+      }, 100); // slight delay so UI updates before reload
+      return;
+    }
+  
+    setDiff(newDiff);
+    setPulling(newDiff > 30);
+  };  
 
   const handleTouchEnd = () => {
     const screenHeight = window.innerHeight;
