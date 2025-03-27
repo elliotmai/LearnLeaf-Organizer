@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { archiveSubject, deleteSubject, blockSubject } from '/src/LearnLeaf_Functions.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -7,9 +8,11 @@ import { EditSubjectForm } from './EditSubjectForm.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import { Box, Typography, CardActions,FormControlLabel, Card,Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip, DialogActions } from '@mui/material';
+import { Box, Typography, CardActions, FormControlLabel, Card, Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip, DialogActions } from '@mui/material';
 
-const SubjectWidget = ({ subject, refreshSubjects ,selectedSubjects,toggleSubjectSelection,subjectIndex ,subjects}) => {
+const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubjectSelection, subjectIndex, subjects }) => {
+    const navigate = useNavigate();
+
     const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
@@ -72,25 +75,24 @@ const SubjectWidget = ({ subject, refreshSubjects ,selectedSubjects,toggleSubjec
                     border: `3px solid ${subject.subjectColor || '#355147'}`,
                 }}
             >
-                 
+
                 <Box display={"flex"}>
-                 <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={selectedSubjects.includes(subjects[subjectIndex].subjectId)}
-                                        onChange={() => toggleSubjectSelection(subjects[subjectIndex].subjectId)}
-                                    />
-                                }
-                        
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={selectedSubjects.includes(subjects[subjectIndex].subjectId)}
+                                onChange={() => toggleSubjectSelection(subjects[subjectIndex].subjectId)}
                             />
-                             </Box> 
+                        }
+
+                    />
+                </Box>
                 <CardContent>
-                    
+
                     <Tooltip title="View Associated Tasks">
-                        <Link
-                            href={`/subjects/${subject.subjectId}`}
-                            underline="hover"
+                        <Typography
                             variant="h6"
+                            onClick={() => navigate(`/subjects/${subject.subjectId}`)}
                             sx={{
                                 fontWeight: 'bold',
                                 color: '#355147',
@@ -100,7 +102,7 @@ const SubjectWidget = ({ subject, refreshSubjects ,selectedSubjects,toggleSubjec
                             }}
                         >
                             {subject.subjectName}
-                        </Link>
+                        </Typography>
                     </Tooltip>
 
                     <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mt: 1, fontWeight: 'bold', color: '#9F6C5B' }}>
