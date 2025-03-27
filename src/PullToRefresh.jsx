@@ -8,7 +8,7 @@ export function PullToRefresh({ children }) {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const standalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) && (navigator.onLine);
     setIsStandalone(standalone);
   }, []);
 
