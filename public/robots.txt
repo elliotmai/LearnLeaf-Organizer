@@ -1,0 +1,12 @@
+# Allow all crawlers access to everything (default)
+User-agent: *
+
+# Don't index service worker, manifest, or internal files
+Disallow: /service-worker.js
+Disallow: /manifest.json
+Disallow: /offline.html
+
+# Optional: disallow sensitive routes
+Disallow: /profile
+Disallow: /resetPassword
+Disallow: /register

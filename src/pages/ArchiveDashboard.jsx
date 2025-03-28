@@ -192,7 +192,14 @@ const ArchivePage = () => {
     };
 
     return (
-        <Box style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box style={{ 
+            height: '100%', 
+            maxHeight: '-webkit-fill-available', 
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center' }}>
             <TopBar />
             <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
                 {user?.name}'s Archives

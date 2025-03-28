@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resetPassword } from '/src/LearnLeaf_Functions.jsx';
 import { useMediaQuery, useTheme } from '@mui/material';
+import FocusInput from '../FocusInput';
 
 function ResetPassword() {
     // State for each input field
@@ -47,7 +48,7 @@ function ResetPassword() {
             <h2 style={{ color: '#907474' }}>Reset Password</h2>
             <form className="form-group" onSubmit={handleSubmit}>
                 <div className="form-inputs">
-                    <input
+                    <FocusInput
                         type="email"
                         id="email"
                         name="email"

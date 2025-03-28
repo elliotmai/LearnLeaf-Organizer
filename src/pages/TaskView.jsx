@@ -154,7 +154,8 @@ const TaskList = () => {
 
 
     return (
-        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
 
             <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
@@ -162,7 +163,8 @@ const TaskList = () => {
                     {user?.name}'s Outstanding Tasks
                 </Typography>
 
-                <div style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+                <div style={{ flexGrow: 1, overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch', width: '100%' }}>
                     {isLoading ? (
                         <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                             <CircularProgress />

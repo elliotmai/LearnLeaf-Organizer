@@ -162,7 +162,8 @@ const CalendarView = () => {
     };
 
     return (
-        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '100%',maxHeight: '-webkit-fill-available',  overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
             <Grid
                 container

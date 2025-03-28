@@ -6,11 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '/src/LearnLeaf_Functions.jsx';
 import TaskImportPopup from '/src/Components/TaskView/TaskImportPopup';
 import LMSConnectPopup from '/src/Components/LMSConnectPopup';
+import SplashScreen from '../SplashScreen';
 
 const TopBar = () => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
+    const [showSplashScreen, setShowSplashScreen] = useState(false);
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -33,6 +35,7 @@ const TopBar = () => {
 
     const handleLogout = async () => {
         try {
+            setShowSplashScreen(true);
             await logoutUser();
             navigate('/');
         } catch (error) {
@@ -50,6 +53,8 @@ const TopBar = () => {
 
     return (
         <Box sx={{ width: '100%', backgroundColor: '#B6CDC8', paddingY: '8px', textAlign: 'center' }}>
+            {/* {showSplashScreen && <SplashScreen />} */}
+
             <Grid container alignItems="center" justifyContent="center" sx={{ position: 'relative' }}>
                 <Box
                     sx={{

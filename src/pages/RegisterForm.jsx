@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerUser } from '/src/LearnLeaf_Functions.jsx';
 import { useMediaQuery, useTheme } from '@mui/material';
+import FocusInput from '../FocusInput';
 
 function RegistrationForm() {
     // State for each input field
@@ -49,7 +50,7 @@ function RegistrationForm() {
             <h2 style={{ color: '#907474' }}>Register Here!</h2>
             <form className="form-group" onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <input
+                    <FocusInput
                         type="text"
                         id="name"
                         name="name"
@@ -60,7 +61,7 @@ function RegistrationForm() {
                     />
                 </div>
                 <div className="form-group">
-                    <input
+                    <FocusInput
                         type="email"
                         id="email"
                         name="email"
@@ -71,7 +72,7 @@ function RegistrationForm() {
                     />
                 </div>
                 <div className="form-group">
-                    <input
+                    <FocusInput
                         type="password"
                         id="password"
                         name="password"

@@ -241,7 +241,7 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
 
                     {/* Description */}
                     {task.taskDescription &&
-                        <Tooltip title="Click to view full description">
+                        // <Tooltip title="Click to view full description">
                             <Typography
                                 variant="body2"
                                 color="textSecondary"
@@ -257,13 +257,13 @@ const TaskWidget = ({ task, onDelete, subjects = [], projects = [], onUpdateTask
                                     WebkitLineClamp: 2,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
-                                    cursor: 'pointer',
+                                    // cursor: 'pointer',
                                     color: '#5B8E9F',
                                 }}
                             >
                                 {formValues.taskDescription}
                             </Typography>
-                        </Tooltip>
+                        // </Tooltip>
                     }
 
                     {/* Full Description Dialog

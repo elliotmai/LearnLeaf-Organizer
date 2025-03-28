@@ -14,8 +14,20 @@ import {
     clearFirebaseStores,
     TASKS_STORE,
     SUBJECTS_STORE,
-    PROJECTS_STORE
+    PROJECTS_STORE,
+    queueDelete,
+    getDeleteQueue,
+    removeFromDeleteQueue,
+    queueUserUpdate,
+    getQueuedUserUpdates,
+    removeUserUpdate,
 } from './db.js';
+
+import {
+    auth,
+    firestore
+} from './firebase.js';
+
 
 import {
     initializeApp
@@ -60,27 +72,6 @@ import {
 import {
     useUser
 } from '/src/UserState.jsx';
-
-//------------------------------------
-// Firebase Configuration and Initialization
-//------------------------------------
-
-// Firebase configuration for the app
-const firebaseConfig = {
-    apiKey: "AIzaSyA8rr1TEUUZ9b_PqR475mszkoC0aMoHeTE",
-    authDomain: "learnleaf-organizer.firebaseapp.com",
-    projectId: "learnleaf-organizer",
-    storageBucket: "learnleaf-organizer.appspot.com",
-    messagingSenderId: "998389863314",
-    appId: "1:998389863314:web:3da40aae1598c7904c674b",
-    measurementId: "G-8XX0HRFBCX"
-};
-
-// Initialize Firebase services
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);
-const firestore = getFirestore()
 
 // Global variables to store user data and Firestore collections
 let userId = null;
@@ -428,18 +419,40 @@ export async function fetchAllData() {
 // Offline Access
 //------------------------------------
 
-// async function syncIndexedDBToFirestore(collectionRef, storeName) {
-//     const localData = await getAllFromStore(storeName);
+export async function syncIndexedDBToFirestore(collectionRef, storeName) {
+    const localItems = await getAllFromStore(storeName);
 
-//     localData.forEach(async (item) => {
-//         try {
-//             console.log(`Syncing IndexedDB -> Firestore (${storeName})`);
-//             await setDoc(doc(collectionRef, item.id), item, { merge: true });
-//         } catch (error) {
-//             console.error(`Error syncing IndexedDB data (${storeName}) to Firestore:`, error);
-//         }
-//     });
-// }
+    for (const item of localItems) {
+        const docId = item.taskId || item.subjectId || item.projectId;
+        const docRef = doc(collectionRef, docId);
+
+        try {
+            const remoteSnap = await getDoc(docRef);
+
+            // Compare Firestore updateTime to local lastUpdated
+            const firestoreUpdated = remoteSnap.exists() && remoteSnap.updateTime
+                ? remoteSnap.updateTime.toMillis()
+                : 0;
+
+            const localUpdated = item.lastUpdated || 0;
+
+            if (!remoteSnap.exists() || localUpdated > firestoreUpdated) {
+                console.log(`[Sync] Pushing updated ${storeName} → Firestore:`, docId);
+
+                // Strip local-only fields before writing to Firestore
+                const data = { ...item };
+                delete data.taskId;
+                delete data.subjectId;
+                delete data.projectId;
+                delete data.lastUpdated;
+
+                await setDoc(docRef, data, { merge: true });
+            }
+        } catch (error) {
+            console.error(`[Sync] Failed to sync ${storeName} item (${docId}):`, error);
+        }
+    }
+}
 
 // // When the user comes back online, sync local IndexedDB to Firestore
 // window.addEventListener("online", () => {
@@ -449,6 +462,40 @@ export async function fetchAllData() {
 //         syncIndexedDBToFirestore(projectCollection, "projects");
 //     }
 // });
+
+export async function processDeleteQueue(userId) {
+    const queue = await getDeleteQueue();
+
+    for (const item of queue) {
+        const { store, itemId, id } = item;
+        try {
+            const collectionRef = collection(firestore, 'users', userId, store);
+            const docRef = doc(collectionRef, itemId);
+            await deleteDoc(docRef);
+            console.log(`[Sync] Deleted from Firestore: ${store}/${itemId}`);
+            await removeFromDeleteQueue(id);
+        } catch (err) {
+            console.error(`[Sync] Failed to delete ${store}/${itemId}:`, err);
+        }
+    }
+}
+
+export async function processUserUpdateQueue() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user?.id) return;
+
+    const updates = await getQueuedUserUpdates();
+    for (const entry of updates) {
+        try {
+            const userRef = doc(firestore, "users", entry.id);
+            await updateDoc(userRef, entry.updates);
+            await removeUserUpdate(entry.id);
+            console.log(`[Sync] User update synced for ${entry.id}`);
+        } catch (err) {
+            console.error(`[Sync] Failed to sync user update: ${entry.id}`, err);
+        }
+    }
+}
 
 async function fetchDataWithIndexedDBFallback(collectionRef, storeName, noneDocRef = null) {
     let localData = await getAllFromStore(storeName);
@@ -580,7 +627,8 @@ export function registerUser(email, password, name) {
                 timeFormat: '12h',
                 dateFormat: 'MM/DD/YYYY',
                 notifications: false,
-                notificationsFrequency: [true, false, false, false], // Default notification settings
+                notificationsFrequency: [true, false, false, false], // Default notification settings,
+                icsURLs: {}
             });
         })
         .catch((error) => {
@@ -709,24 +757,30 @@ export async function updateUserDetails(userId, userDetails) {
     const userDocRef = doc(firestore, "users", userId);
 
     try {
-        // Fetch existing user data to merge with provided details
-        const existingUserDoc = await getDoc(userDocRef);
-        const existingData = existingUserDoc.exists() ? existingUserDoc.data() : {};
+        // Update localStorage immediately
+        const current = JSON.parse(localStorage.getItem('user')) || {};
+        const merged = { ...current, ...userDetails };
+        localStorage.setItem('user', JSON.stringify(merged));
 
-        const updatedData = {
-            ...existingData, // Keep existing fields
-            ...userDetails,  // Overwrite only the provided fields
-        };
+        // Try Firestore update, or queue it
+        if (navigator.onLine) {
+            await tryFirestoreWrite(
+                async () => await updateDoc(userDocRef, userDetails),
+                'updateUserDetails'
+            );
+        } else {
+            console.warn("Offline: queuing user update");
+            await queueUserUpdate(userId, userDetails);
+        }
 
-        await updateDoc(userDocRef, updatedData);
-        localStorage.setItem('user', JSON.stringify({ userId, ...updatedData })); // Save merged data
-        fetchAllData();
+        // Optionally fetch fresh data
+        await fetchAllData();
+
     } catch (error) {
         console.error("Error updating user details:", error);
         throw error;
     }
 }
-
 
 /**
  * Deletes a user from Firestore and Firebase Authentication.
@@ -737,6 +791,11 @@ export async function updateUserDetails(userId, userDetails) {
  */
 export async function deleteUser(userId) {
     const batch = writeBatch(firestore);
+
+    if (!navigator.onLine) {
+        alert("You must be online to delete your account.");
+        throw new Error("Offline user deletion not supported.");
+    }
 
     try {
         // Add user document deletion to the batch
@@ -768,6 +827,19 @@ export async function deleteUser(userId) {
 //------------------------------------
 // CRUD Operations
 //------------------------------------
+
+async function tryFirestoreWrite(fn, label = '') {
+    if (!navigator.onLine) {
+        console.warn(`Offline: skipping Firestore operation (${label})`);
+        return;
+    }
+
+    try {
+        await fn();
+    } catch (err) {
+        console.error(`Firestore operation failed (${label}):`, err);
+    }
+}
 
 /** Task functions: 
  * addTask, 
@@ -851,8 +923,12 @@ export async function addTask(taskDetails) {
         taskProject: taskData.taskProject.id,
     };
 
+    const now = Date.now();
+    localTaskData.lastUpdated = now;
+
     try {
-        await setDoc(taskRef, taskData, { merge: true });
+        await tryFirestoreWrite(() => setDoc(taskRef, taskData, { merge: true }), 'addTask');
+        // await setDoc(taskRef, taskData, { merge: true });
         await saveToStore('tasks', [localTaskData]); // Update IndexedDB
     } catch (error) {
         console.error("Error adding task:", error);
@@ -924,7 +1000,8 @@ export async function editTask(taskDetails) {
     const taskRef = doc(taskCollection, taskId);
 
     try {
-        await updateDoc(taskRef, taskData);
+        await tryFirestoreWrite(() => updateDoc(taskRef, taskData), 'editTask');
+        // await updateDoc(taskRef, taskData);
 
         // Prepare local IndexedDB data
         const localTaskData = {
@@ -936,6 +1013,9 @@ export async function editTask(taskDetails) {
             taskSubject: taskData.taskSubject.id,
             taskProject: taskData.taskProject.id,
         };
+
+        const now = Date.now();
+        localTaskData.lastUpdated = now;
 
         await saveToStore('tasks', [localTaskData]); // Update IndexedDB
         return localTaskData;
@@ -951,12 +1031,17 @@ export async function editTask(taskDetails) {
  */
 export async function deleteTask(taskId) {
     const taskRef = doc(taskCollection, taskId);
-    try {
-        await deleteDoc(taskRef); // Delete task from Firestore
-        await deleteFromStore('tasks', taskId); // Remove task from IndexedDB
-    } catch (error) {
-        console.error("Error deleting task:", error);
+
+    await tryFirestoreWrite(
+        async () => await deleteDoc(taskRef),
+        'deleteTask'
+    );
+
+    if (!navigator.onLine) {
+        await queueDelete('tasks', taskId);
     }
+
+    await deleteFromStore('tasks', taskId);
 }
 
 export async function archiveTask(taskId) {
@@ -964,7 +1049,8 @@ export async function archiveTask(taskId) {
 
     try {
         // Update the task status in Firestore
-        await updateDoc(taskRef, { taskStatus: 'Completed' });
+        await tryFirestoreWrite(() => updateDoc(taskRef, { taskStatus: 'Completed' }), 'archiveTask');
+        // await updateDoc(taskRef, { taskStatus: 'Completed' });
 
         // Update the task status in IndexedDB
         const storedTasks = await getAllFromStore('tasks'); // Get all tasks from IndexedDB
@@ -1035,8 +1121,10 @@ export async function addSubject(subjectDetails) {
 
     try {
         // Save to Firestore and IndexedDB
-        await setDoc(subjectRef, subjectData, { merge: true });
-        await saveToStore('subjects', [{ ...subjectData, subjectId }]);
+        await tryFirestoreWrite(() => setDoc(subjectRef, subjectData, { merge: true }), 'addSubject');
+        // await setDoc(subjectRef, subjectData, { merge: true });
+        const now = Date.now();
+        await saveToStore('subjects', [{ ...subjectData, subjectId, lastUpdated: now }]);
         return { ...subjectData, subjectId };
     } catch (error) {
         console.error("Error adding subject:", error);
@@ -1061,8 +1149,10 @@ export async function editSubject(subjectDetails) {
 
     try {
         // Update Firestore and IndexedDB
-        await updateDoc(doc(subjectCollection, subjectId), subjectData);
-        await saveToStore('subjects', [{ ...subjectData, subjectId }]);
+        await tryFirestoreWrite(() => updateDoc(doc(subjectCollection, subjectId), subjectData), 'editSubject');
+        // await updateDoc(doc(subjectCollection, subjectId), subjectData);
+        const now = Date.now();
+        await saveToStore('subjects', [{ ...subjectData, subjectId, lastUpdated: now }]);
     } catch (error) {
         console.error("Error updating subject:", error);
     }
@@ -1078,7 +1168,15 @@ export async function deleteSubject(subjectId) {
 
     try {
         // Delete the subject from Firestore and IndexedDB
-        await deleteDoc(subjectRef);
+        await tryFirestoreWrite(
+            async () => await deleteDoc(subjectRef),
+            'deleteSubject'
+        );
+
+        if (!navigator.onLine) {
+            await queueDelete('subjects', subjectId);
+        }
+
         await deleteFromStore('subjects', subjectId);
 
         // Update tasks that referenced the deleted subject
@@ -1117,11 +1215,13 @@ export async function archiveSubject(subjectId) {
 
     try {
         // Update Firestore and IndexedDB
-        await updateDoc(subjectRef, { subjectStatus: 'Archived' });
+        await tryFirestoreWrite(() => updateDoc(subjectRef, { subjectStatus: 'Archived' }), 'archiveSubject');
+        // await updateDoc(subjectRef, { subjectStatus: 'Archived' });
 
         const storedSubjects = await getAllFromStore('subjects');
+        const now = Date.now();
         const updatedSubjects = storedSubjects.map(subject =>
-            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived' } : subject
+            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Archived', lastUpdated: now } : subject
         );
         await saveToStore('subjects', updatedSubjects);
     } catch (error) {
@@ -1139,11 +1239,15 @@ export async function blockSubject(subjectId) {
 
     try {
         // Update Firestore and IndexedDB
-        await updateDoc(subjectRef, { subjectStatus: 'Blocked' });
+        await tryFirestoreWrite(() => updateDoc(subjectRef, { subjectStatus: 'Blocked' }), 'blockSubject');
+        // await updateDoc(subjectRef, { subjectStatus: 'Blocked' });
 
         const storedSubjects = await getAllFromStore('subjects');
+        const now = Date.now();
         const updatedSubjects = storedSubjects.map(subject =>
-            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Blocked' } : subject
+            subject.subjectId === subjectId
+                ? { ...subject, subjectStatus: 'Blocked', lastUpdated: now }
+                : subject
         );
         await saveToStore('subjects', updatedSubjects);
     } catch (error) {
@@ -1161,13 +1265,18 @@ export async function reactivateSubject(subjectId) {
 
     try {
         // Update Firestore and IndexedDB
-        await updateDoc(subjectRef, { subjectStatus: 'Active' });
+        await tryFirestoreWrite(() => updateDoc(subjectRef, { subjectStatus: 'Active' }), 'reactivateSubject');
+        // await updateDoc(subjectRef, { subjectStatus: 'Active' });
 
         const storedSubjects = await getAllFromStore('subjects');
+        const now = Date.now();
         const updatedSubjects = storedSubjects.map(subject =>
-            subject.subjectId === subjectId ? { ...subject, subjectStatus: 'Active' } : subject
+            subject.subjectId === subjectId
+                ? { ...subject, subjectStatus: 'Active', lastUpdated: now }
+                : subject
         );
         await saveToStore('subjects', updatedSubjects);
+
     } catch (error) {
         console.error("Error reactivating subject:", error);
     }
@@ -1199,59 +1308,75 @@ export function sortSubjects(subjects) {
  * @returns {Promise<Object>} - The added project data.
  */
 export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
+    const projectId = `${Date.now()}`;
+    const projectRef = doc(projectCollection, projectId);
+
+    const projectData = {
+        projectName,
+        projectDescription,
+        projectStatus: 'Active',
+    };
+
+    // Convert subject IDs to Firestore references
+    const subjectRefs = projectSubjects.map(subjId => doc(subjectCollection, subjId));
+    projectData.projectSubjects = subjectRefs;
+
+    // Add optional due dates
+    if (projectDueDateInput) {
+        projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDueDateInput}T23:59:59.999`));
+    }
+    if (projectDueTimeInput) {
+        projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDueDateInput}T${projectDueTimeInput}`));
+    }
+
+    const now = Date.now();
+    const localProjectData = {
+        projectId,
+        projectName,
+        projectDescription,
+        projectStatus: 'Active',
+        projectSubjects: subjectRefs.map(ref => ref.id),
+        projectDueDate: projectDueDateInput || '',
+        projectDueTime: projectDueTimeInput || '',
+        lastUpdated: now
+    };
+
     try {
-        const projectId = `${Date.now()}`;
-        const projectData = {
-            projectName,
-            projectDescription,
-            projectStatus: 'Active',
-        };
-
-        // Convert subject IDs to Firestore references
-        const subjectRefs = projectSubjects.map(subjId => doc(subjectCollection, subjId));
-        projectData.projectSubjects = subjectRefs;
-
-        // Add due date and time if provided
-        if (projectDueDateInput) {
-            projectData.projectDueDate = Timestamp.fromDate(new Date(`${projectDueDateInput}T23:59:59.999`));
-        }
-        if (projectDueTimeInput) {
-            projectData.projectDueTime = Timestamp.fromDate(new Date(`${projectDueDateInput}T${projectDueTimeInput}`));
-        }
-
-        // Delete the project from Firestore and IndexedDB
-        await deleteDoc(projectRef);
-        await deleteFromStore('projects', projectId);
+        await tryFirestoreWrite(() => setDoc(projectRef, projectData, { merge: true }), 'addProject');
+        //   await setDoc(projectRef, projectData, { merge: true });
+        await saveToStore('projects', [localProjectData]);
+        return localProjectData;
     } catch (error) {
-        console.error("Error deleting project:", error);
+        console.error("Error adding project:", error);
     }
 }
 
 
 export async function deleteAllProjects() {
     try {
-        // Fetch all projects from IndexedDB
         const allProjects = await getAllFromStore('projects');
 
-        // Iterate over each project
         for (const project of allProjects) {
             const projectId = project.projectId;
+            const projectRef = doc(projectCollection, projectId);
 
-            // Fetch all tasks associated with this project
-            const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
+            await tryFirestoreWrite(
+                async () => await deleteDoc(projectRef),
+                `deleteAllProjects:${projectId}`
+            );
 
-            // Update each task to remove the project reference
-            for (const task of allTasks) {
-                task.taskProject = 'None'; // Set taskProject to 'None'
-                await editTask(task); // Update the task
+            if (!navigator.onLine) {
+                await queueDelete('projects', projectId);
             }
 
-            // Delete the project from Firestore
-            const projectRef = doc(projectCollection, projectId);
-            await deleteDoc(projectRef);
-
-            // Delete the project from IndexedDB
             await deleteFromStore('projects', projectId);
+
+            // Update tasks associated with this project
+            const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
+            for (const task of allTasks) {
+                task.taskProject = 'None';
+                await editTask(task);
+            }
         }
 
         console.log("All projects deleted successfully.");
@@ -1262,19 +1387,26 @@ export async function deleteAllProjects() {
 
 export async function archiveProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
-    await updateDoc(projectRef, { projectStatus: 'Archived' });
 
-    const storedProjects = await getAllFromStore('projects');
-    const updatedProjects = storedProjects.map(project => project.projectId === projectId ? { ...project, projectStatus: 'Archived' } : project);
-    await saveToStore('projects', updatedProjects);
+    const updateData = { projectStatus: 'Archived' };
 
     try {
-        // Save project data to Firestore and IndexedDB
-        await setDoc(doc(projectCollection, projectId), projectData);
-        await saveToStore('projects', [localProjectData]);
-        return localProjectData;
+        // Update Firestore
+        await tryFirestoreWrite(() => updateDoc(projectRef, updateData), 'archiveProject');
+        // await updateDoc(projectRef, updateData);
+
+        // Update IndexedDB with lastUpdated
+        const now = Date.now();
+        const storedProjects = await getAllFromStore('projects');
+        const updatedProjects = storedProjects.map(project =>
+            project.projectId === projectId
+                ? { ...project, ...updateData, lastUpdated: now }
+                : project
+        );
+
+        await saveToStore('projects', updatedProjects);
     } catch (error) {
-        console.error("Error adding project:", error);
+        console.error("Error archiving project:", error);
     }
 }
 
@@ -1325,9 +1457,13 @@ export async function editProject(projectDetails) {
         projectData.projectDueTime = deleteField();
     }
 
+    const now = Date.now();
+    localProjectData.lastUpdated = now;
+
     try {
         // Update project in Firestore and IndexedDB
-        await updateDoc(doc(projectCollection, projectDetails.projectId), projectData);
+        await tryFirestoreWrite(() => updateDoc(doc(projectCollection, projectDetails.projectId), projectData), 'editProject');
+        // await updateDoc(doc(projectCollection, projectDetails.projectId), projectData);
         await saveToStore('projects', [localProjectData]);
         return localProjectData;
     } catch (error) {
@@ -1343,6 +1479,17 @@ export async function editProject(projectDetails) {
 export async function deleteProject(projectId) {
     const projectRef = doc(projectCollection, projectId);
 
+    await tryFirestoreWrite(
+        async () => await deleteDoc(projectRef),
+        'deleteProject'
+    );
+
+    if (!navigator.onLine) {
+        await queueDelete('projects', projectId);
+    }
+
+    await deleteFromStore('projects', projectId);
+
     try {
         // Update tasks that referenced the deleted project
         const allTasks = (await getAllFromStore('tasks')).filter(task => task.taskProject === projectId);
@@ -1351,9 +1498,6 @@ export async function deleteProject(projectId) {
             await editTask(task); // Update the task
         }
 
-        // Delete the project from Firestore and IndexedDB
-        await deleteDoc(projectRef);
-        await deleteFromStore('projects', projectId);
     } catch (error) {
         console.error("Error deleting project:", error);
     }
@@ -1369,13 +1513,18 @@ export async function reactivateProject(projectId) {
 
     try {
         // Update project status in Firestore and IndexedDB
-        await updateDoc(projectRef, { projectStatus: 'Active' });
+        await tryFirestoreWrite(() => updateDoc(projectRef, { projectStatus: 'Active' }), 'reactivateProject');
+        // await updateDoc(projectRef, { projectStatus: 'Active' });
 
         const storedProjects = await getAllFromStore('projects');
+        const now = Date.now();
         const updatedProjects = storedProjects.map(project =>
-            project.projectId === projectId ? { ...project, projectStatus: 'Active' } : project
+            project.projectId === projectId
+                ? { ...project, projectStatus: 'Active', lastUpdated: now }
+                : project
         );
         await saveToStore('projects', updatedProjects);
+
     } catch (error) {
         console.error("Error reactivating project:", error);
     }

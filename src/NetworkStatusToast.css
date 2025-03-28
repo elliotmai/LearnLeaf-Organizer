@@ -1,0 +1,25 @@
+/* NetworkStatusToast.css */
+.network-toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #323232;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    font-size: 14px;
+    opacity: 0.95;
+    transition: opacity 0.3s ease;
+  }
+  
+  .network-toast.online {
+    background-color: #2e7d32; /* green */
+  }
+  
+  .network-toast.offline {
+    background-color: #c62828; /* red */
+  }
+  

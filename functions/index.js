@@ -241,27 +241,29 @@ async function processICalData(userId, icalData, firestore) {
 
     async function processTask(task, tasks) {
         let existingTask = null;
-    
+
         const taskRef = firestore.doc(`users/${userId}/tasks/${task.taskLMSDetails.LMS_UID}`);
         const taskDoc = await taskRef.get();
-    
+
         if (taskDoc.exists) {
             existingTask = { taskId: taskDoc.id, ...taskDoc.data() };
-    
+
             console.log(`Editing existing task: ${task.taskName} (User ${userId})`);
             const editingTask = {
                 ...existingTask,
                 taskDueDate: task.dueDateInput,
                 taskDueTime: task.dueTimeInput
             };
+            console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
             await editTask(editingTask, userId);
             edits.push(editingTask);
         } else {
             console.log(`Adding new task: ${task.taskName} (User ${userId})`);
+            console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
             await addTask(task, userId);
             tasks.push(task);
         }
-    }    
+    }
 
     await Promise.all(vevents.map(async (vevent) => {
         const event = new ICAL.Event(vevent);
@@ -281,16 +283,32 @@ async function processICalData(userId, icalData, firestore) {
             return description;
         }
 
-        const startDate = event.startDate.toJSDate();
-        const formattedDate = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+        let formattedDate = null;
+        let formattedTime = null;
 
-        const hasTime = !event.startDate.isDate;
-        let formattedTime = hasTime
-            ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
-            : "23:59";
+        const pad = (num) => String(num).padStart(2, '0');
 
-        if (formattedTime === "00:00") {
-            formattedTime = "23:59";
+        if (event.startDate && typeof event.startDate.toJSDate === 'function') {
+            try {
+                const jsDate = event.startDate.toJSDate();
+
+                if (jsDate instanceof Date && !isNaN(jsDate)) {
+                    const localYear = jsDate.getFullYear();
+                    const localMonth = pad(jsDate.getMonth() + 1); // getMonth() is 0-based
+                    const localDay = pad(jsDate.getDate());
+                    const localHours = pad(jsDate.getHours());
+                    const localMinutes = pad(jsDate.getMinutes());
+
+                    formattedDate = `${localYear}-${localMonth}-${localDay}`;
+                    formattedTime = event.startDate.isDate ? "23:59" : `${localHours}:${localMinutes}`;
+
+                    console.log(`🧠 Final due date: ${formattedDate} ${formattedTime}`);
+                } else {
+                    console.warn(`Invalid JS Date for event: ${event.summary || event.uid}`);
+                }
+            } catch (err) {
+                console.error(`Failed to parse date for event: ${event.summary || event.uid}`, err);
+            }
         }
 
         const task = {

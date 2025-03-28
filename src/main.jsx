@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider, createBrowserRouter, Outlet, Navigate } from 'react-router-dom';
 import { useUser } from '/src/UserState.jsx';
+import SplashScreen from './SplashScreen.jsx';
 import App from './App.jsx';
 import LoginForm from './pages/LoginForm.jsx';
 import RegistrationForm from './pages/RegisterForm.jsx';
@@ -14,25 +15,58 @@ import ProjectTasks from './pages/ProjectTasks.jsx';
 import UserProfile from './pages/UserProfile.jsx';
 import ArchiveDashboard from './pages/ArchiveDashboard.jsx';
 import CalendarView from './pages/CalendarPage.jsx';
+import Logo from './LearnLeaf_Logo_Circle.png';
+// import { m } from '@vite-pwa/assets-generator/dist/shared/assets-generator.5e51fd40.js';
 
-// Use the custom hook to check authentication
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useUser();
+  // if (loading) {
+  //   return (
+  //     <SplashScreen
+  //       message={"Loading LearnLeaf WHYYYYYYYYYY..."}
+  //     />
+  //   );
+  // }
+  return user ? <Navigate to="/tasks" replace /> : children;
+};
+
+// Global flag to control splash
+let forceSplash = false;
+
+// Splash-screen-aware render function
+const renderApp = () => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <RouterProvider router={router} />
+    </React.StrictMode>
+  );
+};
+
+// Auth wrapper
 const ProtectedRoute = ({ children }) => {
-  const { user } = useUser(); // Check if user is authenticated
-  return user ? children : <Navigate to="/" />; // If no user, redirect to login
+  const { user, loading, dataLoading } = useUser();
+
+  if (loading || dataLoading) {
+    return (
+      <SplashScreen message="Loading LearnLeaf..." />
+    );
+  }
+
+  return user ? children : <Navigate to="/" />;
 };
 
 // Create your router
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,  // Common parent component, could be a layout component
+    element: <App />,
     children: [
-      // Public routes
-      { path: "", element: <LoginForm /> },
-      { path: "register", element: <RegistrationForm /> },
-      { path: "resetPassword", element: <ResetPassword /> },
-
-      // Protected routes, wrapped in <ProtectedRoute>
+      {
+        index: true,
+        element: <PublicRoute><LoginForm /></PublicRoute>
+      },
+      { path: "register", element: <PublicRoute> <RegistrationForm /></PublicRoute> },
+      { path: "resetPassword", element: <PublicRoute> <ResetPassword /></PublicRoute> },
       {
         path: "tasks",
         element: (
@@ -101,8 +135,45 @@ const router = createBrowserRouter([
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>
+// Initial render
+renderApp();
+
+let inactivityTimer;
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  // 5 minutes of inactivity
+  inactivityTimer = setTimeout(checkForServiceWorkerUpdate, 300000);
+}
+
+// Track activity
+['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach((event) =>
+  window.addEventListener(event, resetInactivityTimer)
 );
+
+// Start timer initially
+resetInactivityTimer();
+
+function checkForServiceWorkerUpdate() {
+  if (
+    'serviceWorker' in navigator &&
+    window.matchMedia('(display-mode: standalone)').matches
+  ) {
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      if (registration && registration.waiting) {
+        console.log('[SW] Update found while inactive. Reloading...');
+
+        localStorage.setItem('appJustUpdated', 'true');
+        localStorage.setItem('appVersion', __APP_VERSION__);
+
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      } else {
+        console.log('[SW] No update found during inactivity check.');
+      }
+    });
+  }
+}

@@ -90,7 +90,7 @@ button {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -100,7 +100,7 @@ button {
 }
 
     .modal .task-form-container {
-        position: fixed;
+        position: absolute;
         width: 40%;
         height: 50%;
         background-color: #f3f2f2;
@@ -113,7 +113,7 @@ button {
     }
 
     .modal .subject-form-container {
-        position: fixed;
+        position: absolute;
         width: fit-content;
         height: fit-content;
         background-color: #f3f2f2;

@@ -1,96 +1,116 @@
-// @flow
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, firestore } from './firebase';
+import { fetchAllData } from './LearnLeaf_Functions.jsx';
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-    const auth = getAuth();
-    const db = getFirestore();
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
 
-    // Initialize user state from localStorage
-    const [user, setUser] = useState(() => {
-        const storedUserData = localStorage.getItem('user');
-        return storedUserData ? JSON.parse(storedUserData) : null;
+  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const updateUser = (newUserData) => {
+    if (!newUserData) {
+      setUser(null);
+      localStorage.removeItem('user');
+      return;
+    }
+
+    const merged = {
+      ...user,
+      ...newUserData,
+      notifications: newUserData.notifications ?? user?.notifications,
+      notificationsFrequency: newUserData.notificationsFrequency || user?.notificationsFrequency,
+    };
+
+    if (JSON.stringify(user) !== JSON.stringify(merged)) {
+      setUser(merged);
+      localStorage.setItem('user', JSON.stringify(merged));
+      console.log('Updated User Data in localStorage:', merged);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initAuth = async () => {
+      try {
+        await setPersistence(auth, indexedDBLocalPersistence);
+
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (!isMounted) return;
+
+          if (firebaseUser) {
+            const ref = doc(firestore, 'users', firebaseUser.uid);
+            const snap = await getDoc(ref);
+
+            if (snap.exists()) {
+              const data = snap.data();
+              const userData = {
+                id: firebaseUser.uid,
+                name: data.name,
+                email: data.email,
+                timeFormat: data.timeFormat || '12h',
+                dateFormat: data.dateFormat || 'MM/DD/YYYY',
+                notifications: data.notifications ?? false,
+                notificationsFrequency: data.notificationsFrequency || [true, false, false, false],
+                icsURLs: data.icsURLs || {}
+              };
+
+              // Load extra data (tasks, subjects, etc.)
+              const extraData = await fetchAllData();
+              console.log('Fetched extra data:', extraData);
+
+              updateUser({ ...userData, ...extraData });
+            } else {
+              console.error('No user document found!');
+              updateUser(null);
+            }
+          } else {
+            updateUser(null);
+          }
+
+          setLoading(false);
+          setDataLoading(false);
+        });
+
+        // Save unsubscribe to cleanup later
+        return unsubscribe;
+      } catch (err) {
+        console.error('Auth init error:', err);
+        setLoading(false);
+        setDataLoading(false);
+      }
+    };
+
+    let unsubscribeRef;
+    initAuth().then((unsub) => {
+      unsubscribeRef = unsub;
     });
 
-    // Enhanced setUser to manage localStorage
-    const updateUser = (newUserData) => {
-        if (!newUserData) {
-            // Clear user state and localStorage
-            setUser(null);
-            localStorage.removeItem('user');
-            return;
-        }
-    
-        // Merge new data with the existing user state, guarding against undefined values
-        const mergedData = {
-            ...user, // Keep existing fields
-            ...newUserData, // Overwrite only provided fields
-            notifications: newUserData.notifications !== undefined ? newUserData.notifications : user?.notifications,
-            notificationsFrequency: newUserData.notificationsFrequency || user?.notificationsFrequency,
-        };
-    
-        // Avoid re-updating localStorage with unchanged data
-        if (JSON.stringify(user) !== JSON.stringify(mergedData)) {
-            setUser(mergedData);
-            localStorage.setItem('user', JSON.stringify(mergedData));
-            console.log("Updated User Data in localStorage:", mergedData);
-        }
-    };        
+    return () => {
+      isMounted = false;
+      if (unsubscribeRef) unsubscribeRef();
+    };
+  }, []);
 
-    useEffect(() => {
-        let isMounted = true; // To track component mount state
-        let authListenerTriggered = false; // Ensure the listener is called only once
-    
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (!isMounted || authListenerTriggered) return;
-            authListenerTriggered = true; // Prevent multiple triggers
-    
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-    
-                if (userDoc.exists()) {
-                    const userData = {
-                        id: firebaseUser.uid,
-                        name: userDoc.data().name,
-                        email: userDoc.data().email,
-                        timeFormat: userDoc.data().timeFormat || '12h',
-                        dateFormat: userDoc.data().dateFormat || 'MM/DD/YYYY',
-                        notifications: userDoc.data().notifications !== undefined ? userDoc.data().notifications : false,
-                        notificationsFrequency: userDoc.data().notificationsFrequency || [true, false, false, false],
-                    };
-                    console.log("User Data Constructed:", userData);
-                    updateUser(userData); // Pass full user data
-                } else {
-                    console.error("No user document found!");
-                    updateUser(null); // Clear state if no document exists
-                }
-            } else {
-                updateUser(null); // Clear state if user logs out
-            }
-        });
-    
-        return () => {
-            isMounted = false; // Cleanup on component unmount
-            unsubscribe();
-        };
-    }, [auth, db]);    
-    
-    return (
-        <UserContext.Provider value={{ user, updateUser }}>
-            {children}
-        </UserContext.Provider>
-    );
-
+  return (
+    <UserContext.Provider value={{ user, updateUser, loading }}>
+      {children}
+    </UserContext.Provider>
+  );
 };
 
 export function useUser() {
-    const context = useContext(UserContext);
-    if (!context) {
-        throw new Error('useUser must be used within a UserProvider');
-    }
-    return context;
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
 }

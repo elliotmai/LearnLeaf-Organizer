@@ -227,7 +227,8 @@ const ProjectsDashboard = () => {
     });
 
     return (
-        <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
             <TopBar />
             <Grid container direction="column" alignItems="center" justifyItems="center" width="100%" margin="auto">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
@@ -334,7 +335,8 @@ const ProjectsDashboard = () => {
                     </div>
                 </Grid>
             </Grid>
-            <Grid container style={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+            <Grid container style={{ flexGrow: 1, overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch', width: '100%' }}>
                 <div style={{ flex: 1, overflowY: 'auto', paddingLeft: '1%', paddingRight: '1%'}}>
                     {isLoading ? (
                         <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '150px' }}>
