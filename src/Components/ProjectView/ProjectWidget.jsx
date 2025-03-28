@@ -7,13 +7,15 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
-import { Card, CardContent, Typography,FormControlLabel,Checkbox, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Card, CardContent, Typography, FormControlLabel, Checkbox, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
 import { useUser } from '/src/UserState.jsx';
 
-const ProjectWidget = ({ project, subjects, refreshProjects,selectedProjects,projectIndex,toggleProjectSelection,filteredProjects }) => {
+const ProjectWidget = ({ project, subjects, refreshProjects, selectedProjects, projectIndex, toggleProjectSelection, filteredProjects }) => {
+    const navigate = useNavigate();
+
     const [editedProject, setEditedProject] = useState({
         ...project,
     });
@@ -83,22 +85,22 @@ const ProjectWidget = ({ project, subjects, refreshProjects,selectedProjects,pro
                 }}
             >
 
-<Box display={"flex"}>
-                 <FormControlLabel
-                                control={
-                                    <Checkbox
-                                    checked={selectedProjects.includes(filteredProjects[projectIndex].projectId)}
-                                    onChange={() => toggleProjectSelection(filteredProjects[projectIndex].projectId)}
-                                />
-                                }
-                        
+                <Box display={"flex"}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={selectedProjects.includes(filteredProjects[projectIndex].projectId)}
+                                onChange={() => toggleProjectSelection(filteredProjects[projectIndex].projectId)}
                             />
-                             </Box> 
+                        }
+
+                    />
+                </Box>
                 <CardContent>
                     <Tooltip title="View Associated Tasks">
-                        <Link
-                            href={`/projects/${project.projectId}`}
+                        <Typography
                             variant="h6"
+                            onClick={() => navigate(`/projects/${project.projectId}`)}
                             sx={{
                                 textDecoration: 'none',
                                 fontWeight: 'bold',
@@ -109,7 +111,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects,selectedProjects,pro
                             }}
                         >
                             {project.projectName}
-                        </Link>
+                        </Typography>
                     </Tooltip>
 
 
