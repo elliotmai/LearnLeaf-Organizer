@@ -439,15 +439,35 @@ export async function syncIndexedDBToFirestore(collectionRef, storeName) {
             if (!remoteSnap.exists() || localUpdated > firestoreUpdated) {
                 console.log(`[Sync] Pushing updated ${storeName} → Firestore:`, docId);
 
-                // Strip local-only fields before writing to Firestore
                 const data = { ...item };
                 delete data.taskId;
                 delete data.subjectId;
                 delete data.projectId;
                 delete data.lastUpdated;
 
+                // Reconstruct Firestore references for tasks
+                if (storeName === 'tasks') {
+                    data.taskSubject = data.taskSubject && data.taskSubject !== 'None'
+                        ? doc(subjectCollection, data.taskSubject)
+                        : doc(firestore, 'noneSubject', 'None');
+
+                    data.taskProject = data.taskProject && data.taskProject !== 'None'
+                        ? doc(projectCollection, data.taskProject)
+                        : doc(firestore, 'noneProject', 'None');
+                }
+
+                // Reconstruct references for projects
+                if (storeName === 'projects') {
+                    data.projectSubjects = (data.projectSubjects || []).map(id =>
+                        id && id !== 'None'
+                            ? doc(subjectCollection, id)
+                            : doc(firestore, 'noneSubject', 'None')
+                    );
+                }
+
                 await setDoc(docRef, data, { merge: true });
             }
+
         } catch (error) {
             console.error(`[Sync] Failed to sync ${storeName} item (${docId}):`, error);
         }
