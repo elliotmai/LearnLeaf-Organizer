@@ -1541,11 +1541,9 @@ export function sortProjects(projects) {
     });
 }
 
-
-
 export async function loginWithGoogle(updateUser, navigate) {
 
-   
+
     signInWithPopup(auth, provider)
         .then(async (result) => {
 
@@ -1555,7 +1553,7 @@ export async function loginWithGoogle(updateUser, navigate) {
                 clearStore(TASKS_STORE),
                 clearStore(SUBJECTS_STORE),
                 clearStore(PROJECTS_STORE)
-        
+
             ]);
             // This gives you a Google Access Token. You can use it to access the Google API.
             const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -1576,6 +1574,8 @@ export async function loginWithGoogle(updateUser, navigate) {
                     dateFormat: 'MM/DD/YYYY',
                     notifications: false,
                     notificationsFrequency: [true, false, false, false],
+                    icsURLs: {}
+
                 });
 
                 const userData = {
@@ -1586,6 +1586,7 @@ export async function loginWithGoogle(updateUser, navigate) {
                     dateFormat: 'MM/DD/YYYY',
                     notifications: false,
                     notificationFrequency: [true, false, false, false],
+                    icsURLs: {}
                 };
                 localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
 
@@ -1605,6 +1606,7 @@ export async function loginWithGoogle(updateUser, navigate) {
                     dateFormat: 'MM/DD/YYYY',
                     notifications: false,
                     notificationFrequency: [true, false, false, false],
+                    icsURLs: {}
                 };
                 localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
 
@@ -1615,15 +1617,7 @@ export async function loginWithGoogle(updateUser, navigate) {
                 await fetchAllData();
                 updateUser({ id: userData.id, name: userData.name, email: userData.email, password: "dummypassword", notifications: userData.notifcations, notificationFrequency: userData.notificationFrequency }); // Update global user state
                 navigate('/tasks'); // Navigate to tasks page upon successful login
-
-
-
-
             }
-
-
-
-
         }).catch((error) => {
             console.log(error);
             // Handle Errors here.
@@ -1637,8 +1631,6 @@ export async function loginWithGoogle(updateUser, navigate) {
         });
 
 }
-
-
 
 /**
  * Logs in a user using their email and password.
