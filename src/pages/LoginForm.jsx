@@ -8,6 +8,7 @@ import { useMediaQuery, useTheme } from '@mui/material';
 import '/src/Components/Login_Register_Reset.css';
 import '/src/Components/PageFormat.css';
 import FocusInput from '../FocusInput';
+import { loginWithGoogle } from '../LearnLeaf_Functions';
 
 function LoginForm() {
     const [email, setEmail] = useState(''); // State for the email input
@@ -42,6 +43,22 @@ function LoginForm() {
         margin: 'auto',
     };
 
+
+    const handleLoginWithGoogle = async (event) => {
+        event.preventDefault(); // Prevent the default form submission
+
+        try {
+            // Use the Google login function
+            await loginWithGoogle(updateUser, navigate);
+       
+            
+
+        } catch (error) {
+            alert(`Login Error: ${error.message}`);
+        }
+    };
+
+
     return (
         <div className="login-form-container">
             <div className="top-bar">
@@ -70,6 +87,7 @@ function LoginForm() {
                     />
                 </div>
                 <button type="submit">Login</button> {/* Changed button text to Login */}
+                <button type="button" onClick={handleLoginWithGoogle}>Login with Google</button> {/* Changed to a separate button for Google login */}
                 {isLoading && (
                     <p style={{ fontSize: '1.1rem', color: '#35584A' }}>
                         Logging in<span className="dot-flash">.</span>

@@ -40,6 +40,8 @@ import {
     sendPasswordResetEmail,
     sendEmailVerification,
     signOut,
+    GoogleAuthProvider,
+    signInWithPopup,
     deleteUser as deleteFirebaseUser
 } from "firebase/auth";
 
@@ -74,10 +76,15 @@ import {
 } from '/src/UserState.jsx';
 
 // Global variables to store user data and Firestore collections
+const provider = new GoogleAuthProvider();
 let userId = null;
 let taskCollection = null;
 let subjectCollection = null;
 let projectCollection = null;
+
+
+
+
 
 /**
  * Sets the current user ID and initializes Firestore collections.
@@ -657,52 +664,7 @@ export function registerUser(email, password, name) {
         });
 }
 
-/**
- * Logs in a user using their email and password.
- * Fetches and prepares user data from Firestore and stores it locally.
- *
- * @param {string} email - User's email address.
- * @param {string} password - User's password.
- * @returns {Promise<Object>} - Resolves with user and additional fetched data.
- */
-export async function loginUser(email, password) {
 
-    return signInWithEmailAndPassword(auth, email, password)
-        .then(async (userCredential) => {
-            const user = userCredential.user;
-            const userId = user.uid;
-
-            // Fetch user document from Firestore
-            const userDoc = await getDoc(doc(firestore, "users", userId));
-            if (!userDoc.exists()) {
-                throw new Error('User does not exist');
-            }
-
-            // Prepare user data and store in localStorage
-            const userData = {
-                id: userId,
-                name: userDoc.data().name,
-                email: userDoc.data().email,
-                timeFormat: userDoc.data().timeFormat,
-                dateFormat: userDoc.data().dateFormat,
-                notifications: userDoc.data().notifications,
-                notificationsFrequency: userDoc.data().notificationsFrequency,
-                icsURLs: userDoc.data().icsURLs || {}
-            };
-            localStorage.setItem('user', JSON.stringify(userData));
-
-            // Initialize Firestore collections and fetch additional data
-            setUserIdAndCollections(userId);
-            const data = await fetchAllData();
-
-            // Return user data combined with fetched data
-            return { ...userData, ...data };
-        })
-        .catch((error) => {
-            console.error("Login error:", error);
-            throw error;
-        });
-}
 
 /**
  * Sends a password reset email to the user.
@@ -1577,4 +1539,142 @@ export function sortProjects(projects) {
         // Sort by projectName
         return a.projectName.localeCompare(b.projectName);
     });
+}
+
+export async function loginWithGoogle(updateUser, navigate) {
+
+
+    signInWithPopup(auth, provider)
+        .then(async (result) => {
+
+            setUserIdAndCollections(null);
+            await Promise.all([
+                localStorage.clear(),
+                clearStore(TASKS_STORE),
+                clearStore(SUBJECTS_STORE),
+                clearStore(PROJECTS_STORE)
+
+            ]);
+            // This gives you a Google Access Token. You can use it to access the Google API.
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const token = credential.accessToken;
+            // The signed-in user info.
+            const user = result.user;
+
+
+            // Fetch user document from Firestore
+            const userDoc = await getDoc(doc(firestore, "users", user.uid));
+            if (!userDoc.exists()) {
+
+                await setDoc(doc(firestore, "users", user.uid), {
+                    name: user.displayName,
+                    email: user.email,
+                    authMethod: "google", // Use authMethod to distinguish
+                    timeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationsFrequency: [true, false, false, false],
+                    icsURLs: {}
+
+                });
+
+                const userData = {
+                    id: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    userTimeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationFrequency: [true, false, false, false],
+                    icsURLs: {}
+                };
+                localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
+
+                // Initialize collections in Indexedfirestore
+                setUserIdAndCollections(user.uid);
+
+                await fetchAllData();
+                updateUser({ id: userData.id, name: userData.name, email: userData.email, password: "dummypassword", notifications: userData.notifications, notificationFrequency: userData.notificationFrequency }); // Update global user state
+                navigate('/tasks'); // Navigate to tasks page upon successful login
+            }
+            else {
+                const userData = {
+                    id: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    userTimeFormat: '12h',
+                    dateFormat: 'MM/DD/YYYY',
+                    notifications: false,
+                    notificationFrequency: [true, false, false, false],
+                    icsURLs: {}
+                };
+                localStorage.setItem('user', JSON.stringify(userData)); // Store user in localStorage
+
+                // Initialize collections in Indexedfirestore
+                setUserIdAndCollections(user.uid);
+
+
+                await fetchAllData();
+                updateUser({ id: userData.id, name: userData.name, email: userData.email, password: "dummypassword", notifications: userData.notifcations, notificationFrequency: userData.notificationFrequency }); // Update global user state
+                navigate('/tasks'); // Navigate to tasks page upon successful login
+            }
+        }).catch((error) => {
+            console.log(error);
+            // Handle Errors here.
+            const errorCode = error.code;
+            const errorMessage = error.message;
+            // The email of the user's account used.
+            const email = error.customData.email;
+            // The AuthCredential type that was used.
+            const credential = GoogleAuthProvider.credentialFromError(error);
+            // ...
+        });
+
+}
+
+/**
+ * Logs in a user using their email and password.
+ * Fetches and prepares user data from Firestore and stores it locally.
+ *
+ * @param {string} email - User's email address.
+ * @param {string} password - User's password.
+ * @returns {Promise<Object>} - Resolves with user and additional fetched data.
+ */
+export async function loginUser(email, password) {
+
+    return signInWithEmailAndPassword(auth, email, password)
+        .then(async (userCredential) => {
+            const user = userCredential.user;
+            const userId = user.uid;
+
+            // Fetch user document from Firestore
+            const userDoc = await getDoc(doc(firestore, "users", userId));
+            if (!userDoc.exists()) {
+                throw new Error('User does not exist');
+            }
+
+            // Prepare user data and store in localStorage
+            const userData = {
+                id: userId,
+                name: userDoc.data().name,
+                email: userDoc.data().email,
+                timeFormat: userDoc.data().timeFormat,
+                dateFormat: userDoc.data().dateFormat,
+                notifications: userDoc.data().notifications,
+                notificationsFrequency: userDoc.data().notificationsFrequency,
+                icsURLs: userDoc.data().icsURLs || {}
+            };
+            localStorage.setItem('user', JSON.stringify(userData));
+
+            // Initialize Firestore collections and fetch additional data
+            setUserIdAndCollections(userId);
+            const data = await fetchAllData();
+
+            // Return user data combined with fetched data
+            return { ...userData, ...data };
+        })
+        .catch((error) => {
+            console.error("Login error:", error);
+            throw error;
+        });
 }
