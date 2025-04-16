@@ -2,76 +2,6 @@
 
 LearnLeaf Organizer is a single-user task and project management tool designed specifically for students. The application helps students manage their assignments, subjects, and projects efficiently, with features like calendar integration, notifications, and more.
 
-## Features
-
-### Assignment Management
-- **Create, Edit, Delete Assignments**: Easily manage assignments with details like subject, name, priority, status, start date, due date, and project association.
-- **View Assignments**: See all assignments in a dedicated view or within the context of their associated subject or project.
-- **Assignment Notifications**: Receive reminders and notifications about upcoming deadlines.
-
-### Calendar Integration
-- **Calendar View**: View assignments and deadlines in a calendar format.
-- **Modify Assignments from Calendar**: Edit or delete assignments directly from the calendar view.
-
-### Subject Management
-- **Create, Edit, Delete Subjects**: Manage subjects with details like name, semester, and color coding.
-- **Archive Subjects**: Archive subjects to declutter your workspace and unarchive them if needed.
-
-### Project Management
-- **Create, Edit, Delete Projects**: Organize your assignments under projects with features to monitor progress via a doughnut chart.
-- **View Project Progress**: Track the status of associated assignments and view the next assignment due date.
-
-### User Account Management
-- **User Registration & Login**: Create an account and manage your personal information.
-- **Manage Preferences**: Customize settings like time format, date format, and notification preferences.
-
-### Additional Features
-- **Search and Filter**: Easily search for specific assignments and filter them by various criteria such as due date or priority.
-- **Archives**: Access completed assignments, archived subjects, and projects.
-
-## Pages
-
-- **Login Page**: Entry point to the application.
-- **Assignments View**: Main page displaying all assignments after login.
-- **Calendar View**: Visualize your assignments in a calendar format.
-- **Subjects View**: Manage and view all assignments related to specific subjects.
-- **Project Dashboard**: View projects and their associated assignments with a progress chart.
-- **Archive Page**: Access archived subjects, projects, and completed assignments.
-- **User Profile**: Manage user information and settings.
-
-## Design
-
-The application's color palette includes:
-
-- **Opal**: #B6CDC8
-- **Mineral Green**: #355147
-- **Leather**: #9F6C5B
-- **Hemp**: #907474
-- **Misty Blue**: #5B8E9F
-- **Orchid**: #8E5B9F
-- **Scarlet**: #F3161E
-
-## Known Issues & Future Enhancements
-
-### Current Fixes:
-- Deploy web version (Preferably from GitHub Pages)
-- Change all instances of “Task” to “Assignment”.
-- Implement email notifications.
-- Add search and filter options to subject and project views.
-- Fix month overflow issues (e.g., 01-Oct showing as 31-Sep).
-- UI improvements.
-
-### Expansion Scope:
-- Add assignment creation directly from the calendar.
-- Introduce assignment descriptions and subtasks.
-- Mass import assignments from Excel/CSV.
-- Create recurring assignments.
-- Implement Canvas REST API for subject, assignment, and quiz management.
-- Possible future features:
-  - Multi-user support.
-  - Mobile application version.
-  - Statistics page (e.g., number of classes taken, projects done, assignments completed, etc.).
-
 ## Installation
 
 1. Clone the repository:
@@ -94,3 +24,60 @@ The application's color palette includes:
    ```bash
    npm run preview
    ```
+
+## Features
+
+### Assignment Management
+- **Create, Edit, Delete Assignments**: Add detailed tasks with subject, project, priority, status, and due dates.
+- **Filter & Search**: Sort and filter tasks by status, due date, priority, and subject.
+- **Batch Import**: Quickly import multiple assignments from a structured input table.
+- **Real-Time Updates**: Task lists, dropdowns, and visualizations update live across views.
+
+### Calendar Integration
+- **Calendar View**: Visualize all assignments by date in a monthly calendar layout.
+- **Edit from Calendar**: Modify or delete tasks directly from calendar entries.
+- **Canvas LMS Sync**: Import deadlines from Canvas via iCal links with scheduled updates.
+
+### Subject Management
+- **Subject Creation & Editing**: Add subjects with custom colors and semester grouping.
+- **Archiving**: Archive unused subjects to declutter the dashboard.
+
+### Project Management
+- **Project Overview**: Track progress of linked assignments with real-time donut charts.
+- **Visual Analytics**: See next due tasks and overall completion status.
+- **Archive Projects**: Manage completed projects without deleting historical data.
+
+### User Account & Settings
+- **Registration and Login**: Secure account creation and authentication.
+- **User Preferences**: Customize date and time formats, themes, and notification behavior.
+
+### Archive System
+- **Access Past Work**: View archived assignments, subjects, and projects.
+- **Collapsible UI**: Expand/collapse archive views for cleaner navigation.
+
+### Progressive Web App Capabilities
+- **Offline Access**: Full functionality available even without an internet connection using service workers.
+- **Installable on Desktop & Mobile**: Runs like a native app with a launch icon and splash screen.
+- **Cross-Device Syncing**: Background syncing keeps your data up to date across devices when you reconnect to the internet.
+
+## Pages
+
+- **Login Page**: Secure entry point to the application.
+- **Assignments View**: Central hub for managing all upcoming tasks.
+- **Calendar View**: Visual assignment tracker with edit functionality.
+- **Subjects View**: Manage and filter assignments by subject.
+- **Project Dashboard**: Monitor assignment progress within projects.
+- **Archive Page**: Access historical data from completed items.
+- **User Profile**: Manage personal settings and preferences.
+
+## Design
+
+The application's color palette includes:
+
+- **Opal**: #B6CDC8
+- **Mineral Green**: #355147
+- **Leather**: #9F6C5B
+- **Hemp**: #907474
+- **Misty Blue**: #5B8E9F
+- **Orchid**: #8E5B9F
+- **Scarlet**: #F3161E
