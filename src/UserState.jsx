@@ -32,7 +32,7 @@ export const UserProvider = ({ children }) => {
     if (JSON.stringify(user) !== JSON.stringify(merged)) {
       setUser(merged);
       localStorage.setItem('user', JSON.stringify(merged));
-      console.log('Updated User Data in localStorage:', merged);
+      // console.log('Updated User Data in localStorage:', merged);
     }
   };
 
@@ -65,7 +65,7 @@ export const UserProvider = ({ children }) => {
 
               // Load extra data (tasks, subjects, etc.)
               const extraData = await fetchAllData();
-              console.log('Fetched extra data:', extraData);
+              // console.log('Fetched extra data:', extraData);
 
               updateUser({ ...userData, ...extraData });
             } else {

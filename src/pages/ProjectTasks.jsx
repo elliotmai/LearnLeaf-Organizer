@@ -7,7 +7,7 @@ import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
 import TasksTable from '/src/Components/TaskView/TaskTable.jsx';
 import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
-import {CircularProgress, Grid, Typography} from '@mui/material';
+import { CircularProgress, Grid, Typography } from '@mui/material';
 
 const ProjectTasks = () => {
     const [pageProject, setPageProject] = useState(null);
@@ -60,7 +60,7 @@ const ProjectTasks = () => {
             setProjects(allProjects);
 
             setIsLoading(false);
-            console.log('Data loaded from IndexedDB');
+            // console.log('Data loaded from IndexedDB');
             return true;
         } catch (error) {
             console.error('Error loading data from IndexedDB:', error);
@@ -97,7 +97,7 @@ const ProjectTasks = () => {
             try {
                 await deleteTask(taskId);
                 setTasks(prevTasks => prevTasks.filter(task => task.taskId !== taskId));
-                console.log("Task deleted, state and IndexedDB updated");
+                // console.log("Task deleted, state and IndexedDB updated");
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
@@ -137,12 +137,14 @@ const ProjectTasks = () => {
     };
 
     return (
-        <div style={{ height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column'
+        }}>
             <TopBar />
 
             <div>
-            <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
+                <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
                     {pageProject ? `Outstanding Tasks for ${pageProject.projectName}` : 'Loading project...'}
                 </Typography>
 

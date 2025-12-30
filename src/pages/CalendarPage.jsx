@@ -65,7 +65,7 @@ const CalendarView = () => {
             const allProjects = await getAllFromStore('projects');
             const allTasks = await getAllFromStore('tasks');
 
-            console.log('fetched tasks:', allTasks);
+            // console.log('fetched tasks:', allTasks);
 
             const sortedTasks = allTasks.map(task => ({
                 ...task,
@@ -162,8 +162,10 @@ const CalendarView = () => {
     };
 
     return (
-        <div style={{ height: '100%',maxHeight: '-webkit-fill-available',  overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column'
+        }}>
             <TopBar />
             <Grid
                 container

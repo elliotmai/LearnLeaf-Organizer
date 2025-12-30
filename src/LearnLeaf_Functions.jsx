@@ -311,7 +311,7 @@ export function formatTime(input) {
 
 function syncFirestoreToIndexedDB(collectionRef, storeName) {
     onSnapshot(collectionRef, async (snapshot) => {
-        console.log(`Syncing Firestore -> IndexedDB (${storeName})`);
+        // console.log(`Syncing Firestore -> IndexedDB (${storeName})`);
         const updatedData = [];
         const existingIds = new Set(); // Track IDs from Firestore
 
@@ -359,7 +359,7 @@ if (userId) {
  */
 export async function fetchAllData() {
     try {
-        console.log("Attempting to load data from IndexedDB...");
+        // console.log("Attempting to load data from IndexedDB...");
 
         // Use IndexedDB first before fetching from Firestore
         const cachedTasks = await fetchDataWithIndexedDBFallback(taskCollection, "tasks", "");
@@ -367,10 +367,10 @@ export async function fetchAllData() {
         const cachedSubjects = await fetchDataWithIndexedDBFallback(subjectCollection, "subjects", doc(firestore, 'noneSubject', 'None'));
 
         if (cachedTasks && cachedProjects && cachedSubjects) {
-            console.log("Data found in IndexedDB.");
+            // console.log("Data found in IndexedDB.");
             return { tasks: cachedTasks, projects: cachedProjects, subjects: cachedSubjects };
         }
-        console.log("Data not found in IndexedDB. Fetching from Firestore...");
+        // console.log("Data not found in IndexedDB. Fetching from Firestore...");
 
         // Fetch Firestore data
         const noneProjectDoc = await getDoc(doc(firestore, 'noneProject', 'None'));
@@ -406,13 +406,13 @@ export async function fetchAllData() {
         if (!projects.some(proj => proj.projectId === 'None')) {
             projects.push(noneProject);
             await saveDataToIndexedDB("projects", projects);
-            console.log('Added "None" project to IndexedDB.');
+            // console.log('Added "None" project to IndexedDB.');
         }
 
         if (!subjects.some(sub => sub.subjectId === 'None')) {
             subjects.push(noneSubject);
             await saveDataToIndexedDB("subjects", subjects);
-            console.log('Added "None" subject to IndexedDB.');
+            // console.log('Added "None" subject to IndexedDB.');
         }
 
         return { tasks, projects, subjects };
@@ -444,7 +444,7 @@ export async function syncIndexedDBToFirestore(collectionRef, storeName) {
             const localUpdated = item.lastUpdated || 0;
 
             if (!remoteSnap.exists() || localUpdated > firestoreUpdated) {
-                console.log(`[Sync] Pushing updated ${storeName} → Firestore:`, docId);
+                // console.log(`[Sync] Pushing updated ${storeName} → Firestore:`, docId);
 
                 const data = { ...item };
                 delete data.taskId;
@@ -481,7 +481,7 @@ export async function syncIndexedDBToFirestore(collectionRef, storeName) {
     }
 }
 
-// // When the user comes back online, sync local IndexedDB to Firestore
+// When the user comes back online, sync local IndexedDB to Firestore
 // window.addEventListener("online", () => {
 //     if (userId) {
 //         syncIndexedDBToFirestore(taskCollection, "tasks");
@@ -499,7 +499,7 @@ export async function processDeleteQueue(userId) {
             const collectionRef = collection(firestore, 'users', userId, store);
             const docRef = doc(collectionRef, itemId);
             await deleteDoc(docRef);
-            console.log(`[Sync] Deleted from Firestore: ${store}/${itemId}`);
+            // console.log(`[Sync] Deleted from Firestore: ${store}/${itemId}`);
             await removeFromDeleteQueue(id);
         } catch (err) {
             console.error(`[Sync] Failed to delete ${store}/${itemId}:`, err);
@@ -517,7 +517,7 @@ export async function processUserUpdateQueue() {
             const userRef = doc(firestore, "users", entry.id);
             await updateDoc(userRef, entry.updates);
             await removeUserUpdate(entry.id);
-            console.log(`[Sync] User update synced for ${entry.id}`);
+            // console.log(`[Sync] User update synced for ${entry.id}`);
         } catch (err) {
             console.error(`[Sync] Failed to sync user update: ${entry.id}`, err);
         }
@@ -528,11 +528,11 @@ async function fetchDataWithIndexedDBFallback(collectionRef, storeName, noneDocR
     let localData = await getAllFromStore(storeName);
 
     if (localData.length > 0) {
-        console.log(`Using IndexedDB cache for ${storeName}`);
+        // console.log(`Using IndexedDB cache for ${storeName}`);
 
         // Ensure "None" entry exists in IndexedDB cache
         if (noneDocRef && !localData.some(item => item.id === 'None')) {
-            console.log(`Adding missing "None" entry to IndexedDB cache for ${storeName}`);
+            // console.log(`Adding missing "None" entry to IndexedDB cache for ${storeName}`);
             const noneDoc = await getDoc(noneDocRef);
 
             let noneData = { id: 'None', name: 'None' };
@@ -546,7 +546,7 @@ async function fetchDataWithIndexedDBFallback(collectionRef, storeName, noneDocR
 
         return localData;
     } else {
-        console.log(`Fetching from Firestore since IndexedDB is empty (${storeName})`);
+        // console.log(`Fetching from Firestore since IndexedDB is empty (${storeName})`);
 
         return new Promise((resolve, reject) => {
             onSnapshot(collectionRef, async (snapshot) => {
@@ -563,7 +563,7 @@ async function fetchDataWithIndexedDBFallback(collectionRef, storeName, noneDocR
                         }
 
                         if (!fetchedData.some(item => item.id === 'None')) {
-                            console.log(`Adding missing "None" entry to Firestore data for ${storeName}`);
+                            // console.log(`Adding missing "None" entry to Firestore data for ${storeName}`);
                             fetchedData.push(noneData);
                         }
                     }
@@ -694,7 +694,7 @@ export async function logoutUser() {
         await signOut(auth); // Ensure Firebase logs out first
         setUserIdAndCollections(null); // Reset Firestore references
 
-        console.log("User signed out. Clearing IndexedDB, Firestore cache, and localStorage...");
+        // console.log("User signed out. Clearing IndexedDB, Firestore cache, and localStorage...");
 
         // Step 2: Delete IndexedDB database
         await deleteIndexedDBDatabase();
@@ -703,7 +703,7 @@ export async function logoutUser() {
         localStorage.clear();
         sessionStorage.clear();
 
-        console.log('All Clear!');
+        // console.log('All Clear!');
 
     } catch (error) {
         console.error("Error logging out:", error);
@@ -718,7 +718,7 @@ async function deleteIndexedDBDatabase() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.deleteDatabase("learnleaf-db");
         request.onsuccess = () => {
-            console.log("IndexedDB deleted successfully.");
+            // console.log("IndexedDB deleted successfully.");
             resolve();
         };
         request.onerror = (error) => {
@@ -1041,7 +1041,7 @@ export async function archiveTask(taskId) {
         );
         await saveToStore('tasks', updatedTasks); // Save the updated tasks back to IndexedDB
 
-        console.log("Task archived successfully.");
+        // console.log("Task archived successfully.");
     } catch (error) {
         console.error("Error archiving task:", error);
     }
@@ -1361,7 +1361,7 @@ export async function deleteAllProjects() {
             }
         }
 
-        console.log("All projects deleted successfully.");
+        // console.log("All projects deleted successfully.");
     } catch (error) {
         console.error("Error deleting all projects:", error);
     }
@@ -1619,7 +1619,7 @@ export async function loginWithGoogle(updateUser, navigate) {
                 navigate('/tasks'); // Navigate to tasks page upon successful login
             }
         }).catch((error) => {
-            console.log(error);
+            // console.log(error);
             // Handle Errors here.
             const errorCode = error.code;
             const errorMessage = error.message;

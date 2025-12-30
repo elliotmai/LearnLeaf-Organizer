@@ -17,7 +17,7 @@ const UserProfile = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        console.log("User object in UserProfile:", user); // Log the user object
+        // console.log("User object in UserProfile:", user); // Log the user object
         setName(user.name || '');
         setEmail(user.email || '');
         setTimeFormat(user.timeFormat || '12h');
@@ -55,7 +55,7 @@ const UserProfile = () => {
         };
         try {
             await updateUserDetails(user.id, userDetails);
-            await updateUser (userDetails);
+            await updateUser(userDetails);
             alert('Profile updated successfully!');
         } catch (error) {
             console.error('Failed to update profile:', error);
@@ -78,7 +78,7 @@ const UserProfile = () => {
         if (confirmation) {
             try {
                 await deleteUser(user.id);
-                console.log("User account and all related data deleted successfully");
+                // console.log("User account and all related data deleted successfully");
                 updateUser(null);
                 navigate('/');
             } catch (error) {

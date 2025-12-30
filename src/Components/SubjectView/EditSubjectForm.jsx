@@ -39,14 +39,14 @@ const submitButtonStyle = {
 const cancelButtonStyle = {
     color: '#ff5252',
     marginLeft: 1,
-    '&:hover': { 
+    '&:hover': {
         color: '#fff',
-        backgroundColor: '#ff5252' 
+        backgroundColor: '#ff5252'
     }
 };
 
 export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
-    const [formValues, setFormValues] = useState({...subject});
+    const [formValues, setFormValues] = useState({ ...subject });
 
     useEffect(() => {
         setFormValues({
@@ -77,7 +77,7 @@ export const EditSubjectForm = ({ subject, isOpen, onClose, onSave }) => {
             };
             await editSubject(updatedSubjectData);
             onSave();
-            console.log('Subject has been updated successfully.');
+            // console.log('Subject has been updated successfully.');
             onClose(); // Close the modal after saving
         } catch (error) {
             console.error('Failed to update subject:', error);

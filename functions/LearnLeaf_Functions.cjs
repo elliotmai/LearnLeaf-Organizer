@@ -72,12 +72,12 @@ async function addTask(taskDetails, userId) {
         // Adjust the time zone offset to match Central Time (CDT is UTC-5)
         if (hours == 23 && minutes == 59) {
             const offsetInHours = getCentralOffsetHours(); // or 6 if not daylight saving
-            console.log("Offset: ", offsetInHours);
+            // console.log("Offset: ", offsetInHours);
             date.setHours(date.getHours() + offsetInHours);
         }
 
-        console.log("🔥 LOCAL DATE (what we made):", date.toString());
-        console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
+        // console.log("🔥 LOCAL DATE (what we made):", date.toString());
+        // console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
         taskData.taskDueDate = Timestamp.fromDate(date);
         taskData.taskDueTime = Timestamp.fromDate(date);
     }
@@ -99,7 +99,7 @@ async function addTask(taskDetails, userId) {
  * @returns {Promise<Object>} - The updated task data.
  */
 async function editTask(taskDetails, userId) {
-    console.log('Editing task:', [taskDetails.taskDueDate, taskDetails.taskDueTime]);
+    // console.log('Editing task:', [taskDetails.taskDueDate, taskDetails.taskDueTime]);
     const taskId = taskDetails.taskId;
     const taskCollection = firestore.collection(`users/${userId}/tasks`);
 
@@ -139,12 +139,12 @@ async function editTask(taskDetails, userId) {
         // Adjust the time zone offset to match Central Time (CDT is UTC-5)
         if (hours == 23 && minutes == 59) {
             const offsetInHours = getCentralOffsetHours(); // or 6 if not daylight saving
-            console.log("Offset: ", offsetInHours);
+            // console.log("Offset: ", offsetInHours);
             date.setHours(date.getHours() + offsetInHours);
         }
 
-        console.log("🔥 LOCAL DATE (what we made):", date.toString());
-        console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
+        // console.log("🔥 LOCAL DATE (what we made):", date.toString());
+        // console.log("🔥 UTC ISO (Firestore will store):", date.toISOString());
         taskData.taskDueDate = Timestamp.fromDate(date);
         taskData.taskDueTime = Timestamp.fromDate(date);
     }

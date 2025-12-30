@@ -23,11 +23,13 @@ const TaskList = () => {
     const loadFromIndexedDB = async () => {
         try {
             const activeSubjects = (await getAllFromStore('subjects')) || [];
+            // console.log('Active Subjects:', activeSubjects);
             const activeProjects = (await getAllFromStore('projects')) || [];
+            // console.log('Active Projects:', activeProjects);
             const activeTasks = (await getAllFromStore('tasks')) || [];
 
             const filteredTasks = activeTasks.filter(task => task.taskStatus !== 'Completed' && task.taskStatus !== "Archived");
-            console.log({filteredTasks});
+            // console.log({ filteredTasks });
 
             if (activeSubjects.length > 0 && activeProjects.length > 0 && filteredTasks.length > 0) {
                 // Add subject and project info into tasks
@@ -50,18 +52,18 @@ const TaskList = () => {
                 });
 
                 const sortedTasks = sortTasks(tasksWithDetails);
-                console.log('Sorted Tasks:', sortedTasks);
+                // console.log('Sorted Tasks:', sortedTasks);
 
                 const sortedSubjects = activeSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
-                console.log('Sorted Subjects:', sortedSubjects);
+                // console.log('Sorted Subjects:', sortedSubjects);
 
                 const sortedProjects = activeProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
-                console.log('Sorted Projects:', sortedProjects);
+                // console.log('Sorted Projects:', sortedProjects);
 
                 setTasks(sortedTasks);
                 setSubjects(sortedSubjects);
                 setProjects(sortedProjects);
-                setIsLoading(false);
+                setIsLoading(false);;
                 return true;
             }
             setIsLoading(false);
@@ -77,7 +79,7 @@ const TaskList = () => {
         const isLoadedFromIndexedDB = await loadFromIndexedDB();
         if (!isLoadedFromIndexedDB) {
             setTasks([]);
-            console.log("No tasks data found in IndexedDB.");
+            // console.log("No tasks data found in IndexedDB.");
         }
     };
 
@@ -119,7 +121,7 @@ const TaskList = () => {
 
     const handleEditTask = async (updatedTask) => {
 
-        console.log(updatedTask);
+        // console.log(updatedTask);
         const activeSubjects = (await getAllFromStore('subjects')) || [];
         setSubjects(activeSubjects);
 
@@ -154,8 +156,10 @@ const TaskList = () => {
 
 
     return (
-        <div style={{ height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column'
+        }}>
             <TopBar />
 
             <Grid container direction="column" alignItems="center" justifyContent="center" width="100%">
@@ -163,8 +167,10 @@ const TaskList = () => {
                     {user?.name}'s Outstanding Tasks
                 </Typography>
 
-                <div style={{ flexGrow: 1, overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch', width: '100%' }}>
+                <div style={{
+                    flexGrow: 1, overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch', width: '100%'
+                }}>
                     {isLoading ? (
                         <Grid container alignItems="center" justifyContent="center" direction="column" style={{ minHeight: '150px' }}>
                             <CircularProgress />

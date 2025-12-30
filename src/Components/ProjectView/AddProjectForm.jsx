@@ -102,7 +102,7 @@ export function AddProjectForm({ subjects, isOpen, onClose, refreshProjects }) {
             filteredSubjects.push(newSubjectName); // Add the new subject to project subjects
         }
 
-        console.log({ ...projectDetails, projectSubjects: filteredSubjects });
+        // console.log({ ...projectDetails, projectSubjects: filteredSubjects });
 
         const newProject = await addProject({ ...projectDetails, projectSubjects: filteredSubjects });
         onClose();

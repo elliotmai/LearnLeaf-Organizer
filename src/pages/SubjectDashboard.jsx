@@ -6,7 +6,7 @@ import { AddSubjectForm } from '/src/Components/SubjectView/AddSubjectForm.jsx';
 import SubjectWidget from '/src/Components/SubjectView/SubjectWidget.jsx';
 import TopBar from '/src/pages/TopBar.jsx';
 import SubjectFilterBar from './SubjectFilterBar';
-import { Grid, Typography, CircularProgress,Menu, MenuItem, Box, Button, Paper, useTheme, useMediaQuery, Checkbox, FormControlLabel } from '@mui/material';
+import { Grid, Typography, CircularProgress, Menu, MenuItem, Box, Button, Paper, useTheme, useMediaQuery, Checkbox, FormControlLabel } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { FixedSizeList as List } from 'react-window';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -19,8 +19,8 @@ const Row = React.memo(({ index, style, subjects, refreshSubjects, itemsPerRow, 
                     const subjectIndex = startIndex + i;
                     return subjectIndex < subjects.length ? (
                         <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={subjects[subjectIndex].subjectId}>
-                           
-                                    <SubjectWidget subject={subjects[subjectIndex]}  refreshSubjects={refreshSubjects} selectedSubjects={selectedSubjects} toggleSubjectSelection={toggleSubjectSelection} subjectIndex={subjectIndex} subjects={subjects}  />
+
+                            <SubjectWidget subject={subjects[subjectIndex]} refreshSubjects={refreshSubjects} selectedSubjects={selectedSubjects} toggleSubjectSelection={toggleSubjectSelection} subjectIndex={subjectIndex} subjects={subjects} />
                         </Grid>
                     ) : null;
                 })}
@@ -66,34 +66,34 @@ const SubjectsDashboard = () => {
         return 3;
     }, [isSmallScreen, isMediumScreen, isLargeScreen, isXLargeScreen]);
 
-   // Fetch active subjects from IndexedDB
-   const loadFromIndexedDB = async () => {
-    try {
-        const allSubjects = await getAllFromStore('subjects');
-        const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
-        console.log({activeSubjects});
-        if (activeSubjects.length > 0) {
+    // Fetch active subjects from IndexedDB
+    const loadFromIndexedDB = async () => {
+        try {
+            const allSubjects = await getAllFromStore('subjects');
+            const activeSubjects = allSubjects.filter(subject => subject.subjectStatus === 'Active');
+            // console.log({activeSubjects});
+            if (activeSubjects.length > 0) {
+                setSubjects(sortSubjects(activeSubjects));
+                setIsLoading(false);
+                return true;
+            }
+
             setSubjects(sortSubjects(activeSubjects));
             setIsLoading(false);
-            return true;
+            return false;
+        } catch (error) {
+            console.error("Error loading subjects from IndexedDB:", error);
+            return false;
         }
-        
-        setSubjects(sortSubjects(activeSubjects));
-        setIsLoading(false);
-        return false;
-    } catch (error) {
-        console.error("Error loading subjects from IndexedDB:", error);
-        return false;
-    }
-};
+    };
 
-const updateState = async () => {
-    setIsLoading(true);
-    const isLoadedFromIndexedDB = await loadFromIndexedDB();
-    if (!isLoadedFromIndexedDB) {
-        console.log("No subjects data found in IndexedDB.");
-    }
-};
+    const updateState = async () => {
+        setIsLoading(true);
+        const isLoadedFromIndexedDB = await loadFromIndexedDB();
+        if (!isLoadedFromIndexedDB) {
+            // console.log("No subjects data found in IndexedDB.");
+        }
+    };
 
     useEffect(() => {
         if (user?.id) {
@@ -147,7 +147,7 @@ const updateState = async () => {
         if (confirmation) {
             try {
                 await Promise.all(selectedSubjects.map(subjectId => archiveSubject(subjectId)));
-                console.log("Subjects archived successfully.");
+                // console.log("Subjects archived successfully.");
                 updateState();
                 setSelectedSubjects([]);
             } catch (error) {
@@ -161,7 +161,7 @@ const updateState = async () => {
         if (confirmation) {
             try {
                 await Promise.all(selectedSubjects.map(subjectId => deleteSubject(subjectId)));
-                console.log("Subjects deleted successfully.");
+                // console.log("Subjects deleted successfully.");
                 updateState();
                 setSelectedSubjects([]);
             } catch (error) {
@@ -176,8 +176,10 @@ const updateState = async () => {
     const totalRows = Math.ceil(filteredSubjects.length / itemsPerRow);
 
     return (
-        <Box sx={{ height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{
+            height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column'
+        }}>
             <TopBar />
             <Grid container direction="column" alignItems="center" justifyContent="center" width="90%" margin="auto">
                 <Typography variant="h4" sx={{ color: '#907474', textAlign: 'center', mt: 2 }}>
@@ -221,64 +223,64 @@ const updateState = async () => {
                     >
                         Add New Subject
                     </Button>
-                    <div style={{display:"flex",justifyContent:"space-between",width:"100%"}}>
+                    <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
 
                         <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={selectedSubjects.length === filteredSubjects.length ? true : false}
-                            onChange={toggleSelectAll}
-                            color="primary"
+                            control={
+                                <Checkbox
+                                    checked={selectedSubjects.length === filteredSubjects.length ? true : false}
+                                    onChange={toggleSelectAll}
+                                    color="primary"
+                                />
+                            }
+                            label="Select All"
                         />
-                    }
-                    label="Select All"
-                />
 
-<Box display="flex" justifyContent="space-between" gap={2}>
-            <Button
-                variant="outlined"
-                onClick={handleMenuOpen}
-                endIcon={<ArrowDropDownIcon />}
-                disabled={selectedSubjects.length === 0}
-                sx={{
-                    color: '#355147',
-                    borderColor: '#355147',
-                    '&:hover': {
-                        backgroundColor: '#355147',
-                        color: '#fff',
-                    },
-                }}
-            >
-                Actions
-            </Button>
+                        <Box display="flex" justifyContent="space-between" gap={2}>
+                            <Button
+                                variant="outlined"
+                                onClick={handleMenuOpen}
+                                endIcon={<ArrowDropDownIcon />}
+                                disabled={selectedSubjects.length === 0}
+                                sx={{
+                                    color: '#355147',
+                                    borderColor: '#355147',
+                                    '&:hover': {
+                                        backgroundColor: '#355147',
+                                        color: '#fff',
+                                    },
+                                }}
+                            >
+                                Actions
+                            </Button>
 
-            {/* Dropdown Menu */}
-            <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-            >
-                <MenuItem
-                    onClick={() => {
-                        handleBulkArchive();
-                        handleMenuClose();
-                    }}
-                    sx={{ color: '#355147' }}
-                >
-                    Archive Selected
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        handleBulkDelete();
-                        handleMenuClose();
-                    }}
-                    sx={{ color: '#F3161E' }}
-                >
-                    Delete Selected
-                </MenuItem>
-            </Menu>
-        </Box>
-                        </div>
+                            {/* Dropdown Menu */}
+                            <Menu
+                                anchorEl={anchorEl}
+                                open={Boolean(anchorEl)}
+                                onClose={handleMenuClose}
+                            >
+                                <MenuItem
+                                    onClick={() => {
+                                        handleBulkArchive();
+                                        handleMenuClose();
+                                    }}
+                                    sx={{ color: '#355147' }}
+                                >
+                                    Archive Selected
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => {
+                                        handleBulkDelete();
+                                        handleMenuClose();
+                                    }}
+                                    sx={{ color: '#F3161E' }}
+                                >
+                                    Delete Selected
+                                </MenuItem>
+                            </Menu>
+                        </Box>
+                    </div>
 
                 </Grid>
             </Grid>

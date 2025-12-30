@@ -161,7 +161,7 @@ function checkForServiceWorkerUpdate() {
   ) {
     navigator.serviceWorker.getRegistration().then((registration) => {
       if (registration && registration.waiting) {
-        console.log('[SW] Update found while inactive. Reloading...');
+        // console.log('[SW] Update found while inactive. Reloading...');
 
         localStorage.setItem('appJustUpdated', 'true');
         localStorage.setItem('appVersion', __APP_VERSION__);
@@ -172,7 +172,7 @@ function checkForServiceWorkerUpdate() {
           window.location.reload();
         });
       } else {
-        console.log('[SW] No update found during inactivity check.');
+        // console.log('[SW] No update found during inactivity check.');
       }
     });
   }
