@@ -40,7 +40,7 @@ const ProjectWidget = ({ project, reactivateProject, refreshProjects }) => {
     const handleReactivateProject = async () => {
         try {
             await reactivateProject(project.projectId);
-            console.log("Project reactivated successfully.");
+            // console.log("Project reactivated successfully.");
             refreshProjects();
         } catch (error) {
             console.error("Error archiving project:", error);

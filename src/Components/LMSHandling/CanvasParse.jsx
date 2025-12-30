@@ -11,7 +11,7 @@ export default function CanvasParse({ icalUrl }) {
 
             const proxiedUrl = `${flaskServer}?ical_url=${encodeURIComponent(icalUrl)}`;
 
-            console.log("Fetching from:", proxiedUrl);
+            // console.log("Fetching from:", proxiedUrl);
 
             fetch(proxiedUrl)
                 .then(response => response.text())
@@ -20,7 +20,7 @@ export default function CanvasParse({ icalUrl }) {
                         throw new Error("No iCal data received.");
                     }
 
-                    console.log("Fetched iCal Data (Snippet):", icalData.slice(0, 500));
+                    // console.log("Fetched iCal Data (Snippet):", icalData.slice(0, 500));
 
                     const jcal = ICAL.parse(icalData);
                     const component = new ICAL.Component(jcal);
@@ -111,24 +111,24 @@ export default function CanvasParse({ icalUrl }) {
 
                         // If the subject does not exist, add it and process the task
                         if (!existingSubject) {
-                            console.log(`Adding new subject: ${subjectCleaned}`);
+                            // console.log(`Adding new subject: ${subjectCleaned}`);
                             await addSubject(subject);
                             subjects.add(subjectCleaned);
                             await processTask(task, tasks);
                         }
                         // If the subject exists and is not blocked, process the task
                         else if (existingSubject.subjectStatus !== "Blocked") {
-                            console.log(`Processing task for existing subject: ${subjectCleaned}`);
+                            // console.log(`Processing task for existing subject: ${subjectCleaned}`);
                             await processTask(task, tasks);
                         }
                         // If the subject exists and is blocked, skip the task
                         else {
-                            console.log(`Skipping task for blocked subject: ${subjectCleaned}`);
+                            // console.log(`Skipping task for blocked subject: ${subjectCleaned}`);
                         }
                     }));
-                    
+
                     // Log result only after all tasks and subjects are processed
-                    console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length);
+                    // console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length);
                     resolve(); // Resolve the promise after successful completion
                 })
                 .catch((error) => {

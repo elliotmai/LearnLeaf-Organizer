@@ -258,7 +258,7 @@ const TasksTable = ({ tasks, subjects, projects, onDelete, onUpdateTask, onAddTa
             try {
                 // Convert the Set to an array before using map
                 await Promise.all([...selectedTasks].map(taskId => archiveTask(taskId)));
-                console.log("Tasks archived successfully.");
+                // console.log("Tasks archived successfully.");
                 updateState();
                 setSelectedTasks(new Set()); // Clear the selection
             } catch (error) {

@@ -2,18 +2,18 @@ const CACHE_VERSION = 'v1.2';
 const CACHE_NAME = `learnleaf-organizer-cache-${CACHE_VERSION}`;
 
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing new version...');
+  // console.log('[Service Worker] Installing new version...');
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+  // console.log('[Service Worker] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', name);
+            // console.log('[SW] Deleting old cache:', name);
             return caches.delete(name);
           }
         })
@@ -49,8 +49,8 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-      self.skipWaiting();
-    }
-  });
-  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+

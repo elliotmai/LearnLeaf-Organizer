@@ -40,7 +40,7 @@ export async function clearFirebaseStores() {
             const tx = db.transaction(db.objectStoreNames, 'readwrite');
             for (const storeName of db.objectStoreNames) {
                 await tx.objectStore(storeName).clear();
-                console.log(`Cleared store: ${storeName} in database: ${dbName}`);
+                // console.log(`Cleared store: ${storeName} in database: ${dbName}`);
             }
             await tx.done;
             db.close();
@@ -114,7 +114,7 @@ export async function deleteFromStore(storeName, key) {
 
     try {
         await store.delete(key);
-        console.log(`Deleted ${key} from ${storeName}`);
+        // console.log(`Deleted ${key} from ${storeName}`);
     } catch (error) {
         console.error(`Failed to delete ${key} from ${storeName}:`, error);
     }

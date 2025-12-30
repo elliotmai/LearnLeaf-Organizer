@@ -40,7 +40,7 @@ const SubjectWidget = ({ subject, reactivateSubject, refreshSubjects }) => {
     const handleReactivateSubject = async () => {
         try {
             await reactivateSubject(subject.id);
-            console.log("Subject reactivated successfully.");
+            // console.log("Subject reactivated successfully.");
             refreshSubjects();
         } catch (error) {
             console.error("Error archiving subject:", error);

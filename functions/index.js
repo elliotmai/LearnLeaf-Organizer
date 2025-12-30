@@ -23,7 +23,7 @@ sgMail.setApiKey(functions.config().sendgrid.key);
 
 // Query tasks due before or on the end date and where status != 'Completed'
 async function queryTasks(userId, endDate) {
-    console.log('Querying tasks');
+    // console.log('Querying tasks');
     const userDocRef = admin.firestore().collection('users').doc(userId);
     const tasksRef = userDocRef.collection('tasks');
 
@@ -33,7 +33,7 @@ async function queryTasks(userId, endDate) {
         .where('taskStatus', '!=', 'Completed')
         .get();
 
-    console.log(`Returned ${taskQuerySnapshot} for user ${userId}`);
+    // console.log(`Returned ${taskQuerySnapshot} for user ${userId}`);
 
     for (const doc of taskQuerySnapshot.docs) {
         const task = doc.data();
@@ -51,7 +51,7 @@ async function queryTasks(userId, endDate) {
         tasks.push(task);
     }
 
-    console.log('userId:', userId, '\nTasks:', tasks);
+    // console.log('userId:', userId, '\nTasks:', tasks);
     return tasks;
 }
 
@@ -82,7 +82,7 @@ async function createNotificationDocument(userId, userEmail, tasks, notification
     };
 
     const notificationDoc = await notificationsRef.add(notificationData);
-    console.log(`Notification document ${notificationDoc.id} created for ${userEmail}`);
+    // console.log(`Notification document ${notificationDoc.id} created for ${userEmail}`);
     return notificationDoc.id;
 }
 
@@ -131,7 +131,7 @@ async function sendNotificationEmailFromNotificationDoc(notificationDocId, notif
     sgMail
         .send(msg)
         .then(() => {
-            console.log(`Email successfully sent to ${userEmail}`);
+            // console.log(`Email successfully sent to ${userEmail}`);
         })
         .catch((error) => {
             console.error(`Error sending email to ${userEmail}:`, error);
@@ -140,26 +140,26 @@ async function sendNotificationEmailFromNotificationDoc(notificationDocId, notif
 
 // Function to handle notifications based on priority (Weekly > Daily > Urgent)
 exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('America/Chicago').onRun(async (context) => {
-    console.log('sendNotifications function triggered');
+    // console.log('sendNotifications function triggered');
     const usersRef = admin.firestore().collection('users');
     const now = admin.firestore.Timestamp.now();
     const tomorrow = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 1)));
     const nextWeek = admin.firestore.Timestamp.fromDate(new Date(now.toDate().setDate(now.toDate().getDate() + 7)));
 
-    console.log('Querying users with notifications enabled...');
+    // console.log('Querying users with notifications enabled...');
     const usersSnapshot = await usersRef.where('notifications', '==', true).get();
 
-    console.log(`Users found with notifications enabled: ${usersSnapshot.size}`);
+    // console.log(`Users found with notifications enabled: ${usersSnapshot.size}`);
 
     if (usersSnapshot.empty) {
-        console.log('No users with notifications enabled.');
+        // console.log('No users with notifications enabled.');
         return;
     }
 
     for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
         const userData = userDoc.data();
-        console.log(`User Data: ${JSON.stringify(userData)}`);
+        // console.log(`User Data: ${JSON.stringify(userData)}`);
         const userEmail = userData.email;
         const notificationsFrequency = userData.notificationsFrequency;
 
@@ -178,7 +178,7 @@ exports.sendNotifications = functions.pubsub.schedule('0 8 * * *').timeZone('Ame
         }
 
         if (notificationType === 'Urgent' && tasks.length === 0) {
-            console.log(`No urgent tasks for ${userEmail}, skipping email.`);
+            // console.log(`No urgent tasks for ${userEmail}, skipping email.`);
             continue;
         }
 
@@ -248,18 +248,18 @@ async function processICalData(userId, icalData, firestore) {
         if (taskDoc.exists) {
             existingTask = { taskId: taskDoc.id, ...taskDoc.data() };
 
-            console.log(`Editing existing task: ${task.taskName} (User ${userId})`);
+            // console.log(`Editing existing task: ${task.taskName} (User ${userId})`);
             const editingTask = {
                 ...existingTask,
                 taskDueDate: task.dueDateInput,
                 taskDueTime: task.dueTimeInput
             };
-            console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
+            // console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
             await editTask(editingTask, userId);
             edits.push(editingTask);
         } else {
-            console.log(`Adding new task: ${task.taskName} (User ${userId})`);
-            console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
+            // console.log(`Adding new task: ${task.taskName} (User ${userId})`);
+            // console.log(`Final due date: ${task.dueDateInput} ${task.dueTimeInput}`);
             await addTask(task, userId);
             tasks.push(task);
         }
@@ -302,7 +302,7 @@ async function processICalData(userId, icalData, firestore) {
                     formattedDate = `${localYear}-${localMonth}-${localDay}`;
                     formattedTime = event.startDate.isDate ? "23:59" : `${localHours}:${localMinutes}`;
 
-                    console.log(`🧠 Final due date: ${formattedDate} ${formattedTime}`);
+                    // console.log(`🧠 Final due date: ${formattedDate} ${formattedTime}`);
                 } else {
                     console.warn(`Invalid JS Date for event: ${event.summary || event.uid}`);
                 }
@@ -358,7 +358,7 @@ async function processICalData(userId, icalData, firestore) {
     }));
 
     // Log result only after all tasks and subjects are processed
-    console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length, "\nNumber of edits made:", edits.length);
+    // console.log("Number of subjects added:", subjects.size, "\nNumber of tasks added:", tasks.length, "\nNumber of edits made:", edits.length);
 }
 
 exports.processICalFromPopup = functions.https.onCall(async (data, context) => {
@@ -402,7 +402,7 @@ exports.keepRenderAlive = functions.pubsub
 
         try {
             await axios.get(`${flaskServer}?ical_url=dummy`);
-            console.log("Pinged Render server to keep it alive.");
+            // console.log("Pinged Render server to keep it alive.");
         } catch (error) {
             console.error("Error pinging Render server:", error);
         }
