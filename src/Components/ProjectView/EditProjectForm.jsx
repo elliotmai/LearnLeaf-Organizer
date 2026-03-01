@@ -22,12 +22,14 @@ const boxStyle = {
     transform: 'translate(-50%, -50%)',
     width: '90%',
     maxWidth: 500,
+    maxHeight: '90vh',
+    overflowY: 'auto',
     bgcolor: 'background.paper',
     boxShadow: 24,
-    pt: 2,
-    pb: 3,
-    px: 4,
     borderRadius: '12px',
+    px: 4,
+    pt: 3,
+    pb: 3,
 };
 
 const submitButtonStyle = {
