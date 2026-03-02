@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { archiveSubject, deleteSubject, blockSubject } from '/src/LearnLeaf_Functions.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import { EditSubjectForm } from './EditSubjectForm.jsx';
+import SubjectInfoWindow from './SubjectInfoWindow.jsx';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
-import Link from '@mui/material/Link';
 import { Box, Typography, CardActions, FormControlLabel, Card, Checkbox, CardContent, Dialog, DialogTitle, DialogContent, Tooltip, DialogActions } from '@mui/material';
 
 const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubjectSelection, subjectIndex, subjects }) => {
@@ -15,7 +15,7 @@ const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubje
 
     const [editedSubject, setEditedSubject] = useState({ ...subject });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
-    const [isDescriptionOpen, setDescriptionOpen] = useState(false);
+    const [isInfoOpen, setInfoOpen] = useState(false);
     const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
     const handleArchiveSubject = async () => {
@@ -66,8 +66,16 @@ const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubje
                     refreshSubjects();
                 }}
             />
+            <SubjectInfoWindow
+                subject={subject}
+                open={isInfoOpen}
+                onClose={() => setInfoOpen(false)}
+                onEdit={() => handleEditClick(subject)}
+                onDelete={() => handleDeleteClick()}
+            />
             <Card
                 sx={{
+                    position: 'relative',
                     borderRadius: '16px',
                     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
                     padding: '16px',
@@ -75,6 +83,20 @@ const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubje
                     border: `3px solid ${subject.subjectColor || '#355147'}`,
                 }}
             >
+
+                <Box position="absolute" top={8} right={8}>
+                    <IconButton
+                        onClick={() => setInfoOpen(true)}
+                        sx={{
+                            color: '#355147',
+                            '&:hover': { color: '#5B8E9F' },
+                        }}
+                    >
+                        <Tooltip title="View Info">
+                            <SearchIcon />
+                        </Tooltip>
+                    </IconButton>
+                </Box>
 
                 <Box display={"flex"}>
                     <FormControlLabel
@@ -105,49 +127,44 @@ const SubjectWidget = ({ subject, refreshSubjects, selectedSubjects, toggleSubje
                         </Typography>
                     </Tooltip>
 
-                    <Typography variant="body2" color="textSecondary" gutterBottom sx={{ mt: 1, fontWeight: 'bold', color: '#9F6C5B' }}>
+                    <Typography 
+                        variant="body2" 
+                        color="textSecondary" 
+                        gutterBottom 
+                        sx={{ 
+                            mt: 1, 
+                            fontWeight: 'bold', 
+                            color: '#9F6C5B',
+                            whiteSpace: 'pre-wrap',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical'
+                             }}>
                         {subject.subjectSemester}
                     </Typography>
 
                     {subject.subjectDescription && (
-                        <Tooltip title="Click to view full description">
-                            <Typography
-                                variant="body2"
-                                color="textSecondary"
-                                onClick={() => setDescriptionOpen(true)}
-                                sx={{
-                                    fontStyle: 'italic',
-                                    color: '#5B8E9F',
-                                    whiteSpace: 'pre-wrap',
-                                    overflow: 'hidden',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 3,
-                                    WebkitBoxOrient: 'vertical',
-                                    cursor: 'pointer',
-                                    padding: '8px 0',
-                                    textAlign: 'center',
-                                    borderRadius: '8px',
-                                    backgroundColor: '#f1f3f4',
-                                }}
-                            >
-                                {subject.subjectDescription}
-                            </Typography>
-                        </Tooltip>
+                        <Typography
+                            variant="body2"
+                            color="textSecondary"
+                            sx={{
+                                fontStyle: 'italic',
+                                color: '#5B8E9F',
+                                whiteSpace: 'pre-wrap',
+                                overflow: 'hidden',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                padding: '8px 0',
+                                textAlign: 'center',
+                                borderRadius: '8px',
+                                backgroundColor: '#f1f3f4',
+                            }}
+                        >
+                            {subject.subjectDescription}
+                        </Typography>
                     )}
-
-                    <Dialog open={isDescriptionOpen} onClose={() => setDescriptionOpen(false)}>
-                        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '16px' }}>
-                            Full Description
-                            <IconButton onClick={() => setDescriptionOpen(false)} sx={{ color: 'grey.500' }}>
-                                <CloseIcon />
-                            </IconButton>
-                        </DialogTitle>
-                        <DialogContent dividers sx={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            <Typography variant="body2" color="textSecondary" sx={{ whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
-                                {subject.subjectDescription}
-                            </Typography>
-                        </DialogContent>
-                    </Dialog>
                 </CardContent>
 
                 <CardActions sx={{ justifyContent: 'space-between', paddingX: 2 }}>

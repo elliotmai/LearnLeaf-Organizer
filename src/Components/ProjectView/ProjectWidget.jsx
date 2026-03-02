@@ -6,8 +6,10 @@ import ProjectTasks from '/src/pages/ProjectTasks.jsx';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import IconButton from '@mui/material/IconButton';
 import { Card, CardContent, Typography, FormControlLabel, Checkbox, Grid, Button, CardActions, Link, Box, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import ProjectInfoWindow from './ProjectInfoWindow.jsx';
 import { styled, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { EditProjectForm } from './EditProjectForm.jsx';
@@ -20,6 +22,7 @@ const ProjectWidget = ({ project, subjects, refreshProjects, selectedProjects, p
         ...project,
     });
     const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isInfoOpen, setInfoOpen] = useState(false);
     const [isDescriptionOpen, setDescriptionOpen] = useState(false);
     const { user } = useUser();
     const theme = useTheme();
@@ -75,8 +78,16 @@ const ProjectWidget = ({ project, subjects, refreshProjects, selectedProjects, p
                     setEditModalOpen(false);
                 }}
             />
+            <ProjectInfoWindow
+                project={project}
+                open={isInfoOpen}
+                onClose={() => setInfoOpen(false)}
+                onEdit={() => handleEditClick(project)}
+                onDelete={() => handleDeleteClick(project.projectId)}
+            />
             <Card
                 sx={{
+                    position: 'relative',
                     borderRadius: '16px',
                     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
                     padding: '16px',
@@ -84,6 +95,20 @@ const ProjectWidget = ({ project, subjects, refreshProjects, selectedProjects, p
                     transition: 'transform 0.2s ease-in-out',
                 }}
             >
+
+                <Box position="absolute" top={8} right={8}>
+                    <IconButton
+                        onClick={() => setInfoOpen(true)}
+                        sx={{
+                            color: '#355147',
+                            '&:hover': { color: '#5B8E9F' },
+                        }}
+                    >
+                        <Tooltip title="View Info">
+                            <SearchIcon />
+                        </Tooltip>
+                    </IconButton>
+                </Box>
 
                 <Box display={"flex"}>
                     <FormControlLabel
