@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, indexedDBLocalPersistence, setPersistence } from 'firebase/auth';
+import { getAuth, indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -13,9 +13,22 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const firestore = getFirestore(app);
+export const auth = getAuth(app);
+export const firestore = getFirestore(app);
 
-setPersistence(auth, indexedDBLocalPersistence).catch(console.error);
-
-export { auth, firestore };
+// Resolves when auth persistence is configured — await this before any sign-in call
+export const authReady = (async () => {
+  try {
+    await setPersistence(auth, indexedDBLocalPersistence);
+  } catch {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch {
+      try {
+        await setPersistence(auth, inMemoryPersistence);
+      } catch {
+        // Give up — auth will still work, just without guaranteed persistence
+      }
+    }
+  }
+})();
