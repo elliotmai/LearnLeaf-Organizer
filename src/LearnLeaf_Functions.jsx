@@ -141,6 +141,8 @@ export async function loginUser(email, password) {
   const userData = { id:user.uid, name:data.name, email:data.email, timeFormat:data.timeFormat, dateFormat:data.dateFormat, notifications:data.notifications, notificationsFrequency:data.notificationsFrequency, icsURLs:data.icsURLs||{} };
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
+  // Seed IndexedDB in the background so pages load instantly
+  fetchAllData().catch(() => {});
   return userData;
 }
 
@@ -155,6 +157,8 @@ export async function loginWithGoogle(updateUser, navigate) {
   const userData = { id:user.uid, name:data.name||user.displayName||'', email:data.email||user.email, timeFormat:data.timeFormat, dateFormat:data.dateFormat, notifications:data.notifications, notificationsFrequency:data.notificationsFrequency, icsURLs:data.icsURLs||{} };
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
+  // Seed IndexedDB in the background so pages load instantly
+  fetchAllData().catch(() => {});
   updateUser(userData);
   navigate('/tasks');
 }
