@@ -1,5 +1,5 @@
 import { saveToStore, getFromStore, getAllFromStore, deleteFromStore, clearStore, clearFirebaseStores, TASKS_STORE, SUBJECTS_STORE, PROJECTS_STORE, queueDelete, getDeleteQueue, removeFromDeleteQueue, queueUserUpdate, getQueuedUserUpdates, removeUserUpdate } from './db.js';
-import { auth, firestore } from './firebase.js';
+import { auth, authReady, firestore } from './firebase.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, GoogleAuthProvider, signInWithPopup, deleteUser as deleteFirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocs, collection, Timestamp, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
@@ -134,6 +134,7 @@ export function registerUser(email, password, name) {
 }
 
 export async function loginUser(email, password) {
+  await authReady;
   const { user } = await signInWithEmailAndPassword(auth, email, password);
   const snap = await getDoc(doc(firestore,'users',user.uid));
   if (!snap.exists()) throw new Error('User not found');
@@ -147,6 +148,7 @@ export async function loginUser(email, password) {
 }
 
 export async function loginWithGoogle(updateUser, navigate) {
+  await authReady;
   const { user } = await signInWithPopup(auth, provider);
   let snap = await getDoc(doc(firestore,'users',user.uid));
   if (!snap.exists()) {

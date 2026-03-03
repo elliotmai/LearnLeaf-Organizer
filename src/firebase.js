@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, indexedDBLocalPersistence, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getAuth, indexedDBLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -16,9 +16,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-// Try IndexedDB first, fall back to localStorage if blocked (private browsing, some deployed envs)
-setPersistence(auth, indexedDBLocalPersistence)
-  .catch(() => setPersistence(auth, browserLocalPersistence))
-  .catch(console.error);
+setPersistence(auth, indexedDBLocalPersistence).catch(console.error);
 
 export { auth, firestore };
