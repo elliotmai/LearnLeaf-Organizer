@@ -24,8 +24,8 @@ const PublicRoute = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useUser();
-  if (loading) return <SplashScreen message="Loading LearnLeaf..." />;
+  const { user, loading, dataLoading } = useUser();
+  if (loading || dataLoading) return <SplashScreen message="Loading LearnLeaf..." />;
   return user ? children : <Navigate to="/" />;
 };
 

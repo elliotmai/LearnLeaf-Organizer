@@ -31,15 +31,35 @@ export default function ArchivePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [allTasks, allSubjects, allProjects] = await Promise.all([getAllFromStore("tasks"),getAllFromStore("subjects"),getAllFromStore("projects")]);
-    const completed = allTasks.filter(t => t.taskStatus==="Completed").map(t => ({
-      ...t,
-      taskSubject: allSubjects.find(s => s.subjectId===t.taskSubject)||null,
-      taskProject: allProjects.find(p => p.projectId===t.taskProject)||null,
-    }));
+    const { query, where, getDocs, collection } = await import('firebase/firestore');
+    const { firestore } = await import('../firebase.js');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const uid = user?.id;
+  
+    const taskCol    = collection(firestore, 'users', uid, 'tasks');
+    const subjectCol = collection(firestore, 'users', uid, 'subjects');
+    const projectCol = collection(firestore, 'users', uid, 'projects');
+  
+    const [taskSnap, subjectSnap, projectSnap] = await Promise.all([
+      getDocs(query(taskCol,    where('taskStatus',    '==', 'Completed'))),
+      getDocs(query(subjectCol, where('subjectStatus', '==', 'Archived'))),
+      getDocs(query(projectCol, where('projectStatus', '==', 'Archived'))),
+    ]);
+  
+    const allSubjects = subjectSnap.docs.map(d => ({ subjectId: d.id, ...d.data() }));
+    const allProjects = projectSnap.docs.map(d => ({ projectId: d.id, ...d.data() }));
+    const completed   = taskSnap.docs.map(d => {
+      const data = d.data();
+      return {
+        taskId: d.id, ...data,
+        taskSubject: allSubjects.find(s => s.subjectId === data.taskSubject?.id) || null,
+        taskProject: allProjects.find(p => p.projectId === data.taskProject?.id) || null,
+      };
+    });
+  
     setCompletedTasks(sortTasks(completed));
-    setArchivedSubjects(sortSubjects(allSubjects.filter(s => s.subjectStatus==="Archived")));
-    setArchivedProjects(sortProjects(allProjects.filter(p => p.projectStatus==="Archived")));
+    setArchivedSubjects(sortSubjects(allSubjects));
+    setArchivedProjects(sortProjects(allProjects));
     setLoading(false);
   }, []);
 

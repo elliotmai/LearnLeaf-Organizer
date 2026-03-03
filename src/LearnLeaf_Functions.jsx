@@ -125,6 +125,25 @@ export async function fetchAllData() {
   };
 }
 
+// Fetches only active (non-archived, non-completed) data for fast login seeding
+export async function fetchActiveData() {
+  const { query, where } = await import('firebase/firestore');
+  const [taskSnap, subjectSnap, projectSnap] = await Promise.all([
+    getDocs(query(taskCollection, where('taskStatus', '!=', 'Completed'))),
+    getDocs(query(subjectCollection, where('subjectStatus', '==', 'Active'))),
+    getDocs(query(projectCollection, where('projectStatus', '==', 'Active'))),
+  ]);
+  const tasks    = taskSnap.docs.map(d => docToLocal(d, 'tasks'));
+  const subjects = subjectSnap.docs.map(d => docToLocal(d, 'subjects'));
+  const projects = projectSnap.docs.map(d => docToLocal(d, 'projects'));
+  await Promise.all([
+    saveToStore('tasks', tasks),
+    saveToStore('subjects', subjects),
+    saveToStore('projects', projects),
+  ]);
+  return { tasks, subjects, projects };
+}
+
 // --- Auth ---
 export function registerUser(email, password, name) {
   return createUserWithEmailAndPassword(auth, email, password).then(async ({ user }) => {
@@ -133,7 +152,7 @@ export function registerUser(email, password, name) {
   }).catch(e => { alert(`Error: ${e.message}`); throw e; });
 }
 
-export async function loginUser(email, password) {
+export async function loginUser(email, password, setDataLoading) {
   await authReady;
   const { user } = await signInWithEmailAndPassword(auth, email, password);
   const snap = await getDoc(doc(firestore,'users',user.uid));
@@ -143,11 +162,12 @@ export async function loginUser(email, password) {
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
   // Seed IndexedDB in the background so pages load instantly
-  fetchAllData().catch(() => {});
+  setDataLoading?.(true);
+  fetchActiveData().catch(() => {}).finally(() => setDataLoading?.(false));
   return userData;
 }
 
-export async function loginWithGoogle(updateUser, navigate) {
+export async function loginWithGoogle(updateUser, navigate, setDataLoading) {
   await authReady;
   const { user } = await signInWithPopup(auth, provider);
   let snap = await getDoc(doc(firestore,'users',user.uid));
@@ -160,7 +180,8 @@ export async function loginWithGoogle(updateUser, navigate) {
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
   // Seed IndexedDB in the background so pages load instantly
-  fetchAllData().catch(() => {});
+  setDataLoading?.(true);
+  fetchActiveData().catch(() => {}).finally(() => setDataLoading?.(false));
   updateUser(userData);
   navigate('/tasks');
 }

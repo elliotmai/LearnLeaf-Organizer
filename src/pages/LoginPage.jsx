@@ -7,14 +7,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { updateUser } = useUser();
+  const { updateUser, setDataLoading } = useUser();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const info = await loginUser(email, password);
+      const info = await loginUser(email, password, setDataLoading);
       updateUser(info);
       navigate("/tasks");
     } catch(err) { alert(`Login failed: ${err.message}`); }
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   const handleGoogle = async (e) => {
     e.preventDefault();
-    try { await loginWithGoogle(updateUser, navigate); }
+    try { await loginWithGoogle(updateUser, navigate, setDataLoading); }
     catch(err) { alert(`Google login failed: ${err.message}`); }
   };
 

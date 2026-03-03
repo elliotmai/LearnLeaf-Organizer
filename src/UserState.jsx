@@ -33,7 +33,11 @@ export function UserProvider({ children }) {
     else localStorage.removeItem('user');
   };
 
-  return <UserContext.Provider value={{ user, loading, dataLoading, updateUser }}>{children}</UserContext.Provider>;
+  // Change the context value to expose setDataLoading
+return <UserContext.Provider 
+  value={{ user, loading, dataLoading, updateUser, setDataLoading }}>
+  {children}
+</UserContext.Provider>;
 }
 
 export function useUser() {
