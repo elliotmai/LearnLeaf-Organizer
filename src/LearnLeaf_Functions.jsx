@@ -142,7 +142,7 @@ export async function loginUser(email, password) {
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
   // Seed IndexedDB in the background so pages load instantly
-  fetchAllData().catch(() => {});
+  // fetchAllData().catch(() => {});
   return userData;
 }
 
