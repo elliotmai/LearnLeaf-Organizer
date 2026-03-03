@@ -1,230 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import format from 'date-fns/format';
-import CalendarUI from '/src/Components/CalendarPage/CalendarUI';
-import { useUser } from '/src/UserState.jsx';
-import { AddTaskForm } from '/src/Components/TaskView/AddTaskForm.jsx';
-import { deleteTask, sortTasks } from '/src/LearnLeaf_Functions.jsx';
-import TopBar from '/src/pages/TopBar.jsx';
-import TaskFilterBar from '/src/pages/TaskFilterBar.jsx';
-import { getAllFromStore } from '/src/db.js';
-import { Button, Grid, Box } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import '/src/Components/PageFormat.css';
+import React, { useState, useEffect, useCallback } from "react";
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import { format, parse, startOfWeek, getDay } from "date-fns";
+import { enUS } from "date-fns/locale";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+import { useUser } from "../UserState.jsx";
+import { getAllFromStore } from "../db.js";
+import { editTask, deleteTask, sortTasks } from "../LearnLeaf_Functions.jsx";
+import TopBar from "../components/layout/TopBar.jsx";
+import TaskForm from "../components/tasks/TaskForm.jsx";
+import LoadingSpinner from "../components/ui/LoadingSpinner.jsx";
+import ConfirmDialog from "../components/ui/ConfirmDialog.jsx";
+import Toast from "../components/ui/Toast.jsx";
 
-const CalendarView = () => {
-    const { user } = useUser();
-    const [events, setEvents] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-    const [projects, setProjects] = useState([]);
-    const [isAddTaskFormOpen, setIsAddTaskFormOpen] = useState(false);
-    const [currentDate, setCurrentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek: () => startOfWeek(new Date(),{weekStartsOn:0}), getDay, locales:{en:enUS} });
 
-    const [filterCriteria, setFilterCriteria] = useState({
-        searchQuery: '',
-        taskPriority: '',
-        taskStatus: '',
-        taskStartDate: '',
-        taskStartDateComparison: '',
-        taskDueDate: '',
-        taskDueDateComparison: '',
-        taskSubject: '',
-        taskProject: ''
+export default function CalendarPage() {
+  const { user } = useUser();
+  const [events, setEvents]   = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [allTasks, allSubjects, allProjects] = await Promise.all([getAllFromStore("tasks"),getAllFromStore("subjects"),getAllFromStore("projects")]);
+    const active = allTasks.filter(t => t.taskStatus!=="Completed" && t.taskDueDate);
+    const evts = active.map(t => {
+      const subject = allSubjects.find(s => s.subjectId===t.taskSubject);
+      const project = allProjects.find(p => p.projectId===t.taskProject);
+      return {
+        id: t.taskId,
+        title: t.taskName,
+        start: new Date(`${t.taskDueDate}T${t.taskDueTime||"23:59"}:00`),
+        end:   new Date(`${t.taskDueDate}T${t.taskDueTime||"23:59"}:00`),
+        allDay: !t.taskDueTime,
+        task: { ...t, taskSubject:subject||null, taskProject:project||null },
+        color: subject?.subjectColor || "#355147",
+      };
     });
+    setEvents(evts);
+    setSubjects(allSubjects.filter(s => s.subjectStatus==="Active"));
+    setProjects(allProjects.filter(p => p.projectStatus==="Active"));
+    setLoading(false);
+  }, []);
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            const localDate = new Date();
-            const formattedDate = format(localDate, 'yyyy-MM-dd');
-            setCurrentDate(formattedDate); // Updates current date in the local time zone
-        }, 1000);
+  useEffect(() => { if (user?.id) load(); }, [user, load]);
 
-        return () => clearInterval(intervalId);
-    }, []);
+  const handleEventClick = ({ task }) => { setEditingTask(task); setSidebarOpen(true); };
 
-    // Helper function to format a task for the calendar
-    const formatTask = (task) => {
+  const eventStyle = (event) => ({
+    style: { backgroundColor: event.color, borderRadius:"6px", border:"none", color:"white", fontSize:"0.75rem", padding:"2px 5px" }
+  });
 
-        return {
-            allDay: true,
-            start: new Date(task.taskDueDate + 'T00:00:00'),
-            end: new Date(task.taskDueDate + (task.taskDueTime ? `T${task.taskDueTime}` : 'T23:59:59')),
-            title: task.taskName,
-            task: {
-                ...task,
-            },
-            style: {
-                backgroundColor: task.taskStatus === 'Completed' ? '#dedede' : (task.taskSubject?.subjectColor || '#3174ad')
-            }
-        };
-    };
+  const handleSave = async () => { await load(); setToast({ message:"Task updated!", type:"success" }); };
 
-    const loadFromIndexedDB = async () => {
-        try {
-            const allSubjects = await getAllFromStore('subjects');
-            const allProjects = await getAllFromStore('projects');
-            const allTasks = await getAllFromStore('tasks');
+  const handleDeleteConfirm = async () => {
+    await deleteTask(deleteTarget);
+    setDeleteTarget(null);
+    await load();
+    setToast({ message:"Task deleted", type:"info" });
+  };
 
-            // console.log('fetched tasks:', allTasks);
-
-            const sortedTasks = allTasks.map(task => ({
-                ...task,
-                taskSubject: allSubjects.find(subject => subject.subjectId === task.taskSubject),
-                taskProject: allProjects.find(project => project.projectId === task.taskProject)
-            }));
-
-            const filteredTasks = getFilteredTasks(sortedTasks, filterCriteria);
-
-            const formattedEvents = filteredTasks.filter(task => task.taskDueDate).map(formatTask);
-
-            setEvents(formattedEvents);
-            setSubjects(allSubjects.sort((a, b) => a.subjectName.localeCompare(b.subjectName)));
-            setProjects(allProjects.sort((a, b) => a.projectName.localeCompare(b.projectName)));
-        } catch (error) {
-            console.error('Error loading data from IndexedDB:', error);
-        }
-    };
-
-    useEffect(() => {
-        if (user?.id) {
-            loadFromIndexedDB();
-        }
-    }, [user?.id, filterCriteria]);
-
-    const getFilteredTasks = (tasks, filterCriteria) => {
-        return tasks.filter((task) => {
-            const matchesSearchQuery = filterCriteria.searchQuery === '' || task.taskName.toLowerCase().includes(filterCriteria.searchQuery.toLowerCase());
-            const matchesSubject = filterCriteria.taskSubject === '' || task.taskSubject.subjectName.toLowerCase().includes(filterCriteria.taskSubject.toLowerCase());
-            const matchesProject = filterCriteria.taskProject === '' || task.taskProject.projectName.toLowerCase().includes(filterCriteria.taskProject.toLowerCase());
-            const matchesPriority = !filterCriteria.taskPriority || task.taskPriority === filterCriteria.taskPriority;
-            const matchesStatus = !filterCriteria.taskStatus || task.taskStatus === filterCriteria.taskStatus;
-
-            let matchesStartDate = true;
-            if (filterCriteria.taskStartDateComparison === "none") {
-                matchesStartDate = !task.taskStartDate;
-            } else if (filterCriteria.taskStartDate) {
-                matchesStartDate = filterByDate(task.taskStartDate, filterCriteria.taskStartDate, filterCriteria.taskStartDateComparison);
-            }
-
-            let matchesDueDate = true;
-            if (filterCriteria.taskDueDateComparison === "none") {
-                matchesDueDate = !task.taskDueDate;
-            } else if (filterCriteria.taskDueDate) {
-                matchesDueDate = filterByDate(task.taskDueDate, filterCriteria.taskDueDate, filterCriteria.taskDueDateComparison);
-            }
-
-            return matchesSearchQuery && matchesSubject && matchesProject && matchesPriority && matchesStatus && matchesStartDate && matchesDueDate;
-        });
-    };
-
-    const clearFilters = () => {
-        setFilterCriteria({
-            searchQuery: '',
-            priority: '',
-            status: '',
-            startDate: '',
-            startDateComparison: '',
-            dueDate: '',
-            dueDateComparison: '',
-        });
-    };
-
-    const toggleFormVisibility = () => {
-        setIsAddTaskFormOpen(!isAddTaskFormOpen);
-    };
-
-    const handleCloseAddTaskForm = () => {
-        setIsAddTaskFormOpen(false);
-    };
-
-    const handleAddTask = async (newTask) => {
-        const formattedTask = formatTask(newTask);
-        setEvents([...events, formattedTask]);
-    };
-
-    const handleDeleteTask = async (taskId) => {
-        const confirmation = window.confirm("Are you sure you want to delete this task?");
-        if (confirmation) {
-            try {
-                await deleteTask(taskId);
-                setEvents(prevEvents => prevEvents.filter(event => event.task.taskId !== taskId));
-            } catch (error) {
-                console.error('Error deleting task:', error);
-            }
-        }
-    };
-
-    const handleEditTask = async (updatedTask) => {
-        const formattedUpdatedTask = formatTask(updatedTask);
-        setEvents(prevEvents => prevEvents.map(event =>
-            event.task.taskId === updatedTask.taskId ? formattedUpdatedTask : event
-        ));
-    };
-
-    return (
-        <div style={{
-            height: '100%', maxHeight: '-webkit-fill-available', overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column'
-        }}>
-            <TopBar />
-            <Grid
-                container
-                alignItems="center"
-                justifyContent="center"
-                spacing={1}
-                paddingBottom="10px"
-                paddingTop="10px"
-                width="90%"
-                position="relative"
-                sx={{
-                    borderTop: "1px solid #d9d9d9",
-                    borderBottom: "1px solid #d9d9d9",
-                    margin: "auto",
-                    flexDirection: "column",
-                }}
-            >
-
-                <Box display="flex" justifyContent="center" marginBottom="0.5%">
-                    <TaskFilterBar
-                        filterCriteria={filterCriteria}
-                        setFilterCriteria={setFilterCriteria}
-                        clearFilters={clearFilters}
-                    />
-                </Box>
-                <Button
-                    onClick={toggleFormVisibility}
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    sx={{
-                        color: '#355147',
-                        borderColor: '#355147',
-                        '&:hover': {
-                            backgroundColor: '#355147',
-                            color: '#fff',
-                        },
-                    }}
-                >
-                    Add New Task
-                </Button>
-            </Grid>
-            <CalendarUI
-                events={events}
-                refreshTasks={loadFromIndexedDB}
-                subjects={subjects}
-                projects={projects}
-            />
-            {isAddTaskFormOpen && (
-                <AddTaskForm
-                    isOpen={isAddTaskFormOpen}
-                    onClose={handleCloseAddTaskForm}
-                    onAddTask={handleAddTask}
-                    subjects={subjects}
-                    projects={projects}
-                    initialDueDate={currentDate}
-                />
-            )}
+  return (
+    <div style={{ display:"flex",flexDirection:"column",minHeight:"100vh" }}>
+      <TopBar />
+      <main style={{ flex:1,maxWidth:"1280px",margin:"0 auto",width:"100%",padding:"24px 24px 80px",boxSizing:"border-box" }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"20px",flexWrap:"wrap",gap:"12px" }}>
+          <div>
+            <h1 style={{ fontFamily:"Playfair Display,serif",fontSize:"1.6rem",fontWeight:700,color:"#907474",margin:"0 0 2px" }}>Calendar</h1>
+            <p style={{ color:"#9ca3af",fontSize:"0.85rem",margin:0 }}>Click any task to edit it</p>
+          </div>
+          <button onClick={() => { setEditingTask(null); setSidebarOpen(true); }}
+            style={{ padding:"10px 18px",borderRadius:"12px",background:"#355147",color:"white",border:"none",cursor:"pointer",fontWeight:600,fontSize:"0.875rem",boxShadow:"0 2px 8px rgba(53,81,71,0.25)" }}>
+            + New Task
+          </button>
         </div>
-    );
-};
 
-export default CalendarView;
+        {loading ? <LoadingSpinner /> : (
+          <div className="ll-card" style={{ padding:"20px",height:"620px" }}>
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height:"100%" }}
+              eventPropGetter={eventStyle}
+              onSelectEvent={handleEventClick}
+              views={["month","week","agenda"]}
+              defaultView="month"
+              popup
+            />
+          </div>
+        )}
+      </main>
+      <TaskForm open={sidebarOpen} onClose={() => setSidebarOpen(false)} task={editingTask} subjects={subjects} projects={projects} onSave={handleSave} />
+      <ConfirmDialog open={!!deleteTarget} title="Delete Task" message="Permanently delete this task?"
+        onConfirm={handleDeleteConfirm} onCancel={() => setDeleteTarget(null)} confirmLabel="Delete" confirmDanger />
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}

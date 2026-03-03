@@ -1,9 +1,6 @@
-clear
-.vs
-lib
 node_modules
-.firebase
-sendgrid.env
-.DS_Store
 dist
-functions/.runtimeconfig.json
+.firebase
+.DS_Store
+sendgrid.env
+*.log

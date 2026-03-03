@@ -1,13 +1,10 @@
-# Netlify configuration file
-
 [build]
-  command = "npm install && npm run build"  # Ensure npm install runs before build
-  publish = "dist"  # Publish directory for built files
+  command = "npm install && npm run build"
+  publish = "dist"
 
-# Redirect for SPA (Single Page Application) support
 [[redirects]]
   from = "/*"
-  to = "/index.js"
+  to = "/index.html"
   status = 200
 
 [[headers]]

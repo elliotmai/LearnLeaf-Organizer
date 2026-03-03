@@ -1,21 +1,12 @@
-import React from 'react';
-import Logo from './LearnLeaf_Logo_Circle.png'; // adjust path as needed
-// import './SplashScreen.css';
-
-const SplashScreen = ({message}) => (
-  <div style={{
-    height: '100%',
-    maxHeight: '-webkit-fill-available', 
-    width: '100vw',
-    backgroundColor: '#c1d4d2',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center'
-  }}>
-    <img src={Logo} alt="LearnLeaf Logo" style={{ width: 120, height: 120, marginBottom: 20 }} />
-    <p style={{ fontSize: '1.2rem', color: '#35584A' }}>{message || 'Loading LearnLeaf...'}</p>
-  </div>
-);
-
-export default SplashScreen;
+import React from "react";
+export default function SplashScreen({ message = "Loading LearnLeaf..." }) {
+  return (
+    <div style={{ position:"fixed",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#f0f7f5 0%,#e8f2ef 50%,#f5f0f8 100%)",zIndex:9999 }}>
+      <div style={{ width:"60px",height:"60px",borderRadius:"16px",background:"#355147",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontFamily:"Playfair Display,serif",fontWeight:700,fontSize:"22px",marginBottom:"20px",animation:"pulse 1.5s ease-in-out infinite" }}>
+        LL
+      </div>
+      <p style={{ color:"#907474",fontSize:"0.9rem",fontWeight:500 }}>{message}</p>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.8;transform:scale(0.96)} }`}</style>
+    </div>
+  );
+}
