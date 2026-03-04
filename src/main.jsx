@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom";
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import "./index.css";
 import { useUser } from "./UserState.jsx";
 import App from "./App.jsx";
@@ -16,6 +17,9 @@ import ProjectTasksPage from "./pages/ProjectTasksPage.jsx";
 import UserProfilePage from "./pages/UserProfilePage.jsx";
 import ArchivePage from "./pages/ArchivePage.jsx";
 import CalendarPage from "./pages/CalendarPage.jsx";
+
+// Register service worker for PWA functionality
+serviceWorkerRegistration.register();
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useUser();
