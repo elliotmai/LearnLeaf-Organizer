@@ -1,7 +1,7 @@
 import { saveToStore, getFromStore, getAllFromStore, deleteFromStore, clearStore, clearFirebaseStores, TASKS_STORE, SUBJECTS_STORE, PROJECTS_STORE, queueDelete, getDeleteQueue, removeFromDeleteQueue, queueUserUpdate, getQueuedUserUpdates, removeUserUpdate } from './db.js';
 import { auth, authReady, firestore } from './firebase.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, GoogleAuthProvider, signInWithPopup, deleteUser as deleteFirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, getDocs, collection, Timestamp, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, Timestamp, deleteDoc, updateDoc, writeBatch, query, where, orderBy, limit } from 'firebase/firestore';
 
 const provider = new GoogleAuthProvider();
 let userId = null;
@@ -125,9 +125,91 @@ export async function fetchAllData() {
   };
 }
 
-// Fetches only active (non-archived, non-completed) data for fast login seeding
+// ---------------------------------------------------------------------------
+// TIERED LOADING
+// ---------------------------------------------------------------------------
+
+/**
+ * TIER 1 — Critical seed (called on login, blocks navigation).
+ * Fetches:
+ *   • All active subjects
+ *   • All active projects
+ *   • Up to 20 soonest non-completed tasks (ordered by due date)
+ *
+ * Returns { subjects, projects, tasks } so the caller can confirm IDB is warm
+ * before letting the user into the app.
+ */
+export async function fetchCriticalData(uid) {
+  const taskCol    = collection(firestore, 'users', uid, 'tasks');
+  const subjectCol = collection(firestore, 'users', uid, 'subjects');
+  const projectCol = collection(firestore, 'users', uid, 'projects');
+
+  // Run all three in parallel
+  const [subjectSnap, projectSnap, taskSnap] = await Promise.all([
+    getDocs(query(subjectCol, where('subjectStatus', '==', 'Active'))),
+    getDocs(query(projectCol, where('projectStatus', '==', 'Active'))),
+    // Tasks that are not completed, ordered by due date ascending, capped at 20.
+    // Tasks with no due date won't sort well here — we grab them in the background pass.
+    getDocs(query(taskCol, where('taskStatus', 'in', ['Not Started', 'In Progress']), orderBy('taskDueDate', 'asc'))),
+  ]);
+
+  const subjects = subjectSnap.docs.map(d => docToLocal(d, 'subjects'));
+  const projects = projectSnap.docs.map(d => docToLocal(d, 'projects'));
+  const tasks    = taskSnap.docs.map(d => docToLocal(d, 'tasks'));
+
+  // Persist to IDB immediately so every page reads from cache
+  await Promise.all([
+    saveToStore('subjects', subjects),
+    saveToStore('projects', projects),
+    saveToStore('tasks',    tasks),
+  ]);
+
+  return { subjects, projects, tasks };
+}
+
+/**
+ * TIER 2 — Background full load (fire-and-forget after navigation).
+ * Fetches everything that wasn't in the critical seed:
+ *   • Remaining active/in-progress tasks (the ones beyond the first 20, plus
+ *     tasks with no due date which were excluded from the ordered query)
+ *   • Completed tasks (for the archive page)
+ *   • Archived subjects & projects (for the archive page)
+ *
+ * Merges into IDB without touching the UI — pages will pick up the data next
+ * time they call getAllFromStore() (e.g. on focus/re-render).
+ */
+export async function backgroundFetchRemaining(uid) {
+  if (!navigator.onLine) return;
+
+  const taskCol    = collection(firestore, 'users', uid, 'tasks');
+  const subjectCol = collection(firestore, 'users', uid, 'subjects');
+  const projectCol = collection(firestore, 'users', uid, 'projects');
+
+  try {
+    // Fetch ALL tasks (active + completed) — replaces the partial seed
+    const [allTaskSnap, archivedSubjectSnap, archivedProjectSnap] = await Promise.all([
+      getDocs(taskCol),                                                              // every task
+      getDocs(query(subjectCol, where('subjectStatus', '==', 'Archived'))),
+      getDocs(query(projectCol, where('projectStatus', '==', 'Archived'))),
+    ]);
+
+    const allTasks          = allTaskSnap.docs.map(d => docToLocal(d, 'tasks'));
+    const archivedSubjects  = archivedSubjectSnap.docs.map(d => docToLocal(d, 'subjects'));
+    const archivedProjects  = archivedProjectSnap.docs.map(d => docToLocal(d, 'projects'));
+
+    // saveToStore does an upsert so existing records are safely overwritten
+    await Promise.all([
+      saveToStore('tasks',    allTasks),
+      saveToStore('subjects', archivedSubjects),
+      saveToStore('projects', archivedProjects),
+    ]);
+  } catch(e) {
+    console.warn('Background fetch failed (non-fatal):', e);
+  }
+}
+
+// Keep the old fetchActiveData export so nothing else breaks
 export async function fetchActiveData() {
-  const { query, where } = await import('firebase/firestore');
   const [taskSnap, subjectSnap, projectSnap] = await Promise.all([
     getDocs(query(taskCollection, where('taskStatus', '!=', 'Completed'))),
     getDocs(query(subjectCollection, where('subjectStatus', '==', 'Active'))),
@@ -161,9 +243,20 @@ export async function loginUser(email, password, setDataLoading) {
   const userData = { id:user.uid, name:data.name, email:data.email, timeFormat:data.timeFormat, dateFormat:data.dateFormat, notifications:data.notifications, notificationsFrequency:data.notificationsFrequency, icsURLs:data.icsURLs||{} };
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
-  // Seed IndexedDB in the background so pages load instantly
+
+  // TIER 1: Block until critical data is in IDB
   setDataLoading?.(true);
-  fetchActiveData().catch(() => {}).finally(() => setDataLoading?.(false));
+  try {
+    await fetchCriticalData(user.uid);
+  } catch(e) {
+    console.warn('Critical fetch failed, falling back:', e);
+  } finally {
+    setDataLoading?.(false);
+  }
+
+  // TIER 2: Background — don't await, don't block navigation
+  backgroundFetchRemaining(user.uid).catch(() => {});
+
   return userData;
 }
 
@@ -179,10 +272,21 @@ export async function loginWithGoogle(updateUser, navigate, setDataLoading) {
   const userData = { id:user.uid, name:data.name||user.displayName||'', email:data.email||user.email, timeFormat:data.timeFormat, dateFormat:data.dateFormat, notifications:data.notifications, notificationsFrequency:data.notificationsFrequency, icsURLs:data.icsURLs||{} };
   localStorage.setItem('user', JSON.stringify(userData));
   setUserIdAndCollections(user.uid);
-  // Seed IndexedDB in the background so pages load instantly
+
+  // TIER 1: Block until critical data is in IDB
   setDataLoading?.(true);
-  fetchActiveData().catch(() => {}).finally(() => setDataLoading?.(false));
   updateUser(userData);
+  try {
+    await fetchCriticalData(user.uid);
+  } catch(e) {
+    console.warn('Critical fetch failed, falling back:', e);
+  } finally {
+    setDataLoading?.(false);
+  }
+
+  // TIER 2: Background — don't await
+  backgroundFetchRemaining(user.uid).catch(() => {});
+
   navigate('/tasks');
 }
 

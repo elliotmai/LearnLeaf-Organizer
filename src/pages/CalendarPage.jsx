@@ -24,11 +24,12 @@ export default function CalendarPage() {
   const [editingTask, setEditingTask] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const isMobile = window.innerWidth < 768;
 
   const load = useCallback(async () => {
     setLoading(true);
     const [allTasks, allSubjects, allProjects] = await Promise.all([getAllFromStore("tasks"),getAllFromStore("subjects"),getAllFromStore("projects")]);
-    const active = allTasks.filter(t => t.taskStatus!=="Completed" && t.taskDueDate);
+    const active = allTasks.filter(t => t.taskDueDate);
     const evts = active.map(t => {
       const subject = allSubjects.find(s => s.subjectId===t.taskSubject);
       const project = allProjects.find(p => p.projectId===t.taskProject);
@@ -53,7 +54,10 @@ export default function CalendarPage() {
   const handleEventClick = ({ task }) => { setEditingTask(task); setSidebarOpen(true); };
 
   const eventStyle = (event) => ({
-    style: { backgroundColor: event.color, borderRadius:"6px", border:"none", color:"white", fontSize:"0.75rem", padding:"2px 5px" }
+    style: {
+      backgroundColor: event.task?.taskStatus === 'Completed' ? '#9ca3af' : event.color,
+      borderRadius: "6px", border: "none", color: "white", fontSize: "0.75rem", padding: "2px 5px"
+    }
   });
 
   const handleSave = async () => { await load(); setToast({ message:"Task updated!", type:"success" }); };
@@ -90,8 +94,8 @@ export default function CalendarPage() {
               style={{ height:"100%" }}
               eventPropGetter={eventStyle}
               onSelectEvent={handleEventClick}
-              views={["month","week","agenda"]}
-              defaultView="month"
+              views={isMobile ? ["agenda"] : ["month", "week", "agenda"]}
+              defaultView={isMobile ? "agenda" : "month"}
               popup
             />
           </div>

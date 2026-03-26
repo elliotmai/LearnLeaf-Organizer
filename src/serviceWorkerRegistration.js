@@ -7,16 +7,17 @@ const isLocalhost = Boolean(
 export function register(config) {
   if ('serviceWorker' in navigator) {
     const swUrl = '/service-worker.js';
-
     window.addEventListener('load', () => {
-      if (isLocalhost) {
-        checkValidServiceWorker(swUrl, config);
-        navigator.serviceWorker.ready.then(() => {
-          console.log('This web app is being served cache-first by a service worker.');
-        });
-      } else {
-        registerValidSW(swUrl, config);
-      }
+      // Check the SW script actually exists before registering
+      fetch(swUrl).then(res => {
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('javascript')) return; // bail silently
+        if (isLocalhost) {
+          checkValidServiceWorker(swUrl, config);
+        } else {
+          registerValidSW(swUrl, config);
+        }
+      }).catch(() => {}); // offline — skip
     });
   }
 }

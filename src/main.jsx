@@ -18,18 +18,24 @@ import UserProfilePage from "./pages/UserProfilePage.jsx";
 import ArchivePage from "./pages/ArchivePage.jsx";
 import CalendarPage from "./pages/CalendarPage.jsx";
 
-// Register service worker for PWA functionality
 serviceWorkerRegistration.register();
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useUser();
-  if (loading) return <SplashScreen />;
+  if (loading) return <SplashScreen message="Loading LearnLeaf..." />;
   return user ? <Navigate to="/tasks" replace /> : children;
 };
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading, dataLoading } = useUser();
-  if (loading || dataLoading) return <SplashScreen message="Loading LearnLeaf..." />;
+
+  // Still establishing auth state
+  if (loading) return <SplashScreen message="Loading LearnLeaf..." />;
+
+  // Critical data fetch in progress (only happens right after login,
+  // before IDB is warm for the first time)
+  if (dataLoading) return <SplashScreen message="Preparing your tasks..." />;
+
   return user ? children : <Navigate to="/" />;
 };
 
