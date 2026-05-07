@@ -102,16 +102,16 @@ export default function TaskForm({ open, onClose, task, subjects, projects, onSa
             <label style={labelStyle}>Priority</label>
             <select className="ll-select" style={inputStyle(false)} value={form.taskPriority} onChange={e => set("taskPriority", e.target.value)}>
               <option value="High">High</option>
-              <option value="Low">Low</option>
               <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
             </select>
           </div>
           <div>
             <label style={labelStyle}>Status</label>
             <select className="ll-select" style={inputStyle(false)} value={form.taskStatus} onChange={e => set("taskStatus", e.target.value)}>
-              <option value="Completed">Completed</option>
-              <option value="In Progress">In Progress</option>
               <option value="Not Started">Not Started</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
             </select>
           </div>
         </div>
