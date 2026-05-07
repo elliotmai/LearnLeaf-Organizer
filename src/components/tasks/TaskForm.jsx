@@ -102,16 +102,16 @@ export default function TaskForm({ open, onClose, task, subjects, projects, onSa
             <label style={labelStyle}>Priority</label>
             <select className="ll-select" style={inputStyle(false)} value={form.taskPriority} onChange={e => set("taskPriority", e.target.value)}>
               <option value="High">High</option>
-              <option value="Medium">Medium</option>
               <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
             </select>
           </div>
           <div>
             <label style={labelStyle}>Status</label>
             <select className="ll-select" style={inputStyle(false)} value={form.taskStatus} onChange={e => set("taskStatus", e.target.value)}>
-              <option value="Not Started">Not Started</option>
-              <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Not Started">Not Started</option>
             </select>
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function TaskForm({ open, onClose, task, subjects, projects, onSa
           <select className="ll-select" style={inputStyle(false)} value={isNewSubject ? "newSubject" : form.taskSubject}
             onChange={e => { if (e.target.value === "newSubject") { setIsNewSubject(true); set("taskSubject","None"); } else { setIsNewSubject(false); set("taskSubject", e.target.value); } }}>
             <option value="None">No Subject</option>
-            {subjects.filter(s => s.subjectStatus === "Active").map(s => <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>)}
+            {subjects.filter(s => s.subjectStatus === "Active").slice().sort((a,b) => (a.subjectName||"").localeCompare(b.subjectName||"", undefined, { sensitivity: "base" })).map(s => <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>)}
             <option value="newSubject">+ New Subject</option>
           </select>
           {isNewSubject && (
@@ -153,7 +153,7 @@ export default function TaskForm({ open, onClose, task, subjects, projects, onSa
           <select className="ll-select" style={inputStyle(false)} value={isNewProject ? "newProject" : form.taskProject}
             onChange={e => { if (e.target.value === "newProject") { setIsNewProject(true); set("taskProject","None"); } else { setIsNewProject(false); set("taskProject", e.target.value); } }}>
             <option value="None">No Project</option>
-            {projects.filter(p => p.projectStatus === "Active").map(p => <option key={p.projectId} value={p.projectId}>{p.projectName}</option>)}
+            {projects.filter(p => p.projectStatus === "Active").slice().sort((a,b) => (a.projectName||"").localeCompare(b.projectName||"", undefined, { sensitivity: "base" })).map(p => <option key={p.projectId} value={p.projectId}>{p.projectName}</option>)}
             <option value="newProject">+ New Project</option>
           </select>
           {isNewProject && (

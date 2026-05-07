@@ -16,7 +16,7 @@ const EMPTY_FILTER = { searchQuery:"", taskStatus:"", taskPriority:"", taskDueDa
 
 export default function SubjectTasksPage() {
   const { subjectId } = useParams();
-  const { user } = useUser();
+  const { user, dataVersion } = useUser();
   const [tasks, setTasks] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -47,7 +47,7 @@ export default function SubjectTasksPage() {
     setLoading(false);
   }, [subjectId]);
 
-  useEffect(() => { if (user?.id) load(); }, [user, load]);
+  useEffect(() => { if (user?.id) load(); }, [user, load, dataVersion]);
 
   const filtered = tasks.filter(t => {
     if (filter.searchQuery && !t.taskName.toLowerCase().includes(filter.searchQuery.toLowerCase())) return false;
@@ -95,7 +95,7 @@ export default function SubjectTasksPage() {
             <p>{tasks.length === 0 ? "No tasks for this subject yet." : "No tasks match your filters"}</p>
           </div>
         ) : (
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:"12px" }}>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:"12px" }}>
             {filtered.map(task => (
               <TaskCard key={task.taskId} task={task}
                 onEdit={t => { setEditingTask(t); setSidebarOpen(true); }}

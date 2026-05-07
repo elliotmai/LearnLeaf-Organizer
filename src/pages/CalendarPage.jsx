@@ -15,7 +15,7 @@ import Toast from "../components/ui/Toast.jsx";
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek: () => startOfWeek(new Date(),{weekStartsOn:0}), getDay, locales:{en:enUS} });
 
 export default function CalendarPage() {
-  const { user } = useUser();
+  const { user, dataVersion } = useUser();
   const [events, setEvents]   = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -49,7 +49,7 @@ export default function CalendarPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.id) load(); }, [user, load]);
+  useEffect(() => { if (user?.id) load(); }, [user, load, dataVersion]);
 
   const handleEventClick = ({ task }) => { setEditingTask(task); setSidebarOpen(true); };
 

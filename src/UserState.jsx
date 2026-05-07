@@ -1,9 +1,9 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { auth, firestore } from './firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAllFromStore } from './db.js';
-import { backgroundFetchRemaining } from './LearnLeaf_Functions.jsx';
+import { refreshAllData } from './LearnLeaf_Functions.jsx';
 
 const UserContext = createContext(null);
 
@@ -11,6 +11,9 @@ export function UserProvider({ children }) {
   const [user, setUser]               = useState(null);
   const [loading, setLoading]         = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
+  const [refreshing, setRefreshing]   = useState(false);
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -31,17 +34,17 @@ export function UserProvider({ children }) {
           setUser(userObj);
           localStorage.setItem('user', JSON.stringify(userObj));
 
-          // If IDB already has data (returning visit / page refresh), kick off
-          // a quiet background refresh to pick up anything missed since last load.
-          // If IDB is empty this is a fresh login — loginUser already ran
-          // fetchCriticalData so we only need the background pass here too.
+          // If IDB already has data (returning visit / page refresh), pages will
+          // mount and read the cached data immediately. Then we re-pull from
+          // Firebase in the background and bump dataVersion so pages re-render
+          // with fresh data. If IDB is empty, loginUser/loginWithGoogle already
+          // ran fetchCriticalData before navigating, so no extra fetch here.
           const cached = await getAllFromStore('tasks');
           if (cached.length > 0) {
-            // IDB is warm — silently refresh in background, no spinner needed
-            backgroundFetchRemaining(firebaseUser.uid).catch(() => {});
+            refreshAllData(firebaseUser.uid)
+              .then(() => setDataVersion(v => v + 1))
+              .catch(() => {});
           }
-          // If IDB is empty, loginUser / loginWithGoogle handles the full seed
-          // before navigating, so nothing extra needed here.
         } catch {
           setUser(null);
         }
@@ -60,8 +63,26 @@ export function UserProvider({ children }) {
     else localStorage.removeItem('user');
   };
 
+  // Manual refresh (pull-to-refresh on mobile, or any explicit refresh trigger).
+  // Clears IDB stores so deleted-in-Firebase records don't linger.
+  const refreshData = useCallback(async () => {
+    if (!user?.id) return;
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      await refreshAllData(user.id, { clear: true });
+      setDataVersion(v => v + 1);
+    } catch (e) {
+      console.warn('refreshData failed:', e);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [user]);
+
   return (
-    <UserContext.Provider value={{ user, loading, dataLoading, updateUser, setDataLoading }}>
+    <UserContext.Provider value={{ user, loading, dataLoading, dataVersion, refreshing, updateUser, setDataLoading, refreshData }}>
       {children}
     </UserContext.Provider>
   );

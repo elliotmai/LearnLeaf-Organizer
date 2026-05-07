@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { UserProvider } from "./UserState.jsx";
 import Toast from "./components/ui/Toast.jsx";
+import PullToRefresh from "./components/ui/PullToRefresh.jsx";
 
 function AppInner() {
   const [networkToast, setNetworkToast] = useState(null);
@@ -17,6 +18,7 @@ function AppInner() {
   return (
     <div style={{ minHeight:"100vh" }}>
       <Outlet />
+      <PullToRefresh />
       {networkToast && <Toast message={networkToast.message} type={networkToast.type} onClose={() => setNetworkToast(null)} />}
     </div>
   );

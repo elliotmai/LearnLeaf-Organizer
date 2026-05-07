@@ -22,7 +22,7 @@ const SectionHeader = ({ title, count, open, onToggle, color }) => (
 );
 
 export default function ArchivePage() {
-  const { user } = useUser();
+  const { user, dataVersion } = useUser();
   const [completedTasks, setCompletedTasks] = useState([]);
   const [archivedSubjects, setArchivedSubjects] = useState([]);
   const [archivedProjects, setArchivedProjects] = useState([]);
@@ -82,7 +82,7 @@ export default function ArchivePage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.id) load(); }, [user, load]);
+  useEffect(() => { if (user?.id) load(); }, [user, load, dataVersion]);
 
   const toggle = (k) => setOpenSections(s => ({...s,[k]:!s[k]}));
 
@@ -217,7 +217,7 @@ export default function ArchivePage() {
             <div>
               <SectionHeader title="Archived Subjects" count={filteredSubjects.length} open={openSections.subjects} onToggle={() => toggle("subjects")} color="#5B8E9F" />
               {openSections.subjects && (
-                <div style={{ marginTop:"8px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:"10px" }}>
+                <div style={{ marginTop:"8px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,220px),1fr))",gap:"10px" }}>
                   {filteredSubjects.map(s => (
                     <div key={s.subjectId} className="ll-card" style={{ padding:"14px",borderTop:`3px solid ${s.subjectColor||"#B6CDC8"}` }}>
                       <h3 style={{ margin:"0 0 4px",fontSize:"0.9rem",fontWeight:600,color:"#355147" }}>{s.subjectName}</h3>
@@ -247,7 +247,7 @@ export default function ArchivePage() {
             <div>
               <SectionHeader title="Archived Projects" count={filteredProjects.length} open={openSections.projects} onToggle={() => toggle("projects")} color="#8E5B9F" />
               {openSections.projects && (
-                <div style={{ marginTop:"8px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"10px" }}>
+                <div style={{ marginTop:"8px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,240px),1fr))",gap:"10px" }}>
                   {filteredProjects.map(p => (
                     <div key={p.projectId} className="ll-card" style={{ padding:"14px" }}>
                       <h3 style={{ margin:"0 0 4px",fontSize:"0.9rem",fontWeight:600,color:"#355147" }}>{p.projectName}</h3>

@@ -5,11 +5,27 @@
 @layer base {
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
+  html, body {
+    /* Prevents stray horizontal overflow from forcing mobile browsers to
+       initial-zoom-out so the user can see everything. Layout still flexes
+       to viewport width via responsive grids. */
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
   body {
     background-color: #f8faf9;
     font-family: 'DM Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     color: #1a2e28;
+  }
+  /* Tighter horizontal padding on mobile so cards/grids have more usable
+     width — desktop pages set padding via inline style (24px); the rule
+     below overrides only the horizontal sides on small viewports. */
+  @media (max-width: 480px) {
+    main {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
   }
 }
 
