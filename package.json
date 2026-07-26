@@ -4,6 +4,7 @@
   "version": "3.0.0",
   "type": "module",
   "scripts": {
+    "prepare": "node .githooks/install.mjs",
     "dev": "vite",
     "start": "vite",
     "build": "vite build",

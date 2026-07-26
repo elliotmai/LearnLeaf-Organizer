@@ -1,0 +1,5 @@
+#!/bin/sh
+# What's New changelog hook — stamps the newest entry's date and reminds you to
+# add an entry when user-facing code changes. Logic lives in the .mjs beside this.
+# Bypass with `git commit --no-verify`.
+exec node "$(git rev-parse --show-toplevel)/.githooks/whatsnew-precommit.mjs"
