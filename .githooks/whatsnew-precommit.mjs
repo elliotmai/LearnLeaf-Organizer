@@ -33,16 +33,30 @@ const changelogStaged = staged.includes(CONFIG_REL);
 const d = new Date();
 const today = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 
-// --- Job 1: stamp the newest entry's version with today's date ---
+// --- Job 1: stamp the newest entry's version with today's date (YYYY.MM.DD),
+// escalating to YYYY.MM.DD.N for the 2nd+ release on the same day, so the date
+// never runs ahead of the real calendar. ---
 if (changelogStaged && existsSync(configPath)) {
   const src = readFileSync(configPath, 'utf8');
-  // The newest entry is first, so replace only the first version: '....'.
-  const re = /version:\s*(['"`])(\d{4}\.\d{2}\.\d{2})\1/;
-  const m = src.match(re);
-  if (m && m[2] !== today) {
-    writeFileSync(configPath, src.replace(re, `version: '${today}'`));
+  const all = [...src.matchAll(/version:\s*(['"`])([\d.]+)\1/g)].map((m) => m[2]);
+  const current = all[0];        // newest entry (first in the array)
+  const others = all.slice(1);   // already-published entries
+  const sameDay = others.filter((v) => v === today || v.startsWith(today + '.'));
+  let next = today;
+  if (sameDay.length) {
+    let maxN = 0;
+    sameDay.forEach((v) => {
+      const suf = v.slice(today.length + 1);
+      const n = suf === '' ? 0 : parseInt(suf, 10);
+      if (!Number.isNaN(n)) maxN = Math.max(maxN, n);
+    });
+    next = `${today}.${maxN + 1}`;
+  }
+  if (current && current !== next) {
+    const one = /version:\s*(['"`])[\d.]+\1/;
+    writeFileSync(configPath, src.replace(one, `version: '${next}'`));
     git(`add -- "${CONFIG_REL}"`);
-    console.error(`[whats-new] Stamped newest changelog entry: ${m[2]} -> ${today}`);
+    console.error(`[whats-new] Stamped newest changelog entry: ${current} -> ${next}`);
   }
 }
 
