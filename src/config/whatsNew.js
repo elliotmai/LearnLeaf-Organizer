@@ -1,8 +1,10 @@
 /**
  * End-user "What's New" entries — NEWEST FIRST.
  *
- * When you ship user-facing changes, bump `version` (use today's date as
- * YYYY.MM.DD) and add a new entry at the top with plain-language, benefit-focused
+ * When you ship user-facing changes, add a new entry at the top with `version`
+ * set to today's date as YYYY.MM.DD — or YYYY.MM.DD.N for the 2nd+ release in a
+ * single day (the pre-commit hook stamps this automatically). Plain-language,
+ * benefit-focused
  * bullets. The next time each person opens the app, the popup shows every entry
  * newer than what their device last saw — so if several releases stacked up
  * between visits, they see them all at once (tracked per-device in localStorage).
