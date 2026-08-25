@@ -6,6 +6,7 @@ import TopBar from "../components/layout/TopBar.jsx";
 import TaskCard from "../components/tasks/TaskCard.jsx";
 import TaskForm from "../components/tasks/TaskForm.jsx";
 import TaskDetailPanel from "../components/tasks/TaskDetailPanel.jsx";
+import TaskImportDialog from "../components/tasks/TaskImportDialog.jsx";
 import FilterBar from "../components/ui/FilterBar.jsx";
 import LoadingSpinner from "../components/ui/LoadingSpinner.jsx";
 import ConfirmDialog from "../components/ui/ConfirmDialog.jsx";
@@ -45,6 +46,7 @@ export default function TasksPage() {
   const [detailTask, setDetailTask] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
   const load = useCallback(async () => {
@@ -78,6 +80,18 @@ export default function TasksPage() {
   const handleSave = async () => {
     await load();
     setToast({ message: editingTask ? "Task updated!" : "Task added!", type: "success" });
+  };
+
+  const handleImported = async (imported, failed) => {
+    await load();
+    if (imported > 0) {
+      setToast({
+        message: `Imported ${imported} task${imported === 1 ? "" : "s"}${failed ? ` — ${failed} could not be saved` : ""}`,
+        type: failed ? "info" : "success",
+      });
+    } else if (failed) {
+      setToast({ message: "Nothing was imported — see the errors listed in the dialog", type: "error" });
+    }
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
@@ -117,10 +131,16 @@ export default function TasksPage() {
               {filtered.length} active task{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button onClick={handleAdd}
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 18px", borderRadius: "12px", background: "#355147", color: "white", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", boxShadow: "0 2px 8px rgba(53,81,71,0.25)", whiteSpace: "nowrap" }}>
-            + New Task
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <button onClick={() => setImportOpen(true)} className="btn-secondary"
+              style={{ padding: "10px 16px", whiteSpace: "nowrap" }}>
+              Import from Spreadsheet
+            </button>
+            <button onClick={handleAdd}
+              style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 18px", borderRadius: "12px", background: "#355147", color: "white", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", boxShadow: "0 2px 8px rgba(53,81,71,0.25)", whiteSpace: "nowrap" }}>
+              + New Task
+            </button>
+          </div>
         </div>
 
         <FilterBar filterCriteria={filter} onChange={handleFilterChange} onClear={clearFilters} subjects={subjects} projects={projects} />
@@ -162,6 +182,9 @@ export default function TasksPage() {
 
       <TaskForm open={sidebarOpen} onClose={() => setSidebarOpen(false)}
         task={editingTask} subjects={subjects} projects={projects} onSave={handleSave} />
+
+      <TaskImportDialog open={importOpen} onClose={() => setImportOpen(false)}
+        subjects={subjects} projects={projects} onImported={handleImported} />
 
       <TaskDetailPanel open={detailOpen} onClose={() => setDetailOpen(false)}
         task={detailTask}
