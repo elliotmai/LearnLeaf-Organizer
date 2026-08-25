@@ -14,6 +14,14 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.08.25',
+    date: 'August 2026',
+    items: [
+      '📊 Import tasks from a spreadsheet — paste rows straight from Excel or Google Sheets (or pick a CSV file) on the Tasks page, check the preview, then add them all at once.',
+      '✨ Subjects and projects named in your sheet are matched to the ones you already have, and any new ones are created for you.',
+    ],
+  },
+  {
     version: '2026.07.26',
     date: 'July 2026',
     items: [

@@ -26,6 +26,17 @@ const initUserFromLocalStorage = async () => {
 };
 initUserFromLocalStorage();
 
+// Ids are timestamp strings. Bulk operations (e.g. spreadsheet import) create
+// records in a tight loop and can land in the same millisecond, so a bare
+// Date.now() would hand out the same id twice and silently overwrite the
+// earlier record. Stepping forward on collision keeps ids unique per session.
+let lastGeneratedId = 0;
+function generateId() {
+  const now = Date.now();
+  lastGeneratedId = now > lastGeneratedId ? now : lastGeneratedId + 1;
+  return `${lastGeneratedId}`;
+}
+
 async function tryFirestoreWrite(fn, label = '') {
   if (!navigator.onLine) return;
   try { await fn(); } catch (e) { console.error(`Firestore write failed (${label}):`, e); }
@@ -345,7 +356,7 @@ export async function deleteUser(uid) {
 // --- Tasks ---
 export async function addTask(taskDetails) {
   if (!taskCollection) { const u = JSON.parse(localStorage.getItem('user')); if (u?.id) setUserIdAndCollections(u.id); }
-  const taskId = taskDetails.taskLMSDetails?.LMS_UID || `${Date.now()}`;
+  const taskId = taskDetails.taskLMSDetails?.LMS_UID || generateId();
   const taskRef = doc(taskCollection, taskId);
 
   const subjectRef = (taskDetails.taskSubject && taskDetails.taskSubject !== 'None')
@@ -436,7 +447,7 @@ export function sortTasks(tasks) {
 // --- Subjects ---
 export async function addSubject(details) {
   if (!subjectCollection) { const u = JSON.parse(localStorage.getItem('user')); if (u?.id) setUserIdAndCollections(u.id); }
-  const subjectId = details.subjectLMSDetails?.LMS_UID || `${Date.now()}`;
+  const subjectId = details.subjectLMSDetails?.LMS_UID || generateId();
   const ref = doc(subjectCollection, subjectId);
   const data = { subjectName: details.subjectName, subjectSemester: details.subjectSemester || '', subjectDescription: details.subjectDescription || '', subjectColor: details.subjectColor || '#355147', subjectStatus: details.subjectStatus || 'Active', subjectLMSDetails: details.subjectLMSDetails || {} };
   const local = { subjectId, ...data };
@@ -488,7 +499,7 @@ export function sortSubjects(subjects) {
 // --- Projects ---
 export async function addProject({ projectDueDateInput, projectDueTimeInput, projectName, projectDescription, projectSubjects }) {
   if (!projectCollection) { const u = JSON.parse(localStorage.getItem('user')); if (u?.id) setUserIdAndCollections(u.id); }
-  const projectId = `${Date.now()}`;
+  const projectId = generateId();
   const ref = doc(projectCollection, projectId);
   const subjectRefs = (projectSubjects || []).filter(id => id && id !== 'None').map(id => doc(subjectCollection, id));
   const data = { projectName, projectDescription: projectDescription || '', projectStatus: 'Active', projectSubjects: subjectRefs };
