@@ -25,3 +25,13 @@ Rules that make it useful rather than decorative:
   someone to do teaches people to ignore it.
 - **Keep it under about 15 words.** It has to survive being summarised into
   the session's status line, which is where the dashboard actually reads it.
+
+## Push straight to main
+
+Commit and push your work directly to `main`. That is the default for every
+change — no feature branch, no pull request, no waiting on a review.
+
+- **Unless the request says otherwise.** Asked for a branch, a PR, or a review
+  first? Do that instead — an explicit instruction beats this default.
+- **Push as soon as the work stands on its own.** A commit that never leaves
+  the session has not landed, and nothing else is collecting it.
