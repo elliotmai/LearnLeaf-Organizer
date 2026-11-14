@@ -4,11 +4,16 @@
  * A small bearer-token REST API over ONE user's Firestore data, so an assistant
  * (or any script) can read and manage tasks, subjects and projects. It uses the
  * Firebase Admin SDK, so Firestore security rules do not apply — access is
- * limited in code to the single user id in LEARNLEAF_UID.
+ * limited in code to the one user whose document carries the caller's token hash.
  *
- * Required environment variables (Netlify → Site configuration → Environment):
- *   LEARNLEAF_API_TOKEN       long random string; callers send "Authorization: Bearer <token>"
- *   LEARNLEAF_UID             Firebase Auth uid of the account whose data this serves
+ * Who the caller is: callers send "Authorization: Bearer <token>". The function
+ * hashes the token (SHA-256, hex) and finds the user document in `users` whose
+ * `apiTokenHash` field matches. That user's id is the only data it will touch.
+ * No user id, email or token lives in the environment; only the hash is stored,
+ * on your own user document. Remove the field to revoke access. Generate a token
+ * and its hash with `node scripts/make-api-token.mjs`.
+ *
+ * Required environment variable (Netlify → Site configuration → Environment):
  *   FIREBASE_SERVICE_ACCOUNT  service-account key JSON (raw JSON or base64 of it)
  * Optional:
  *   LEARNLEAF_TZ              IANA zone used to read/write dates and times (default "UTC")
@@ -27,7 +32,7 @@
  * Data shapes mirror src/LearnLeaf_Functions.jsx (docToLocal): dates are
  * "YYYY-MM-DD", times "HH:mm", and subject/project links are plain ids or "None".
  */
-import { timingSafeEqual, randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 
@@ -59,14 +64,19 @@ function getDb() {
   return getFirestore();
 }
 
-function checkAuth(req) {
-  const expected = process.env.LEARNLEAF_API_TOKEN;
-  if (!expected || expected.length < 24) throw new HttpError(500, 'LEARNLEAF_API_TOKEN is missing or too short (use 24+ characters)');
+const MIN_TOKEN_LENGTH = 32;
+
+export const hashToken = token => createHash('sha256').update(token).digest('hex');
+
+// Bearer token -> uid of the one user whose document stores that token's hash.
+export async function resolveUid(db, req) {
   const header = req.headers.get('authorization') || '';
-  const given = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new HttpError(401, 'Unauthorized');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (token.length < MIN_TOKEN_LENGTH) throw new HttpError(401, 'Unauthorized');
+  const snap = await db.collection('users').where('apiTokenHash', '==', hashToken(token)).limit(2).get();
+  // Zero matches: unknown token. More than one: ambiguous, so refuse rather than guess.
+  if (snap.size !== 1) throw new HttpError(401, 'Unauthorized');
+  return snap.docs[0].id;
 }
 
 // ---------------------------------------------------------------- dates ----
@@ -391,12 +401,11 @@ async function handle(req, db, uid, segments) {
 export default async function handler(req) {
   const requestId = randomUUID().slice(0, 8);
   try {
-    checkAuth(req);
-    const uid = process.env.LEARNLEAF_UID;
-    if (!uid) throw new HttpError(500, 'LEARNLEAF_UID is not set');
+    const db = getDb();
+    const uid = await resolveUid(db, req);
     const path = new URL(req.url).pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '');
     const segments = path.split('/').filter(Boolean).map(decodeURIComponent);
-    return await handle(req, getDb(), uid, segments);
+    return await handle(req, db, uid, segments);
   } catch (e) {
     if (e instanceof HttpError) return json(e.status, { error: e.message });
     console.error(`[api ${requestId}]`, e);
