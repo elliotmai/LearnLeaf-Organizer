@@ -15,8 +15,13 @@
  *
  * Required environment variable (Netlify → Site configuration → Environment):
  *   FIREBASE_SERVICE_ACCOUNT  service-account key JSON (raw JSON or base64 of it)
- * Optional:
- *   LEARNLEAF_TZ              IANA zone used to read/write dates and times (default "UTC")
+ * Timezone: due dates and times are read and written in the caller's own zone,
+ * taken from the string field `timezone` (an IANA name such as "America/Chicago")
+ * on their user document. The web app records the browser's timezone there each
+ * time the person signs in or reopens it, so it matches what they see in the app.
+ * If it is missing the API falls back to the optional LEARNLEAF_TZ environment
+ * variable, then to UTC. Because it is per user, one deployment can serve people
+ * in different zones.
  *
  * Routes (all under /api, all JSON):
  *   GET    /api/summary                      overdue / due-today / due-soon counts + next tasks
@@ -33,6 +38,7 @@
  * "YYYY-MM-DD", times "HH:mm", and subject/project links are plain ids or "None".
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 
@@ -68,19 +74,29 @@ const MIN_TOKEN_LENGTH = 32;
 
 export const hashToken = token => createHash('sha256').update(token).digest('hex');
 
-// Bearer token -> uid of the one user whose document stores that token's hash.
-export async function resolveUid(db, req) {
+const isValidZone = z => { try { new Intl.DateTimeFormat('en-CA', { timeZone: z }); return true; } catch { return false; } };
+
+// Bearer token -> the one user whose document stores that token's hash.
+// Returns { uid, timezone } where timezone is that user's timezone (or undefined).
+export async function resolveUser(db, req) {
   const header = req.headers.get('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   if (token.length < MIN_TOKEN_LENGTH) throw new HttpError(401, 'Unauthorized');
   const snap = await db.collection('users').where('apiTokenHash', '==', hashToken(token)).limit(2).get();
   // Zero matches: unknown token. More than one: ambiguous, so refuse rather than guess.
   if (snap.size !== 1) throw new HttpError(401, 'Unauthorized');
-  return snap.docs[0].id;
+  const doc = snap.docs[0];
+  const timezone = doc.data().timezone;
+  if (timezone !== undefined && (typeof timezone !== 'string' || !isValidZone(timezone))) {
+    throw new HttpError(500, 'timezone on your user document is not a valid IANA timezone (e.g. America/Chicago)');
+  }
+  return { uid: doc.id, timezone };
 }
 
 // ---------------------------------------------------------------- dates ----
-const TZ = () => process.env.LEARNLEAF_TZ || 'UTC';
+// The zone for the current request: the user's timezone, else LEARNLEAF_TZ, else UTC.
+const tzStore = new AsyncLocalStorage();
+const TZ = () => tzStore.getStore() || process.env.LEARNLEAF_TZ || 'UTC';
 
 // Wall-clock parts of an instant in the configured zone.
 function partsInTz(date) {
@@ -402,10 +418,10 @@ export default async function handler(req) {
   const requestId = randomUUID().slice(0, 8);
   try {
     const db = getDb();
-    const uid = await resolveUid(db, req);
+    const { uid, timezone } = await resolveUser(db, req);
     const path = new URL(req.url).pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '');
     const segments = path.split('/').filter(Boolean).map(decodeURIComponent);
-    return await handle(req, db, uid, segments);
+    return await tzStore.run(timezone, () => handle(req, db, uid, segments));
   } catch (e) {
     if (e instanceof HttpError) return json(e.status, { error: e.message });
     console.error(`[api ${requestId}]`, e);

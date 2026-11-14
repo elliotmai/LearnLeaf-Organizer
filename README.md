@@ -275,9 +275,9 @@ The Firebase web config currently lives directly in `src/firebase.js`. To point 
 
 No user id, email or token is kept in Netlify. Setup:
 
-1. **Netlify variable.** Add `FIREBASE_SERVICE_ACCOUNT` (Firebase console → Project settings → Service accounts → Generate new private key; raw JSON or base64) under Site configuration → Environment variables. Optionally add `LEARNLEAF_TZ` (an IANA zone such as `America/New_York`, default `UTC`) so due dates and times use your timezone. Redeploy.
+1. **Netlify variable.** Add `FIREBASE_SERVICE_ACCOUNT` (Firebase console → Project settings → Service accounts → Generate new private key; raw JSON or base64) under Site configuration → Environment variables. Redeploy.
 2. **Make a token.** Run `node scripts/make-api-token.mjs`. It prints a token (keep it private, it is shown once) and its SHA-256 hash.
-3. **Link it to your account.** In the Firebase console → Firestore → `users` → your user document, add a string field `apiTokenHash` with the hash.
+3. **Link it to your account.** In the Firebase console → Firestore → `users` → your user document, add a string field `apiTokenHash` with the hash. Due dates and times use the `timezone` field on your user document, which the web app fills in automatically with your browser's timezone each time you open it (open the app once after deploying). It is per user, so people in different zones can share one deployment. Until it is set the API falls back to an optional `LEARNLEAF_TZ` variable, then to `UTC`.
 
 Callers then send `Authorization: Bearer <token>`. To revoke or rotate, delete or replace `apiTokenHash`. Never commit the token or the service-account key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
 
