@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { auth, firestore } from './firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAllFromStore } from './db.js';
 import { refreshAllData } from './LearnLeaf_Functions.jsx';
 
@@ -33,6 +33,16 @@ export function UserProvider({ children }) {
           };
           setUser(userObj);
           localStorage.setItem('user', JSON.stringify(userObj));
+
+          // Keep the person's timezone on their user document so server-side
+          // tools (the personal API) read and write due dates the way the app shows them.
+          // Best-effort: a failure here must never block sign-in.
+          try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz && snap.exists() && data.timezone !== tz && navigator.onLine) {
+              updateDoc(doc(firestore, 'users', firebaseUser.uid), { timezone: tz }).catch(() => {});
+            }
+          } catch { /* ignore */ }
 
           // If IDB already has data (returning visit / page refresh), pages will
           // mount and read the cached data immediately. Then we re-pull from
