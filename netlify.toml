@@ -3,6 +3,15 @@
   publish = "dist"
 
 [[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

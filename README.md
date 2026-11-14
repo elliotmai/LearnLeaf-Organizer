@@ -269,6 +269,23 @@ The Firebase web config currently lives directly in `src/firebase.js`. To point 
 
 ---
 
+## Personal API (assistant access)
+
+`netlify/functions/api.mjs` is a bearer-token REST API over **one** user's tasks, subjects and projects, served at `/api/*` on the Netlify site. It uses the Firebase Admin SDK, so access is limited in code to a single uid. Routes and field shapes are documented at the top of that file.
+
+Set these in Netlify → Site configuration → Environment variables, then redeploy:
+
+| Variable | Value |
+|----------|-------|
+| `LEARNLEAF_API_TOKEN` | A long random string (24+ chars). Callers send `Authorization: Bearer <token>`. |
+| `LEARNLEAF_UID` | Your Firebase Auth uid (Firebase console → Authentication → Users). |
+| `FIREBASE_SERVICE_ACCOUNT` | Service-account key JSON (Firebase console → Project settings → Service accounts). Raw JSON or base64. |
+| `LEARNLEAF_TZ` | Optional IANA zone for due dates/times, e.g. `America/New_York`. Defaults to `UTC`. |
+
+Never commit the token or key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
+
+---
+
 ## Build & deploy
 
 ```bash
