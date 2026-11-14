@@ -51,6 +51,12 @@ class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
+// Maps every document, but one malformed record must not take the whole list down:
+// it is returned as { <idKey>, _error } so it can be found and fixed.
+const mapAll = (docs, fn, idKey) => docs.map(doc => {
+  try { return fn(doc); } catch (e) { console.error(`unreadable ${idKey} ${doc.id}:`, e); return { [idKey]: doc.id, _error: `Could not read this record: ${e.message}` }; }
+});
+
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
@@ -122,8 +128,21 @@ function zonedToDate(dateStr, timeStr = '00:00:00') {
   return new Date(result);
 }
 
-const toDateStr = ts => { if (!ts) return ''; const p = partsInTz(ts.toDate()); return `${p.year}-${p.month}-${p.day}`; };
-const toTimeStr = ts => { if (!ts) return ''; const p = partsInTz(ts.toDate()); return `${p.hour}:${p.minute}`; };
+// Old records may hold dates as Firestore Timestamps, JS Dates, ISO strings or {seconds}.
+// Normalise whatever is there; anything unreadable becomes null (shown as empty).
+function toJsDate(v) {
+  if (!v) return null;
+  let d = null;
+  if (typeof v.toDate === 'function') d = v.toDate();
+  else if (v instanceof Date) d = v;
+  else if (typeof v === 'string' || typeof v === 'number') d = new Date(v);
+  else if (typeof v.seconds === 'number') d = new Date(v.seconds * 1000);
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+const toDateStr = v => { const d = toJsDate(v); if (!d) return ''; const p = partsInTz(d); return `${p.year}-${p.month}-${p.day}`; };
+const toTimeStr = v => { const d = toJsDate(v); if (!d) return ''; const p = partsInTz(d); return `${p.hour}:${p.minute}`; };
+// A link may be a DocumentReference or (in old data) a bare id string.
+const refId = r => (typeof r === 'string' ? r : r?.id) || 'None';
 const todayStr = () => toDateStr(Timestamp.now());
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -147,8 +166,8 @@ function taskToJson(doc) {
     taskDescription: d.taskDescription || '',
     taskPriority: d.taskPriority || 'Medium',
     taskStatus: d.taskStatus || 'Not Started',
-    taskSubject: d.taskSubject?.id || 'None',
-    taskProject: d.taskProject?.id || 'None',
+    taskSubject: refId(d.taskSubject),
+    taskProject: refId(d.taskProject),
     taskDueDate: toDateStr(d.taskDueDate),
     taskDueTime: toTimeStr(d.taskDueTime),
     taskStartDate: toDateStr(d.taskStartDate),
@@ -168,7 +187,7 @@ function projectToJson(doc) {
     projectName: d.projectName || '',
     projectDescription: d.projectDescription || '',
     projectStatus: d.projectStatus || 'Active',
-    projectSubjects: (d.projectSubjects || []).map(r => r.id),
+    projectSubjects: (Array.isArray(d.projectSubjects) ? d.projectSubjects : []).map(refId),
     projectDueDate: toDateStr(d.projectDueDate),
     projectDueTime: toTimeStr(d.projectDueTime),
   };
@@ -262,7 +281,7 @@ async function handle(req, db, uid, segments) {
 
   if (resource === 'summary' && method === 'GET') {
     const snap = await col('tasks').where('taskStatus', 'in', ['Not Started', 'In Progress']).get();
-    const open = snap.docs.map(taskToJson);
+    const open = mapAll(snap.docs, taskToJson, 'taskId').filter(t => !t._error);
     const today = todayStr();
     const soon = (() => { const d = new Date(zonedToDate(today).getTime() + 7 * 86400000); const p = partsInTz(d); return `${p.year}-${p.month}-${p.day}`; })();
     const byDue = (a, b) => (a.taskDueDate || '9999').localeCompare(b.taskDueDate || '9999') || (a.taskDueTime || '23:59').localeCompare(b.taskDueTime || '23:59');
@@ -285,13 +304,13 @@ async function handle(req, db, uid, segments) {
   if (resource === 'tasks') {
     if (!id && method === 'GET') {
       const q = url.searchParams;
-      let tasks = (await col('tasks').get()).docs.map(taskToJson);
+      let tasks = mapAll((await col('tasks').get()).docs, taskToJson, 'taskId');
       if (q.get('status')) tasks = tasks.filter(t => t.taskStatus === q.get('status'));
       if (q.get('subject')) tasks = tasks.filter(t => t.taskSubject === q.get('subject'));
       if (q.get('project')) tasks = tasks.filter(t => t.taskProject === q.get('project'));
       if (q.get('due_before')) tasks = tasks.filter(t => t.taskDueDate && t.taskDueDate <= q.get('due_before'));
       if (q.get('due_after')) tasks = tasks.filter(t => t.taskDueDate && t.taskDueDate >= q.get('due_after'));
-      tasks.sort((a, b) => (a.taskDueDate || '9999').localeCompare(b.taskDueDate || '9999') || (a.taskDueTime || '23:59').localeCompare(b.taskDueTime || '23:59') || a.taskName.localeCompare(b.taskName));
+      tasks.sort((a, b) => (a.taskDueDate || '9999').localeCompare(b.taskDueDate || '9999') || (a.taskDueTime || '23:59').localeCompare(b.taskDueTime || '23:59') || (a.taskName || '').localeCompare(b.taskName || ''));
       return json(200, { tasks });
     }
     if (!id && method === 'POST') {
@@ -324,7 +343,7 @@ async function handle(req, db, uid, segments) {
   }
 
   if (resource === 'subjects') {
-    if (!id && method === 'GET') return json(200, { subjects: (await col('subjects').get()).docs.map(subjectToJson) });
+    if (!id && method === 'GET') return json(200, { subjects: mapAll((await col('subjects').get()).docs, subjectToJson, 'subjectId') });
     if (!id && method === 'POST') {
       const data = {
         subjectName: str(body.subjectName, 'subjectName', { max: 200, required: true }),
@@ -360,7 +379,7 @@ async function handle(req, db, uid, segments) {
   }
 
   if (resource === 'projects') {
-    if (!id && method === 'GET') return json(200, { projects: (await col('projects').get()).docs.map(projectToJson) });
+    if (!id && method === 'GET') return json(200, { projects: mapAll((await col('projects').get()).docs, projectToJson, 'projectId') });
     const subjectRefs = async list => {
       if (list === undefined) return undefined;
       if (!Array.isArray(list)) throw new HttpError(400, 'projectSubjects must be an array of subject ids');
