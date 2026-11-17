@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 /*
+ * LEGACY. New tokens should come from the Connected apps screen in the app
+ * (Account & Preferences → Connected apps): it mints a token per app, shows it
+ * once, tracks when it was last used, and revokes it with one click. Tokens made
+ * by this script still work; use it only if you need a token without the app.
+ *
  * Generates a personal API token for netlify/functions/api.mjs and prints the
  * SHA-256 hash to store on your Firestore user document.
  *

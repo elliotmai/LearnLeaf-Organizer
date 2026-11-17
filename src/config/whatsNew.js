@@ -14,6 +14,13 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.17',
+    date: 'November 2026',
+    items: [
+      '🔗 Connected apps — let another of your apps (like Fridge Board) read and update your tasks. Find it under Account & Preferences: name the app, copy its key, and revoke it there whenever you like.',
+    ],
+  },
+  {
     version: '2026.08.25',
     date: 'August 2026',
     items: [

@@ -5,6 +5,7 @@ import { logoutUser, updateUserDetails, deleteUser } from "../LearnLeaf_Function
 import TopBar from "../components/layout/TopBar.jsx";
 import Toast from "../components/ui/Toast.jsx";
 import ConfirmDialog from "../components/ui/ConfirmDialog.jsx";
+import ConnectedApps from "../components/account/ConnectedApps.jsx";
 
 export default function UserProfilePage() {
   const { user, updateUser } = useUser();
@@ -124,6 +125,9 @@ export default function UserProfilePage() {
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
+
+        {/* Connected apps (API keys for the owner's other apps) */}
+        <ConnectedApps styles={{ section, sectionTitle, inp, lab }} />
 
         {/* Danger zone */}
         <div style={{ ...section, border: "1px solid rgba(243,22,30,0.15)" }}>

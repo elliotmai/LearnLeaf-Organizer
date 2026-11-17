@@ -7,13 +7,15 @@
  * limited in code to the one user whose document carries the caller's token hash.
  *
  * Who the caller is: callers send "Authorization: Bearer <token>". The function
- * hashes the token (SHA-256, hex) and finds the user document in `users` whose
- * `apiTokenHash` field matches, or whose `apiTokenHashes` array contains it (one
- * entry per connected app, so each can be revoked on its own). That user's id is
- * the only data it will touch.
- * No user id, email or token lives in the environment; only the hash is stored,
- * on your own user document. Remove the field to revoke access. Generate a token
- * and its hash with `node scripts/make-api-token.mjs`.
+ * hashes the token (SHA-256, hex) and looks it up, in order:
+ *   1. apiTokens/{hash} — tokens ("llapp_...") minted on the Connected apps
+ *      screen (Account & Preferences). Revoked ones are refused. This is how new
+ *      tokens should be made; see netlify/lib/apiTokens.mjs.
+ *   2. Legacy: the user document in `users` whose `apiTokenHash` field matches,
+ *      or whose `apiTokenHashes` array contains it (made with
+ *      `node scripts/make-api-token.mjs`). Still honoured so old tokens work.
+ * That user's id is the only data it will touch. No user id, email or token
+ * lives in the environment; only hashes are stored.
  *
  * Required environment variable (Netlify → Site configuration → Environment):
  *   FIREBASE_SERVICE_ACCOUNT  service-account key JSON (raw JSON or base64 of it)
@@ -39,19 +41,16 @@
  * Data shapes mirror src/LearnLeaf_Functions.jsx (docToLocal): dates are
  * "YYYY-MM-DD", times "HH:mm", and subject/project links are plain ids or "None".
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { HttpError, json, getDb, hashToken, bearer } from '../lib/firebaseAdmin.mjs';
+import { lookupToken } from '../lib/apiTokens.mjs';
 
 const TASK_STATUSES = ['Not Started', 'In Progress', 'Completed'];
 const SUBJECT_STATUSES = ['Active', 'Archived', 'Blocked'];
 const PROJECT_STATUSES = ['Active', 'Archived'];
 const PRIORITIES = ['High', 'Medium', 'Low'];
-
-class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
-}
 
 // Maps every document, but one malformed record must not take the whole list down:
 // it is returned as { <idKey>, _error } so it can be found and fixed.
@@ -59,47 +58,41 @@ const mapAll = (docs, fn, idKey) => docs.map(doc => {
   try { return fn(doc); } catch (e) { console.error(`unreadable ${idKey} ${doc.id}:`, e); return { [idKey]: doc.id, _error: `Could not read this record: ${e.message}` }; }
 });
 
-const json = (status, body) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
-
-// ---------------------------------------------------------------- setup ----
-function readServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new HttpError(500, 'FIREBASE_SERVICE_ACCOUNT is not set');
-  const text = raw.trim().startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
-  try { return JSON.parse(text); } catch { throw new HttpError(500, 'FIREBASE_SERVICE_ACCOUNT is not valid JSON'); }
-}
-
-function getDb() {
-  if (!getApps().length) initializeApp({ credential: cert(readServiceAccount()) });
-  return getFirestore();
-}
-
 const MIN_TOKEN_LENGTH = 32;
 
-export const hashToken = token => createHash('sha256').update(token).digest('hex');
+export { hashToken };
 
 const isValidZone = z => { try { new Intl.DateTimeFormat('en-CA', { timeZone: z }); return true; } catch { return false; } };
 
-// Bearer token -> the one user whose document stores that token's hash.
-// Returns { uid, timezone } where timezone is that user's timezone (or undefined).
+// Bearer token -> the one user it belongs to. Returns { uid, timezone } where
+// timezone is that user's timezone (or undefined). Every failure is the same 401.
+//   1. apiTokens/{hash}: a token minted on the Connected apps screen. A revoked
+//      one is refused outright. lastUsedAt is updated best-effort.
+//   2. Legacy: the user whose apiTokenHash equals the hash, or whose
+//      apiTokenHashes array contains it. Exactly one user, else 401.
 export async function resolveUser(db, req) {
-  const header = req.headers.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const token = bearer(req);
   if (token.length < MIN_TOKEN_LENGTH) throw new HttpError(401, 'Unauthorized');
   const hash = hashToken(token);
   const users = db.collection('users');
-  const [single, many] = await Promise.all([
-    users.where('apiTokenHash', '==', hash).limit(2).get(),
-    users.where('apiTokenHashes', 'array-contains', hash).limit(2).get(),
-  ]);
-  const matches = new Map([...single.docs, ...many.docs].map(d => [d.id, d]));
-  // Zero matches: unknown token. More than one user: ambiguous, so refuse rather than guess.
-  if (matches.size !== 1) throw new HttpError(401, 'Unauthorized');
-  const [doc] = matches.values();
+
+  let doc;
+  const connected = await lookupToken(db, hash);
+  if (connected) {
+    if (connected.revoked) throw new HttpError(401, 'Unauthorized');
+    const [snap] = await Promise.all([users.doc(connected.uid).get(), connected.touched]);
+    if (!snap.exists) throw new HttpError(401, 'Unauthorized');
+    doc = snap;
+  } else {
+    const [single, many] = await Promise.all([
+      users.where('apiTokenHash', '==', hash).limit(2).get(),
+      users.where('apiTokenHashes', 'array-contains', hash).limit(2).get(),
+    ]);
+    const matches = new Map([...single.docs, ...many.docs].map(d => [d.id, d]));
+    // Zero matches: unknown token. More than one user: ambiguous, so refuse rather than guess.
+    if (matches.size !== 1) throw new HttpError(401, 'Unauthorized');
+    [doc] = matches.values();
+  }
   const timezone = doc.data().timezone;
   if (timezone !== undefined && (typeof timezone !== 'string' || !isValidZone(timezone))) {
     throw new HttpError(500, 'timezone on your user document is not a valid IANA timezone (e.g. America/Chicago)');

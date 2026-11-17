@@ -31,6 +31,8 @@ _Streamlining success, one task at a time._
 - [Getting started](#getting-started)
 - [Configuration (Firebase)](#configuration-firebase)
 - [Scripts](#scripts)
+- [Personal API (assistant access)](#personal-api-assistant-access)
+  - [Connected apps](#connected-apps)
 - [Build & deploy](#build--deploy)
 - [PWA notes](#pwa-notes)
 - [Design system](#design-system)
@@ -72,6 +74,7 @@ The defining trait of v3.0 is that it's **offline-first**: the interface always 
 **Account & preferences**
 - Email/password and Google sign-in
 - Time format (12h / 24h), date format (MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD), and notification preferences
+- Connected apps — give another of your apps its own API key, see when it was last used, revoke it any time
 - Account deletion ("danger zone")
 
 **Platform**
@@ -193,6 +196,8 @@ src/
 │   ├── projects/
 │   │   ├── ProjectForm.jsx
 │   │   └── ProjectDetailPanel.jsx
+│   ├── account/
+│   │   └── ConnectedApps.jsx          # Mint/revoke API keys for your other apps
 │   └── ui/
 │       ├── Sidebar.jsx                # Reusable slide-out panel
 │       ├── Toast.jsx
@@ -266,6 +271,7 @@ The Firebase web config currently lives directly in `src/firebase.js`. To point 
 | `npm run build`   | Production build to `dist/`                  |
 | `npm run preview` | Preview the production build locally         |
 | `npm run deploy`  | Build, then publish `dist/` via `gh-pages`   |
+| `npm test`        | Run the API token tests (`node --test`)      |
 
 ---
 
@@ -276,12 +282,27 @@ The Firebase web config currently lives directly in `src/firebase.js`. To point 
 No user id, email or token is kept in Netlify. Setup:
 
 1. **Netlify variable.** Add `FIREBASE_SERVICE_ACCOUNT` (Firebase console → Project settings → Service accounts → Generate new private key; raw JSON or base64) under Site configuration → Environment variables. Redeploy.
-2. **Make a token.** Run `node scripts/make-api-token.mjs`. It prints a token (keep it private, it is shown once) and its SHA-256 hash.
-3. **Link it to your account.** In the Firebase console → Firestore → `users` → your user document, add a string field `apiTokenHash` with the hash. Due dates and times use the `timezone` field on your user document, which the web app fills in automatically with your browser's timezone each time you open it (open the app once after deploying). It is per user, so people in different zones can share one deployment. Until it is set the API falls back to an optional `LEARNLEAF_TZ` variable, then to `UTC`.
+2. **Connect an app.** Sign in, open **Account & Preferences** (the profile page) → **Connected apps**, choose **Connect an app**, and name it (for example "Fridge Board"). The app shows a key starting `llapp_` once; copy it into the other app. See [Connected apps](#connected-apps) below.
 
-Callers then send `Authorization: Bearer <token>`. To revoke or rotate, delete or replace `apiTokenHash`.
+Callers then send `Authorization: Bearer <token>`. Due dates and times use the `timezone` field on your user document, which the web app fills in automatically with your browser's timezone each time you open it (open the app once after deploying). It is per user, so people in different zones can share one deployment. Until it is set the API falls back to an optional `LEARNLEAF_TZ` variable, then to `UTC`. Never commit a token or the service-account key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
 
-**More than one app?** Give each its own token: run the script again and add the new hash to an array field `apiTokenHashes` on the same user document (create it as an array of strings). Every hash in the array works alongside `apiTokenHash`, and removing one entry revokes just that app. Never commit the token or the service-account key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
+### Connected apps
+
+**Where:** Account & Preferences → Connected apps (`src/components/account/ConnectedApps.jsx`).
+
+**What a key can do:** everything the personal API above can do for your account — read, create and update tasks, subjects and projects, archive subjects and projects, and delete tasks. It cannot see other people's data, and it cannot mint or revoke keys.
+
+**Revoking:** choose **Revoke** next to the app and confirm. The key stops working straight away. Each app has its own key, so revoking one leaves the others alone. You can have up to 20 connected apps.
+
+**How it works:** `netlify/functions/connections.mjs` (served at `/api/connections`, authenticated with your Firebase sign-in) mints a random `llapp_` token on the server and stores only its SHA-256 hash, as the document id in the top-level `apiTokens` collection (`{ uid, label, createdAt, lastUsedAt, revokedAt }`). The API checks `apiTokens/{hash}` first and records `lastUsedAt`. Client access to `apiTokens` must be denied in your Firestore rules (only the Admin SDK reads it):
+
+```
+match /apiTokens/{document=**} {
+  allow read, write: if false;
+}
+```
+
+**Legacy tokens still work.** Tokens made with `node scripts/make-api-token.mjs` and stored as `apiTokenHash` (string) or `apiTokenHashes` (array) on your user document are still accepted; remove the field or array entry to revoke one. New tokens should come from the Connected apps screen.
 
 ---
 

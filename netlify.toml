@@ -2,6 +2,20 @@
   command = "npm install && npm run build"
   publish = "dist"
 
+# Connected apps (mint/list/revoke, Firebase sign-in auth). Must come before
+# /api/* — Netlify uses the first rule that matches.
+[[redirects]]
+  from = "/api/connections"
+  to = "/.netlify/functions/connections"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/connections/*"
+  to = "/.netlify/functions/connections/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
