@@ -7,9 +7,11 @@
  *
  * 1. Keep the token somewhere private (a password manager). It is shown once and
  *    is never stored anywhere in plain text.
- * 2. In the Firebase console → Firestore → users → <your user id>, add a string
- *    field named  apiTokenHash  with the hash value.
- * To revoke or rotate, delete or replace that field.
+ * 2. In the Firebase console → Firestore → users → <your user id>, either set the
+ *    string field  apiTokenHash  to the hash (your first token), or add the hash
+ *    to the array field  apiTokenHashes  (one entry per connected app, e.g. a
+ *    separate token for Fridge Board, so each can be revoked on its own).
+ * To revoke a token, delete its field or array entry.
  */
 import { randomBytes, createHash } from 'node:crypto';
 
@@ -17,4 +19,4 @@ const token = randomBytes(32).toString('base64url');
 const hash = createHash('sha256').update(token).digest('hex');
 
 console.log(`\nAPI token (keep private, shown once):\n  ${token}\n`);
-console.log(`apiTokenHash (add to your users/<uid> document):\n  ${hash}\n`);
+console.log(`Hash (set as apiTokenHash, or add to the apiTokenHashes array, on users/<uid>):\n  ${hash}\n`);

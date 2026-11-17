@@ -279,7 +279,9 @@ No user id, email or token is kept in Netlify. Setup:
 2. **Make a token.** Run `node scripts/make-api-token.mjs`. It prints a token (keep it private, it is shown once) and its SHA-256 hash.
 3. **Link it to your account.** In the Firebase console → Firestore → `users` → your user document, add a string field `apiTokenHash` with the hash. Due dates and times use the `timezone` field on your user document, which the web app fills in automatically with your browser's timezone each time you open it (open the app once after deploying). It is per user, so people in different zones can share one deployment. Until it is set the API falls back to an optional `LEARNLEAF_TZ` variable, then to `UTC`.
 
-Callers then send `Authorization: Bearer <token>`. To revoke or rotate, delete or replace `apiTokenHash`. Never commit the token or the service-account key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
+Callers then send `Authorization: Bearer <token>`. To revoke or rotate, delete or replace `apiTokenHash`.
+
+**More than one app?** Give each its own token: run the script again and add the new hash to an array field `apiTokenHashes` on the same user document (create it as an array of strings). Every hash in the array works alongside `apiTokenHash`, and removing one entry revokes just that app. Never commit the token or the service-account key. Subjects and projects can be archived through the API but not deleted; tasks can be deleted.
 
 ---
 

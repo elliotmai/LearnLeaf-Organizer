@@ -8,7 +8,9 @@
  *
  * Who the caller is: callers send "Authorization: Bearer <token>". The function
  * hashes the token (SHA-256, hex) and finds the user document in `users` whose
- * `apiTokenHash` field matches. That user's id is the only data it will touch.
+ * `apiTokenHash` field matches, or whose `apiTokenHashes` array contains it (one
+ * entry per connected app, so each can be revoked on its own). That user's id is
+ * the only data it will touch.
  * No user id, email or token lives in the environment; only the hash is stored,
  * on your own user document. Remove the field to revoke access. Generate a token
  * and its hash with `node scripts/make-api-token.mjs`.
@@ -88,10 +90,16 @@ export async function resolveUser(db, req) {
   const header = req.headers.get('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   if (token.length < MIN_TOKEN_LENGTH) throw new HttpError(401, 'Unauthorized');
-  const snap = await db.collection('users').where('apiTokenHash', '==', hashToken(token)).limit(2).get();
-  // Zero matches: unknown token. More than one: ambiguous, so refuse rather than guess.
-  if (snap.size !== 1) throw new HttpError(401, 'Unauthorized');
-  const doc = snap.docs[0];
+  const hash = hashToken(token);
+  const users = db.collection('users');
+  const [single, many] = await Promise.all([
+    users.where('apiTokenHash', '==', hash).limit(2).get(),
+    users.where('apiTokenHashes', 'array-contains', hash).limit(2).get(),
+  ]);
+  const matches = new Map([...single.docs, ...many.docs].map(d => [d.id, d]));
+  // Zero matches: unknown token. More than one user: ambiguous, so refuse rather than guess.
+  if (matches.size !== 1) throw new HttpError(401, 'Unauthorized');
+  const [doc] = matches.values();
   const timezone = doc.data().timezone;
   if (timezone !== undefined && (typeof timezone !== 'string' || !isValidZone(timezone))) {
     throw new HttpError(500, 'timezone on your user document is not a valid IANA timezone (e.g. America/Chicago)');
