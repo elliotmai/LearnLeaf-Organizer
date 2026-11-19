@@ -10,14 +10,14 @@
  * Google-verified emails). With none, a new account is made, unless
  * HIVE_NEW_ACCOUNTS=off, for apps only existing users should get into.
  *
+ * Setup: HIVE_APP_ID and HIVE_PUBLIC_KEY are in src/config/hive.js (public).
  * Environment (Netlify → Site configuration → Environment):
- *   HIVE_APP_ID               this app's id in Hive's catalog, e.g. learnleaf
- *   HIVE_PUBLIC_KEY           from Hive's `node scripts/hive-keys.mjs`
  *   FIREBASE_SERVICE_ACCOUNT  as for Connected apps
  *   HIVE_NEW_ACCOUNTS         optional; "off" to refuse people with no account
  */
 import { verifyPass } from '../lib/hiveAssertion.mjs';
 import { accountForEmail, createAccount, customToken } from '../lib/firebaseAccounts.mjs';
+import { HIVE_APP_ID, HIVE_PUBLIC_KEY } from '../../src/config/hive.js';
 
 export const config = { path: '/api/hive/exchange' };
 
@@ -45,8 +45,8 @@ export async function exchange(pass, { appId, publicKey, allowNew = true, find =
 
 export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'POST only' });
-  const appId = process.env.HIVE_APP_ID;
-  const publicKey = process.env.HIVE_PUBLIC_KEY;
+  const appId = process.env.HIVE_APP_ID || HIVE_APP_ID;
+  const publicKey = process.env.HIVE_PUBLIC_KEY || HIVE_PUBLIC_KEY;
   if (!appId || !publicKey || !process.env.FIREBASE_SERVICE_ACCOUNT) return json(503, { error: 'Hive sign-in is not set up for this app' });
   let pass = '';
   try { ({ pass } = await req.json()); } catch { /* fall through */ }

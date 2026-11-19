@@ -12,13 +12,15 @@
  *   }), []);
  *
  * Call it where a signed-out person would land (the login screen). It does
- * nothing outside Hive, when VITE_HIVE_ORIGIN isn't set, or when someone is
+ * nothing outside Hive, when HIVE_ORIGIN isn't set, or when someone is
  * already signed in here. Needs netlify/functions/hive-exchange.mjs.
  *
- * VITE_HIVE_ORIGIN is Hive's address, e.g. https://fridge-board-7u23.netlify.app.
+ * HIVE_ORIGIN (src/config/hive.js, or VITE_HIVE_ORIGIN) is Hive's address.
  * Messages from anywhere else are ignored.
  */
-export const HIVE_ORIGIN = (import.meta.env.VITE_HIVE_ORIGIN || '').replace(/\/$/, '');
+import { HIVE_ORIGIN as DEFAULT_ORIGIN } from './config/hive.js';
+
+export const HIVE_ORIGIN = (import.meta.env.VITE_HIVE_ORIGIN || DEFAULT_ORIGIN || '').replace(/\/$/, '');
 
 export const inHive = () => Boolean(HIVE_ORIGIN) && window.parent !== window;
 

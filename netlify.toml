@@ -2,9 +2,9 @@
   command = "npm install && npm run build"
   publish = "dist"
 
-# Sign in with Hive: these two are meant to be in the built site, so the
-# secret scan shouldn't flag them. HIVE_PUBLIC_KEY isn't secret either, but
-# never appears in the build.
+# Sign in with Hive: its setup is in src/config/hive.js. If VITE_HIVE_ORIGIN or
+# HIVE_APP_ID are ever overridden in Netlify, they end up in the built site on
+# purpose, so the secret scan shouldn't flag them.
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "VITE_HIVE_ORIGIN,HIVE_APP_ID"
 
