@@ -6,8 +6,10 @@
  * Firebase Admin SDK, so Firestore security rules do not apply — access is
  * limited in code to the one user whose document carries the caller's token hash.
  *
- * Who the caller is: callers send "Authorization: Bearer <token>". The function
- * hashes the token (SHA-256, hex) and looks it up, in order:
+ * Who the caller is: Hive sends "Authorization: Hive <pass>" (see resolveUser):
+ * a two-minute pass for its signed-in user, found by their confirmed email.
+ * Other callers send "Authorization: Bearer <token>". The function hashes the
+ * token (SHA-256, hex) and looks it up, in order:
  *   1. apiTokens/{hash} — tokens ("llapp_...") minted on the Connected apps
  *      screen (Account & Preferences). Revoked ones are refused. This is how new
  *      tokens should be made; see netlify/lib/apiTokens.mjs.
@@ -46,6 +48,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { HttpError, json, getDb, hashToken, bearer } from '../lib/firebaseAdmin.mjs';
 import { lookupToken } from '../lib/apiTokens.mjs';
+import { verifyPass } from '../lib/hiveAssertion.mjs';
+import { accountForEmail } from '../lib/firebaseAccounts.mjs';
+import { HIVE_APP_ID, HIVE_PUBLIC_KEY } from '../../src/config/hive.js';
 
 const TASK_STATUSES = ['Not Started', 'In Progress', 'Completed'];
 const SUBJECT_STATUSES = ['Active', 'Archived', 'Blocked'];
@@ -64,13 +69,20 @@ export { hashToken };
 
 const isValidZone = z => { try { new Intl.DateTimeFormat('en-CA', { timeZone: z }); return true; } catch { return false; } };
 
-// Bearer token -> the one user it belongs to. Returns { uid, timezone } where
-// timezone is that user's timezone (or undefined). Every failure is the same 401.
+// Caller -> the one user they are. Returns { uid, timezone } where timezone is
+// that user's timezone (or undefined). Every failure is the same 401.
+//   0. `Authorization: Hive <pass>`: Hive (Fridge-Board repo) signs a two-minute
+//      pass for its signed-in user, made for LearnLeaf only. Their confirmed
+//      email finds their account. This is how Hive and the fridge board read
+//      your tasks, with no token stored anywhere. No account → 401 (the API
+//      never creates one).
 //   1. apiTokens/{hash}: a token minted on the Connected apps screen. A revoked
 //      one is refused outright. lastUsedAt is updated best-effort.
 //   2. Legacy: the user whose apiTokenHash equals the hash, or whose
 //      apiTokenHashes array contains it. Exactly one user, else 401.
-export async function resolveUser(db, req) {
+export async function resolveUser(db, req, { findUid = accountForEmail } = {}) {
+  const hive = /^Hive\s+(.+)$/i.exec(req.headers.get('authorization') || '');
+  if (hive) return withTimezone(await userFromPass(db, hive[1].trim(), findUid));
   const token = bearer(req);
   if (token.length < MIN_TOKEN_LENGTH) throw new HttpError(401, 'Unauthorized');
   const hash = hashToken(token);
@@ -93,11 +105,31 @@ export async function resolveUser(db, req) {
     if (matches.size !== 1) throw new HttpError(401, 'Unauthorized');
     [doc] = matches.values();
   }
+  return withTimezone(doc);
+}
+
+function withTimezone(doc) {
   const timezone = doc.data().timezone;
   if (timezone !== undefined && (typeof timezone !== 'string' || !isValidZone(timezone))) {
     throw new HttpError(500, 'timezone on your user document is not a valid IANA timezone (e.g. America/Chicago)');
   }
   return { uid: doc.id, timezone };
+}
+
+async function userFromPass(db, pass, findUid) {
+  let claims;
+  try {
+    claims = verifyPass(pass, process.env.HIVE_APP_ID || HIVE_APP_ID, process.env.HIVE_PUBLIC_KEY || HIVE_PUBLIC_KEY);
+  } catch (e) {
+    console.warn('[api] refused Hive pass:', e.message);
+    throw new HttpError(401, 'Unauthorized');
+  }
+  if (!claims.email || claims.email_verified !== true) throw new HttpError(401, 'Unauthorized');
+  const uid = await findUid(claims.email);
+  if (!uid) throw new HttpError(401, 'Unauthorized');
+  const snap = await db.collection('users').doc(uid).get();
+  if (!snap.exists) throw new HttpError(401, 'Unauthorized');
+  return snap;
 }
 
 // ---------------------------------------------------------------- dates ----

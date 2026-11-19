@@ -246,3 +246,31 @@ test('works on the direct function path too', async () => {
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { connections: [] });
 });
+
+// ------------------------------------------------------ Hive passes -------
+import { makeKeys, signPass } from '../netlify/lib/hiveAssertion.mjs';
+
+const hiveKeys = makeKeys();
+const hiveReq = (pass) => new Request('https://x.test/api/summary', { headers: { authorization: `Hive ${pass}` } });
+const findUid = async (email) => ({ 'alice@example.com': 'alice' })[email] ?? null;
+const alice = { uid: 'hive-a', email: 'alice@example.com', email_verified: true };
+
+test('a Hive pass made for LearnLeaf finds the person by their confirmed email', async () => {
+  process.env.HIVE_PUBLIC_KEY = hiveKeys.publicKey;
+  const db = mockDb({ 'users/alice': { timezone: 'America/Chicago' } });
+  assert.deepEqual(await resolveUser(db, hiveReq(signPass(alice, 'learnleaf', hiveKeys.signingKey)), { findUid }), { uid: 'alice', timezone: 'America/Chicago' });
+});
+
+test('Hive passes for another app, forged, unconfirmed, or with no LearnLeaf account get 401', async () => {
+  process.env.HIVE_PUBLIC_KEY = hiveKeys.publicKey;
+  const db = mockDb({ 'users/alice': {} });
+  const bad = [
+    signPass(alice, 'kitchenhub', hiveKeys.signingKey),
+    signPass(alice, 'learnleaf', makeKeys().signingKey),
+    signPass({ ...alice, email_verified: false }, 'learnleaf', hiveKeys.signingKey),
+    signPass({ ...alice, email: 'stranger@example.com' }, 'learnleaf', hiveKeys.signingKey),
+    'junk',
+  ];
+  for (const p of bad) await assert.rejects(resolveUser(db, hiveReq(p), { findUid }), (e) => e.status === 401);
+  delete process.env.HIVE_PUBLIC_KEY;
+});
