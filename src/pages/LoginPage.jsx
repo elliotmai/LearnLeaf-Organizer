@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser, loginWithGoogle } from "../LearnLeaf_Functions.jsx";
+import { finishLogin, loginUser, loginWithGoogle } from "../LearnLeaf_Functions.jsx";
 import { useUser } from "../UserState.jsx";
+import { auth, authReady } from "../firebase.js";
+import { connectHive, inHive } from "../hive.js";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,6 +11,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { updateUser, setDataLoading } = useUser();
   const navigate = useNavigate();
+  // Opened inside Hive and signed in there? Then sign in here with no second login.
+  const [hive, setHive] = useState(inHive() ? "waiting" : null);
+
+  useEffect(() => connectHive({
+    auth,
+    ready: authReady,
+    onSignedIn: (user) => finishLogin(user, updateUser, navigate, setDataLoading),
+    onSignedOut: () => setHive(null),
+    onError: () => setHive("failed"),
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +48,12 @@ export default function LoginPage() {
           <h1 style={{ fontFamily:"Playfair Display,serif",fontSize:"1.75rem",fontWeight:700,color:"#355147",margin:"0 0 6px" }}>LearnLeaf</h1>
           <p style={{ color:"#907474",fontSize:"0.9rem",margin:0 }}>Streamlining success, one task at a time</p>
         </div>
+
+        {hive && (
+          <p role="status" style={{ textAlign:"center",color:"#6b7280",fontSize:"0.9rem",margin:"0 0 16px" }}>
+            {hive === "waiting" ? "Signing you in with Hive…" : "Couldn’t sign in with Hive. Sign in below instead."}
+          </p>
+        )}
 
         {/* Card */}
         <div className="ll-card" style={{ padding:"32px" }}>

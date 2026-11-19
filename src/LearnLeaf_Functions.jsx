@@ -297,6 +297,15 @@ export async function loginUser(email, password, setDataLoading) {
 export async function loginWithGoogle(updateUser, navigate, setDataLoading) {
   await authReady;
   const { user } = await signInWithPopup(auth, provider);
+  await finishLogin(user, updateUser, navigate, setDataLoading);
+}
+
+/**
+ * Everything after a sign-in that isn't email and password: make the profile
+ * the first time, cache it, load data, go to Tasks. Used by Google sign-in
+ * and by Sign in with Hive (src/hive.js).
+ */
+export async function finishLogin(user, updateUser, navigate, setDataLoading) {
   let snap = await getDoc(doc(firestore, 'users', user.uid));
   if (!snap.exists()) {
     await setDoc(doc(firestore, 'users', user.uid), { name: user.displayName || '', email: user.email, timeFormat: '12h', dateFormat: 'MM/DD/YYYY', notifications: false, notificationsFrequency: [true, false, false, false], icsURLs: {} });

@@ -2,6 +2,20 @@
   command = "npm install && npm run build"
   publish = "dist"
 
+# Sign in with Hive: these two are meant to be in the built site, so the
+# secret scan shouldn't flag them. HIVE_PUBLIC_KEY isn't secret either, but
+# never appears in the build.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "VITE_HIVE_ORIGIN,HIVE_APP_ID"
+
+# Sign in with Hive (src/hive.js). Must come before /api/* — Netlify uses
+# the first rule that matches.
+[[redirects]]
+  from = "/api/hive/exchange"
+  to = "/.netlify/functions/hive-exchange"
+  status = 200
+  force = true
+
 # Connected apps (mint/list/revoke, Firebase sign-in auth). Must come before
 # /api/* — Netlify uses the first rule that matches.
 [[redirects]]

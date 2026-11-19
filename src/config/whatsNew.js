@@ -14,6 +14,13 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.19',
+    date: 'November 2026',
+    items: [
+      '🐝 Sign in with Hive — open LearnLeaf from Hive and you are signed in already, with no second login.',
+    ],
+  },
+  {
     version: '2026.11.17',
     date: 'November 2026',
     items: [
