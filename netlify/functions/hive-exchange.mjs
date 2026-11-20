@@ -19,7 +19,10 @@ import { verifyPass } from '../lib/hiveAssertion.mjs';
 import { accountForEmail, createAccount, customToken } from '../lib/firebaseAccounts.mjs';
 import { HIVE_APP_ID, HIVE_PUBLIC_KEY } from '../../src/config/hive.js';
 
-export const config = { path: '/api/hive/exchange' };
+// Reached through the /api/hive/exchange redirect in netlify.toml, like the
+// other functions here. No `config.path`: a function with its own path no
+// longer answers at /.netlify/functions/<name>, which that redirect points to,
+// so the two together made every exchange a 404.
 
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
