@@ -18,9 +18,10 @@
  * HIVE_ORIGIN (src/config/hive.js, or VITE_HIVE_ORIGIN) is Hive's address.
  * Messages from anywhere else are ignored.
  */
-import { HIVE_ORIGIN as DEFAULT_ORIGIN } from './config/hive.js';
+import { HIVE_ORIGIN as DEFAULT_ORIGIN, HIVE_OLD_ORIGINS } from './config/hive.js';
 
 export const HIVE_ORIGIN = (import.meta.env.VITE_HIVE_ORIGIN || DEFAULT_ORIGIN || '').replace(/\/$/, '');
+const ORIGINS = [HIVE_ORIGIN, ...HIVE_OLD_ORIGINS].filter(Boolean);
 
 export const inHive = () => Boolean(HIVE_ORIGIN) && window.parent !== window;
 
@@ -28,7 +29,7 @@ export function connectHive({ auth, ready, onSignedIn, onSignedOut, onError } = 
   if (!inHive() || !auth) return () => {};
   let busy = false;
   const onMessage = async (e) => {
-    if (e.origin !== HIVE_ORIGIN || e.source !== window.parent) return;
+    if (!ORIGINS.includes(e.origin) || e.source !== window.parent) return;
     if (e.data?.type === 'hive:signed-out') { onSignedOut?.(); return; }
     if (e.data?.type !== 'hive:pass' || typeof e.data.pass !== 'string') return;
     if (busy || auth.currentUser) return;
@@ -53,6 +54,7 @@ export function connectHive({ auth, ready, onSignedIn, onSignedOut, onError } = 
     }
   };
   window.addEventListener('message', onMessage);
-  window.parent.postMessage({ type: 'hive:hello', v: 1 }, HIVE_ORIGIN);
+  // Only the real Hive (whichever address it's at) receives this; others are dropped.
+  for (const o of ORIGINS) window.parent.postMessage({ type: 'hive:hello', v: 1 }, o);
   return () => window.removeEventListener('message', onMessage);
 }
