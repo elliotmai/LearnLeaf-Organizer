@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { finishLogin, loginUser, loginWithGoogle } from "../LearnLeaf_Functions.jsx";
 import { useUser } from "../UserState.jsx";
 import { auth, authReady } from "../firebase.js";
-import { connectHive, inHive } from "../hive.js";
+import { connectHive, inHive, onSharedDomain, signInFromSharedSession } from "../hive.js";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const { updateUser, setDataLoading } = useUser();
   const navigate = useNavigate();
   // Opened inside Hive and signed in there? Then sign in here with no second login.
-  const [hive, setHive] = useState(inHive() ? "waiting" : null);
+  const [hive, setHive] = useState(inHive() || onSharedDomain() ? "waiting" : null);
 
   useEffect(() => connectHive({
     auth,
@@ -21,6 +21,18 @@ export default function LoginPage() {
     onSignedOut: () => setHive(null),
     onError: () => setHive("failed"),
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Outside Hive, on Hive's shared domain: one login with Hive there too.
+  useEffect(() => {
+    if (inHive() || !onSharedDomain()) return;
+    let live = true;
+    signInFromSharedSession({ auth, ready: authReady }).then((user) => {
+      if (!live) return;
+      if (user) finishLogin(user, updateUser, navigate, setDataLoading);
+      else setHive(null);
+    });
+    return () => { live = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -17,8 +17,13 @@
  *
  * HIVE_ORIGIN (src/config/hive.js, or VITE_HIVE_ORIGIN) is Hive's address.
  * Messages from anywhere else are ignored.
+ *
+ * Outside Hive, on Hive's shared domain, it signs you in from Hive's shared
+ * sign-in instead (signInFromSharedSession), so there's one login either way.
  */
-import { HIVE_ORIGIN as DEFAULT_ORIGIN, HIVE_OLD_ORIGINS } from './config/hive.js';
+import {
+  HIVE_APP_ID, HIVE_ORIGIN as DEFAULT_ORIGIN, HIVE_OLD_ORIGINS, SHARED_DOMAIN, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL,
+} from './config/hive.js';
 
 export const HIVE_ORIGIN = (import.meta.env.VITE_HIVE_ORIGIN || DEFAULT_ORIGIN || '').replace(/\/$/, '');
 const ORIGINS = [HIVE_ORIGIN, ...HIVE_OLD_ORIGINS].filter(Boolean);
@@ -35,17 +40,8 @@ export function connectHive({ auth, ready, onSignedIn, onSignedOut, onError } = 
     if (busy || auth.currentUser) return;
     busy = true;
     try {
-      const res = await fetch('/api/hive/exchange', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ pass: e.data.pass }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw Object.assign(new Error(body.error || `Sign-in answered ${res.status}`), { code: body.code });
-      await ready;
-      const { signInWithCustomToken } = await import('firebase/auth');
-      const { user } = await signInWithCustomToken(auth, body.token);
-      await onSignedIn?.(user, { created: !!body.created });
+      const { user, created } = await signInWithPass(auth, e.data.pass, ready);
+      await onSignedIn?.(user, { created });
     } catch (err) {
       console.warn('[hive] sign-in failed:', err.message);
       onError?.(err);
@@ -57,4 +53,53 @@ export function connectHive({ auth, ready, onSignedIn, onSignedOut, onError } = 
   // Only the real Hive (whichever address it's at) receives this; others are dropped.
   for (const o of ORIGINS) window.parent.postMessage({ type: 'hive:hello', v: 1 }, o);
   return () => window.removeEventListener('message', onMessage);
+}
+
+/** Trade a Hive pass for a sign-in here (netlify/functions/hive-exchange.mjs). */
+async function signInWithPass(auth, pass, ready) {
+  const res = await fetch('/api/hive/exchange', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pass }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(body.error || `Sign-in answered ${res.status}`), { code: body.code });
+  await ready;
+  const { signInWithCustomToken } = await import('firebase/auth');
+  const { user } = await signInWithCustomToken(auth, body.token);
+  return { user, created: !!body.created };
+}
+
+export const onSharedDomain = (host = location.hostname) => host === SHARED_DOMAIN || host.endsWith(`.${SHARED_DOMAIN}`);
+
+/**
+ * Outside Hive, on the shared domain: if Hive is signed in (its session cookie
+ * is shared by every app here), sign in here as the same person. Resolves to
+ * the signed-in user, or null when Hive isn't signed in or this can't be done.
+ */
+export async function signInFromSharedSession({ auth, ready } = {}) {
+  if (inHive() || !onSharedDomain() || !auth || !HIVE_ORIGIN) return null;
+  await ready;
+  if (auth.currentUser) return null;
+  try {
+    const { createBrowserClient } = await import('@supabase/ssr');
+    const sb = createBrowserClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      cookieOptions: { name: 'hive-auth', path: '/', sameSite: 'lax', secure: true, maxAge: 60 * 60 * 24 * 400, domain: `.${SHARED_DOMAIN}` },
+      auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data } = await sb.auth.getSession(); // refreshes an expired session, and saves it back for every app
+    const token = data.session?.access_token;
+    if (!token) return null;
+    const res = await fetch(`${HIVE_ORIGIN}/api/hive/pass`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ app: HIVE_APP_ID }),
+    });
+    if (!res.ok) return null;
+    const { pass } = await res.json();
+    return (await signInWithPass(auth, pass, ready)).user;
+  } catch (err) {
+    console.warn('[hive] shared sign-in failed:', err.message);
+    return null;
+  }
 }

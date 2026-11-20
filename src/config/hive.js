@@ -14,3 +14,12 @@ export const HIVE_OLD_ORIGINS = ['https://fridge-board-7u23.netlify.app'];
 
 /** Checks Hive passes. Matches HIVE_SIGNING_KEY in Hive's Netlify settings. */
 export const HIVE_PUBLIC_KEY = 'MCowBQYDK2VwAyEAD+9fPYhGN9ftY8MGu8oQZdgfSMZL7coC6pZ812weWVE=';
+
+/**
+ * Hive's shared sign-in. On Hive's shared domain the signed-in person's
+ * Supabase session sits in a cookie every app can read, so LearnLeaf signs
+ * you in from it even outside Hive. All public by design.
+ */
+export const SHARED_DOMAIN = 'flyingdoublemranch.com';
+export const SUPABASE_URL = 'https://fcjiummxpacwriwopcho.supabase.co';
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fZo1FUg_j4O1EHH-W2Jr1A_4P8W3o2S';

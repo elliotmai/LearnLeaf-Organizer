@@ -7,6 +7,8 @@
 # purpose, so the secret scan shouldn't flag them.
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "VITE_HIVE_ORIGIN,HIVE_APP_ID"
+  # Supabase's publishable key (src/config/hive.js) is public by design.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "sb_publishable_fZo1FUg_j4O1EHH-W2Jr1A_4P8W3o2S"
 
 # Sign in with Hive (src/hive.js). Must come before /api/* — Netlify uses
 # the first rule that matches.
