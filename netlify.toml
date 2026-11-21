@@ -12,6 +12,14 @@
 
 # Sign in with Hive (src/hive.js). Must come before /api/* — Netlify uses
 # the first rule that matches.
+# The old address sends people to the new one, so the one Hive sign-in
+# (a cookie for *.flyingdoublemranch.com) covers this app too.
+[[redirects]]
+  from = "https://learnleaf-organizer.netlify.app/*"
+  to = "https://learnleaf.flyingdoublemranch.com/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/hive/exchange"
   to = "/.netlify/functions/hive-exchange"
