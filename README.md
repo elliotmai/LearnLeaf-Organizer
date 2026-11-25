@@ -325,7 +325,7 @@ To use it from any directory instead:
 claude mcp add learnleaf --scope user -e LEARNLEAF_API_TOKEN=llapp_... -- node /path/to/LearnLeaf-Organizer/mcp/server.mjs
 ```
 
-`LEARNLEAF_API_URL` overrides the API address (default `https://learnleaf.flyingdoublemranch.com/api`).
+`LEARNLEAF_API_URL` overrides the API address (default `https://learnleaf.flyingdoublemranch.com/api`). `.mcp.json` also sets `NODE_USE_ENV_PROXY=1` for this server only, so it uses `HTTPS_PROXY` where one is set (Claude cloud sessions, whose proxy adds the key for `learnleaf-organizer.netlify.app`; their environment sets `LEARNLEAF_API_URL` to that address). Where no proxy is set it changes nothing.
 
 **2b. Hosted (Streamable HTTP), nothing to run locally.** The site serves the same server at `/mcp` (`netlify/functions/mcp.mjs`):
 
