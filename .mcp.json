@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "learnleaf": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp/server.mjs"],
+      "env": {
+        "LEARNLEAF_API_TOKEN": "${LEARNLEAF_API_TOKEN:-}",
+        "LEARNLEAF_API_URL": "${LEARNLEAF_API_URL:-https://learnleaf.flyingdoublemranch.com/api}"
+      }
+    }
+  }
+}

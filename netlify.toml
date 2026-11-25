@@ -20,6 +20,13 @@
   status = 301
   force = true
 
+# MCP server for assistants (netlify/functions/mcp.mjs). Before the /* catch-all.
+[[redirects]]
+  from = "/mcp"
+  to = "/.netlify/functions/mcp"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/hive/exchange"
   to = "/.netlify/functions/hive-exchange"

@@ -33,6 +33,7 @@ _Streamlining success, one task at a time._
 - [Scripts](#scripts)
 - [Personal API (assistant access)](#personal-api-assistant-access)
   - [Connected apps](#connected-apps)
+  - [MCP server (Claude CLI and other assistants)](#mcp-server-claude-cli-and-other-assistants)
 - [Build & deploy](#build--deploy)
 - [PWA notes](#pwa-notes)
 - [Design system](#design-system)
@@ -303,6 +304,36 @@ match /apiTokens/{document=**} {
 ```
 
 **Legacy tokens still work.** Tokens made with `node scripts/make-api-token.mjs` and stored as `apiTokenHash` (string) or `apiTokenHashes` (array) on your user document are still accepted; remove the field or array entry to revoke one. New tokens should come from the Connected apps screen.
+
+### MCP server (Claude CLI and other assistants)
+
+`mcp/` is an [MCP](https://modelcontextprotocol.io) server over the personal API, so Claude (Claude Code CLI, Claude Desktop, or any MCP client) can read and manage your LearnLeaf data as tools. It has no dependencies and runs two ways; both use a Connected-apps key and both go through `/api`, so they can do exactly what the API can and no more.
+
+**Tools:** `get_summary`, `list_tasks`, `get_task`, `create_task`, `update_task`, `delete_task`, `list_subjects`, `create_subject`, `update_subject`, `list_projects`, `create_project`, `update_project`.
+
+**1. Get a key.** Account & Preferences → Connected apps → Connect an app (name it "Claude"). Copy the `llapp_` key.
+
+**2a. Local (stdio), for Claude CLI in this repo.** `.mcp.json` already registers the `learnleaf` server (`node mcp/server.mjs`). Export the key in your shell and start Claude here; approve the project server when asked (or check `/mcp`):
+
+```bash
+export LEARNLEAF_API_TOKEN=llapp_...
+```
+
+To use it from any directory instead:
+
+```bash
+claude mcp add learnleaf --scope user -e LEARNLEAF_API_TOKEN=llapp_... -- node /path/to/LearnLeaf-Organizer/mcp/server.mjs
+```
+
+`LEARNLEAF_API_URL` overrides the API address (default `https://learnleaf.flyingdoublemranch.com/api`).
+
+**2b. Hosted (Streamable HTTP), nothing to run locally.** The site serves the same server at `/mcp` (`netlify/functions/mcp.mjs`):
+
+```bash
+claude mcp add --transport http learnleaf https://learnleaf.flyingdoublemranch.com/mcp --scope user --header "Authorization: Bearer llapp_..."
+```
+
+Revoking the key on the Connected apps screen cuts off either one straight away. Keep the key out of the repo: `.mcp.json` only reads it from your environment.
 
 ---
 
