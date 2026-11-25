@@ -14,6 +14,21 @@
 # the first rule that matches.
 # The old address sends people to the new one, so the one Hive sign-in
 # (a cookie for *.flyingdoublemranch.com) covers this app too.
+# Except the API and MCP endpoints: callers with a key need no sign-in cookie,
+# and some (assistant sessions) only hold the key for this old address.
+# Must come before the redirect below.
+[[redirects]]
+  from = "https://learnleaf-organizer.netlify.app/mcp"
+  to = "/.netlify/functions/mcp"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://learnleaf-organizer.netlify.app/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "https://learnleaf-organizer.netlify.app/*"
   to = "https://learnleaf.flyingdoublemranch.com/:splat"
