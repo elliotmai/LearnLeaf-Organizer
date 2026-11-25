@@ -16,6 +16,17 @@ function cmpVersion(a, b) {
   return 0;
 }
 
+// True when the app runs inside a frame — Hive shows every app in an iframe
+// and has its own What's New. Reading window.top can throw when the parent is
+// cross-origin; that is a frame too.
+function isEmbedded() {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Accumulating "What's New" popup. The next time a person opens the app after one
  * or more updates, it shows EVERY changelog entry newer than what this device has
@@ -39,7 +50,17 @@ export default function WhatsNew() {
     }
     // Versions are YYYY.MM.DD (or YYYY.MM.DD.N for same-day releases).
     const unseen = seen == null ? [latest] : WHATS_NEW.filter((e) => cmpVersion(e.version, seen) > 0);
-    if (unseen.length) setEntries(unseen);
+    if (!unseen.length) return;
+    // Record "seen" as soon as it is shown, not only on dismiss: Hive remounts
+    // the app on every open and people go home without tapping close, so a
+    // dismiss-only write let the same update pop up every time.
+    try {
+      localStorage.setItem(STORAGE_KEY, latest.version);
+    } catch {
+      /* ignore storage failures */
+    }
+    // Inside Hive, mark it seen silently; Hive shows its own What's New.
+    if (!isEmbedded()) setEntries(unseen);
   }, [latest]);
 
   const dismiss = () => {
