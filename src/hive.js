@@ -67,7 +67,32 @@ async function signInWithPass(auth, pass, ready) {
   await ready;
   const { signInWithCustomToken } = await import('firebase/auth');
   const { user } = await signInWithCustomToken(auth, body.token);
+  try { localStorage.setItem(VIA_HIVE, '1'); } catch { /* private mode */ }
   return { user, created: !!body.created };
+}
+
+/** Set when this sign-in came from Hive; logging out clears all storage, and it with it. */
+const VIA_HIVE = 'learnleaf.viaHive';
+
+/**
+ * Signed in here through Hive, and Hive has since signed out: `onSignedOut`.
+ * Inside Hive, when Hive says so; on the shared domain, when Hive's shared
+ * sign-in cookie is gone. A sign-in of your own here is left alone.
+ */
+export function watchHiveSignOut(onSignedOut) {
+  let via = null;
+  try { via = localStorage.getItem(VIA_HIVE); } catch { /* private mode */ }
+  if (via !== '1') return () => {};
+  if (inHive()) {
+    const onMessage = (e) => {
+      if (ORIGINS.includes(e.origin) && e.source === window.parent && e.data?.type === 'hive:signed-out') onSignedOut();
+    };
+    window.addEventListener('message', onMessage);
+    for (const o of ORIGINS) window.parent.postMessage({ type: 'hive:hello', v: 1 }, o);
+    return () => window.removeEventListener('message', onMessage);
+  }
+  if (onSharedDomain() && !document.cookie.split(/;\s*/).some((c) => c.startsWith('hive-auth'))) onSignedOut();
+  return () => {};
 }
 
 export const onSharedDomain = (host = location.hostname) => host === SHARED_DOMAIN || host.endsWith(`.${SHARED_DOMAIN}`);

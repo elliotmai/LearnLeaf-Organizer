@@ -4,9 +4,16 @@ import { UserProvider } from "./UserState.jsx";
 import Toast from "./components/ui/Toast.jsx";
 import PullToRefresh from "./components/ui/PullToRefresh.jsx";
 import WhatsNew from "./components/ui/WhatsNew.jsx";
+import { logoutUser } from "./LearnLeaf_Functions.jsx";
+import { watchHiveSignOut } from "./hive.js";
 
 function AppInner() {
   const [networkToast, setNetworkToast] = useState(null);
+
+  // Signed in through Hive and Hive signed out: sign out here too.
+  useEffect(() => watchHiveSignOut(async () => {
+    try { await logoutUser(); } finally { window.location.assign("/"); }
+  }), []);
 
   useEffect(() => {
     const online  = () => setNetworkToast({ message:"Back online! Syncing data...", type:"success" });
