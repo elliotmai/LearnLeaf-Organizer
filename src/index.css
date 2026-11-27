@@ -29,6 +29,12 @@
   }
 }
 
+/* Phones and tablets: form fields at 16px so iOS doesn't zoom in on focus
+   (!important beats the inline font sizes some fields set). */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; min-width: 0; }
+}
+
 /* Form inputs */
 .ll-input {
   width: 100%;
@@ -147,7 +153,7 @@
 /* Sidebar slide */
 .sidebar-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: rgba(0,0,0,0.35);
   backdrop-filter: blur(2px);
   z-index: 40;

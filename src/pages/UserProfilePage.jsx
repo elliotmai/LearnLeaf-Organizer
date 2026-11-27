@@ -49,7 +49,7 @@ export default function UserProfilePage() {
   const sectionTitle = { fontFamily: "Playfair Display,serif", fontSize: "1.05rem", fontWeight: 700, color: "#5B8E9F", margin: "0 0 20px" };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex:1 }}>
       <TopBar />
       <main style={{ flex: 1, maxWidth: "640px", margin: "0 auto", width: "100%", padding: "24px 24px 80px", boxSizing: "border-box" }}>
         <h1 style={{ fontFamily: "Playfair Display,serif", fontSize: "1.6rem", fontWeight: 700, color: "#907474", marginBottom: "24px" }}>Account & Preferences</h1>
@@ -72,7 +72,7 @@ export default function UserProfilePage() {
         {/* Preferences */}
         <div style={section}>
           <h2 style={sectionTitle}>Preferences</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
             <div>
               <label style={lab}>Time Format</label>
               <select className="ll-select" style={{ ...inp, paddingRight: "2.5rem", appearance: "none" }}
@@ -100,7 +100,7 @@ export default function UserProfilePage() {
             <span style={{ fontSize: "0.9rem", fontWeight: 500, color: "#374151" }}>Enable notifications</span>
             <label style={{ position: "relative", display: "inline-block", width: "42px", height: "22px", cursor: "pointer" }}>
               <input type="checkbox" checked={notifications} onChange={e => setNotifications(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-              <span style={{ position: "absolute", inset: 0, borderRadius: "11px", background: notifications ? "#355147" : "#e5e9e8", transition: "background 200ms" }}>
+              <span style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, borderRadius: "11px", background: notifications ? "#355147" : "#e5e9e8", transition: "background 200ms" }}>
                 <span style={{ position: "absolute", left: notifications ? "22px" : "2px", top: "2px", width: "18px", height: "18px", borderRadius: "50%", background: "white", transition: "left 200ms", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
               </span>
             </label>

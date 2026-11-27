@@ -14,6 +14,13 @@
  */
 export const WHATS_NEW = [
   {
+    version: '2026.11.27',
+    date: 'November 2026',
+    items: [
+      '📱 Fits phones and tablets better — tapping into a field no longer zooms the screen, and short pages no longer scroll just to show the footer.',
+    ],
+  },
+  {
     version: '2026.11.19',
     date: 'November 2026',
     items: [

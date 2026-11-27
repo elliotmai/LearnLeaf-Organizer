@@ -17,7 +17,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",background:"linear-gradient(135deg,#f0f7f5 0%,#e8f2ef 50%,#f5f0f8 100%)" }}>
+    <div style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",background:"linear-gradient(135deg,#f0f7f5 0%,#e8f2ef 50%,#f5f0f8 100%)" }}>
       <div style={{ width:"100%",maxWidth:"420px" }}>
         <div style={{ textAlign:"center",marginBottom:"32px" }}>
           <div style={{ width:"56px",height:"56px",borderRadius:"16px",background:"#355147",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontFamily:"Playfair Display,serif",fontWeight:700,fontSize:"20px",margin:"0 auto 16px" }}>LL</div>

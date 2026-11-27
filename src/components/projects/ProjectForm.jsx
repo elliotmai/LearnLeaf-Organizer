@@ -63,7 +63,7 @@ export default function ProjectForm({ open, onClose, project, subjects, onSave }
             value={form.projectDescription} onChange={e => set("projectDescription",e.target.value)} placeholder="Project goals, scope, notes..." />
         </div>
 
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px" }}>
+        <div style={{ display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:"12px" }}>
           <div>
             <label style={lab}>Due Date</label>
             <input type="date" style={inp(false)} value={form.projectDueDate} onChange={e => set("projectDueDate",e.target.value)} />

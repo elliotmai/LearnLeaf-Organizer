@@ -189,7 +189,7 @@ export default function TaskImportDialog({ open, onClose, subjects = [], project
     if (!failures.length) onClose();
   };
 
-  const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", zIndex: 60 };
+  const overlay = { position: "fixed", top: 0, right: 0, bottom: 0, left: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", zIndex: 60 };
   const panel = {
     position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 70,
     background: "white", borderRadius: "16px", width: "min(1280px, 95vw)", maxHeight: "90vh",

@@ -121,7 +121,7 @@ export default function TopBar() {
           .ll-hidden-sm { display:none; }
           .ll-mobile-only { display:flex !important; }
           .ll-mobile-bottom-nav { display:flex !important; }
-          .page-mobile-pad { padding-bottom: 64px !important; }
+          .page-mobile-pad { padding-bottom: 44px !important; }
         }
         @media (min-width:768px) {
           .ll-mobile-only { display:none !important; }

@@ -79,7 +79,7 @@ export default function WhatsNew() {
   return (
     <>
       <div
-        style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(2px)",zIndex:80 }}
+        style={{ position:"fixed",top:0,right:0,bottom:0,left:0,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(2px)",zIndex:80 }}
         onClick={dismiss}
       />
       <div

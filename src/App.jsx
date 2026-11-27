@@ -25,7 +25,7 @@ function AppInner() {
 
   return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column" }}>
-      <div style={{ flex:"1 0 auto" }}>
+      <div style={{ flex:"1 0 auto", display:"flex", flexDirection:"column" }}>
         <Outlet />
       </div>
       <footer className="page-mobile-pad" style={{ flexShrink:0, display:"flex", justifyContent:"center", padding:"10px 16px", borderTop:"1px solid #f0f4f2", background:"#f8faf9" }}>

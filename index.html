@@ -9,6 +9,13 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/pwa-192x192.png" />
   <link rel="manifest" href="/manifest.json" />
+  <script>
+    // Inside Hive's frame: no pinch or double-tap zoom (Hive can't stop a pinch that starts in here).
+    if (window.parent !== window) {
+      document.documentElement.style.touchAction = 'pan-x pan-y';
+      document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300..700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />

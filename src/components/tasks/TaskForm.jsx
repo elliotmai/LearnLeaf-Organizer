@@ -78,7 +78,7 @@ export default function TaskForm({ open, onClose, task, subjects, projects, onSa
 
   const labelStyle = { display:"block", fontSize:"0.7rem", fontWeight:600, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"4px" };
   const errStyle = { fontSize:"0.75rem", color:"#F3161E", marginTop:"4px" };
-  const rowStyle = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" };
+  const rowStyle = { display:"grid", gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)", gap:"12px" };
 
   return (
     <Sidebar open={open} onClose={onClose} title={isEdit ? "Edit Task" : "New Task"}>

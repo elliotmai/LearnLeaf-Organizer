@@ -3,7 +3,7 @@ import React from "react";
 export default function SplashScreen({ message = "Loading LearnLeaf..." }) {
   return (
     <div style={{
-      position: "fixed", inset: 0, display: "flex", flexDirection: "column",
+      position: "fixed", top: 0, right: 0, bottom: 0, left: 0, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
       background: "linear-gradient(135deg,#f0f7f5 0%,#e8f2ef 50%,#f5f0f8 100%)",
       zIndex: 9999,
